@@ -14,14 +14,24 @@ docker-build: ## Build Docker image
 	docker build -t leads-core:latest .
 
 # Run with docker-compose
-run: ## Start all services with docker-compose
+run: ## Start all services with docker-compose (single Redis)
 	@echo "Starting services with docker-compose..."
 	docker-compose up -d --build
 
+# Run with Redis cluster
+run-cluster: ## Start all services with Redis cluster
+	@echo "Starting services with Redis cluster..."
+	docker-compose -f docker-compose.cluster.yml up -d --build
+
 # Stop all services
-stop: ## Stop all services
+stop: ## Stop all services (single Redis)
 	@echo "Stopping services..."
 	docker-compose down
+
+# Stop Redis cluster
+stop-cluster: ## Stop Redis cluster services
+	@echo "Stopping Redis cluster services..."
+	docker-compose -f docker-compose.cluster.yml down
 
 # Run tests
 test: ## Run Go tests
@@ -40,14 +50,24 @@ test-race: ## Run tests with race check
 	go test -v -race ./...
 
 # Clean up
-clean: ## Clean up docker containers, images, and volumes
+clean: ## Clean up docker containers, images, and volumes (single Redis)
 	@echo "Cleaning up..."
 	docker-compose down -v --rmi all --remove-orphans
 	docker system prune -f
 
+# Clean up Redis cluster
+clean-cluster: ## Clean up Redis cluster containers, images, and volumes
+	@echo "Cleaning up Redis cluster..."
+	docker-compose -f docker-compose.cluster.yml down -v --rmi all --remove-orphans
+	docker system prune -f
+
 # Show logs
-logs: ## Show docker-compose logs
+logs: ## Show docker-compose logs (single Redis)
 	docker-compose logs -f
+
+# Show cluster logs
+logs-cluster: ## Show Redis cluster logs
+	docker-compose -f docker-compose.cluster.yml logs -f
 
 # Show logs for specific service
 logs-app: ## Show logs for leads-core service
@@ -55,6 +75,31 @@ logs-app: ## Show logs for leads-core service
 
 logs-redis: ## Show logs for redis services
 	docker-compose logs -f redis-node-1 redis-node-2 redis-node-3
+
+# Redis cluster management
+cluster-start: ## Start Redis cluster
+	@echo "Starting Redis cluster..."
+	./redis-cluster.sh start
+
+cluster-stop: ## Stop Redis cluster
+	@echo "Stopping Redis cluster..."
+	./redis-cluster.sh stop
+
+cluster-status: ## Show Redis cluster status
+	@echo "Redis cluster status:"
+	./redis-cluster.sh status
+
+cluster-test: ## Test Redis cluster functionality
+	@echo "Testing Redis cluster..."
+	./redis-cluster.sh test
+
+cluster-clean: ## Clean Redis cluster data
+	@echo "Cleaning Redis cluster data..."
+	./redis-cluster.sh clean
+
+cluster-integration-test: ## Run integration test with Redis cluster
+	@echo "Running Redis cluster integration test..."
+	./test-cluster.sh
 
 # Development mode (run locally)
 dev: ## Run application locally (requires Redis running, automatically loads .env)

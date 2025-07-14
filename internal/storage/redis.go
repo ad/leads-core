@@ -105,34 +105,34 @@ func (r *RedisClient) GetClient() redis.UniversalClient {
 	return r.client
 }
 
-// Redis key patterns
+// Redis key patterns with hash tags for cluster compatibility
 const (
-	// Forms
-	FormKey          = "form:%s"          // HASH - form data
-	FormsByTimeKey   = "forms:by_time"    // ZSET - all forms by timestamp
-	UserFormsKey     = "forms:%s"         // SET - user's forms
-	FormsByTypeKey   = "forms:type:%s"    // SET - forms by type
-	FormsByStatusKey = "forms:enabled:%s" // SET - forms by status (0|1)
+	// Forms - use {formID} hash tag to ensure related keys are in same slot
+	FormKey          = "{%s}:form"        // HASH - form data
+	FormsByTimeKey   = "forms:by_time"    // ZSET - all forms by timestamp (global)
+	UserFormsKey     = "{%s}:user:forms"  // SET - user's forms
+	FormsByTypeKey   = "forms:type:%s"    // SET - forms by type (global)
+	FormsByStatusKey = "forms:enabled:%s" // SET - forms by status (0|1) (global)
 
-	// Submissions
-	SubmissionKey      = "submission:%s:%s"    // HASH - submission data
-	FormSubmissionsKey = "form:%s:submissions" // ZSET - form submissions by timestamp
+	// Submissions - use {formID} hash tag to group with form data
+	SubmissionKey      = "{%s}:submission:%s" // HASH - submission data
+	FormSubmissionsKey = "{%s}:submissions"   // ZSET - form submissions by timestamp
 
-	// Statistics
-	FormStatsKey  = "form:%s:stats"          // HASH - form statistics
-	DailyViewsKey = "stats:form:%s:views:%s" // INCR - daily views (YYYY-MM-DD)
+	// Statistics - use {formID} hash tag to group with form data
+	FormStatsKey  = "{%s}:stats"    // HASH - form statistics
+	DailyViewsKey = "{%s}:views:%s" // INCR - daily views (YYYY-MM-DD)
 
 	// Rate limiting with hash tags for cluster compatibility
 	RateLimitIPKey     = "rate_limit:{%s}:ip:%s"  // INCR - IP rate limit with hash tag
 	RateLimitGlobalKey = "rate_limit:{%s}:global" // INCR - global rate limit with hash tag
 )
 
-// GenerateFormKey generates a form key
+// GenerateFormKey generates a form key with hash tag
 func GenerateFormKey(formID string) string {
 	return fmt.Sprintf(FormKey, formID)
 }
 
-// GenerateUserFormsKey generates a user forms key
+// GenerateUserFormsKey generates a user forms key with hash tag
 func GenerateUserFormsKey(userID string) string {
 	return fmt.Sprintf(UserFormsKey, userID)
 }
@@ -151,22 +151,22 @@ func GenerateFormsByStatusKey(enabled bool) string {
 	return fmt.Sprintf(FormsByStatusKey, status)
 }
 
-// GenerateSubmissionKey generates a submission key
+// GenerateSubmissionKey generates a submission key with hash tag
 func GenerateSubmissionKey(formID, submissionID string) string {
 	return fmt.Sprintf(SubmissionKey, formID, submissionID)
 }
 
-// GenerateFormSubmissionsKey generates a form submissions key
+// GenerateFormSubmissionsKey generates a form submissions key with hash tag
 func GenerateFormSubmissionsKey(formID string) string {
 	return fmt.Sprintf(FormSubmissionsKey, formID)
 }
 
-// GenerateFormStatsKey generates a form stats key
+// GenerateFormStatsKey generates a form stats key with hash tag
 func GenerateFormStatsKey(formID string) string {
 	return fmt.Sprintf(FormStatsKey, formID)
 }
 
-// GenerateDailyViewsKey generates a daily views key
+// GenerateDailyViewsKey generates a daily views key with hash tag
 func GenerateDailyViewsKey(formID, date string) string {
 	return fmt.Sprintf(DailyViewsKey, formID, date)
 }

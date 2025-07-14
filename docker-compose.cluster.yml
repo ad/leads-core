@@ -1,0 +1,107 @@
+services:
+  redis-node-0:
+      image: docker.io/bitnami/redis-cluster:7.0
+      volumes:
+        - redis-cluster_data-0:/bitnami/redis/data
+      environment:
+        - 'ALLOW_EMPTY_PASSWORD=yes'
+        - 'REDIS_NODES=redis-node-0 redis-node-1 redis-node-2'
+        - 'REDIS_CLUSTER_DYNAMIC_IPS=no'
+        - 'REDIS_CLUSTER_ANNOUNCE_IP=redis-node-0'
+      networks:
+        - leads-network
+      ports:
+        - "6370:6379"
+        - "16370:16379"
+      healthcheck:
+        test: ["CMD", "redis-cli", "ping"]
+        interval: 1s
+        timeout: 10s
+        retries: 5
+  
+  redis-node-1:
+      image: docker.io/bitnami/redis-cluster:7.0
+      volumes:
+        - redis-cluster_data-1:/bitnami/redis/data
+      environment:
+        - 'ALLOW_EMPTY_PASSWORD=yes'
+        - 'REDIS_NODES=redis-node-0 redis-node-1 redis-node-2'
+        - 'REDIS_CLUSTER_DYNAMIC_IPS=no'
+        - 'REDIS_CLUSTER_ANNOUNCE_IP=redis-node-1'
+      networks:
+        - leads-network
+      ports:
+        - "6371:6379"
+        - "16371:16379"
+      healthcheck:
+        test: ["CMD", "redis-cli", "ping"]
+        interval: 1s
+        timeout: 10s
+        retries: 5
+  
+  redis-node-2:
+      image: docker.io/bitnami/redis-cluster:7.0
+      volumes:
+        - redis-cluster_data-2:/bitnami/redis/data
+      environment:
+        - 'ALLOW_EMPTY_PASSWORD=yes'
+        - 'REDIS_CLUSTER_REPLICAS=0'
+        - 'REDIS_NODES=redis-node-0 redis-node-1 redis-node-2'
+        - 'REDIS_CLUSTER_CREATOR=yes'
+        - 'REDIS_CLUSTER_DYNAMIC_IPS=no'
+        - 'REDIS_CLUSTER_ANNOUNCE_IP=redis-node-2'
+      depends_on:
+        redis-node-0:
+          condition: service_healthy
+        redis-node-1:
+          condition: service_healthy
+      networks:
+        - leads-network
+      ports:
+        - "6372:6379"
+        - "16372:16379"
+      healthcheck:
+        test: ["CMD", "redis-cli", "ping"]
+        interval: 1s
+        timeout: 10s
+        retries: 5
+  # Go application with Redis cluster configuration
+  leads-core:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_PORT=8080
+      - SERVER_READ_TIMEOUT=30s
+      - SERVER_WRITE_TIMEOUT=30s
+      - REDIS_ADDRESSES=redis-node-0:6379,redis-node-1:6379,redis-node-2:6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
+      - JWT_SECRET=super-secret-jwt-key-change-in-production
+      - RATE_LIMIT_IP_PER_MINUTE=10000
+      - RATE_LIMIT_GLOBAL_PER_MINUTE=50000
+      - TTL_FREE_DAYS=30
+      - TTL_PRO_DAYS=365
+    depends_on:
+      redis-node-0:
+        condition: service_healthy
+      redis-node-1:
+        condition: service_healthy
+      redis-node-2:
+        condition: service_healthy
+    networks:
+      - leads-network
+    restart: unless-stopped
+
+
+volumes:
+    redis-cluster_data-0:
+        driver: local
+    redis-cluster_data-1:
+        driver: local
+    redis-cluster_data-2:
+        driver: local
+
+networks:
+  leads-network:
+    driver: bridge

@@ -32,36 +32,50 @@ func NewRedisFormRepository(client *RedisClient) *RedisFormRepository {
 
 // Create creates a new form
 func (r *RedisFormRepository) Create(ctx context.Context, form *models.Form) error {
-	pipe := r.client.client.TxPipeline()
+	// Step 1: Store form data and stats in the same slot using hash tag {formID}
+	formSlotPipe := r.client.client.TxPipeline()
 
 	// Store form data
 	formKey := GenerateFormKey(form.ID)
-	pipe.HSet(ctx, formKey, form.ToRedisHash())
+	formSlotPipe.HSet(ctx, formKey, form.ToRedisHash())
 
-	// Add to indexes
-	timestamp := float64(form.CreatedAt.Unix())
-	pipe.ZAdd(ctx, FormsByTimeKey, redis.Z{Score: timestamp, Member: form.ID})
-
-	userFormsKey := GenerateUserFormsKey(form.OwnerID)
-	pipe.SAdd(ctx, userFormsKey, form.ID)
-
-	typeKey := GenerateFormsByTypeKey(form.Type)
-	pipe.SAdd(ctx, typeKey, form.ID)
-
-	statusKey := GenerateFormsByStatusKey(form.Enabled)
-	pipe.SAdd(ctx, statusKey, form.ID)
-
-	// Initialize stats
+	// Initialize stats (same slot as form due to {formID} hash tag)
 	statsKey := GenerateFormStatsKey(form.ID)
-	pipe.HSet(ctx, statsKey, map[string]interface{}{
+	formSlotPipe.HSet(ctx, statsKey, map[string]interface{}{
 		"form_id": form.ID,
 		"views":   0,
 		"submits": 0,
 		"closes":  0,
 	})
 
-	_, err := pipe.Exec(ctx)
-	return err
+	_, err := formSlotPipe.Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to store form data: %w", err)
+	}
+
+	// Step 2: Update user forms index (separate slot)
+	userFormsKey := GenerateUserFormsKey(form.OwnerID)
+	if err := r.client.client.SAdd(ctx, userFormsKey, form.ID).Err(); err != nil {
+		return fmt.Errorf("failed to update user forms index: %w", err)
+	}
+
+	// Step 3: Update global indexes (separate operations to avoid cross-slot issues)
+	timestamp := float64(form.CreatedAt.Unix())
+	if err := r.client.client.ZAdd(ctx, FormsByTimeKey, redis.Z{Score: timestamp, Member: form.ID}).Err(); err != nil {
+		return fmt.Errorf("failed to update time index: %w", err)
+	}
+
+	typeKey := GenerateFormsByTypeKey(form.Type)
+	if err := r.client.client.SAdd(ctx, typeKey, form.ID).Err(); err != nil {
+		return fmt.Errorf("failed to update type index: %w", err)
+	}
+
+	statusKey := GenerateFormsByStatusKey(form.Enabled)
+	if err := r.client.client.SAdd(ctx, statusKey, form.ID).Err(); err != nil {
+		return fmt.Errorf("failed to update status index: %w", err)
+	}
+
+	return nil
 }
 
 // GetByID retrieves a form by ID
@@ -131,30 +145,29 @@ func (r *RedisFormRepository) Update(ctx context.Context, form *models.Form) err
 		return fmt.Errorf("form not found: %w", err)
 	}
 
-	pipe := r.client.client.TxPipeline()
-
-	// Update form data
+	// Update form data (atomic operation within same slot)
 	form.UpdatedAt = time.Now()
 	formKey := GenerateFormKey(form.ID)
-	pipe.HSet(ctx, formKey, form.ToRedisHash())
+	if err := r.client.client.HSet(ctx, formKey, form.ToRedisHash()).Err(); err != nil {
+		return fmt.Errorf("failed to update form data: %w", err)
+	}
 
-	// Update indexes if necessary
+	// Update indexes if necessary (separate operations)
 	if existingForm.Type != form.Type {
 		oldTypeKey := GenerateFormsByTypeKey(existingForm.Type)
 		newTypeKey := GenerateFormsByTypeKey(form.Type)
-		pipe.SRem(ctx, oldTypeKey, form.ID)
-		pipe.SAdd(ctx, newTypeKey, form.ID)
+		r.client.client.SRem(ctx, oldTypeKey, form.ID)
+		r.client.client.SAdd(ctx, newTypeKey, form.ID)
 	}
 
 	if existingForm.Enabled != form.Enabled {
 		oldStatusKey := GenerateFormsByStatusKey(existingForm.Enabled)
 		newStatusKey := GenerateFormsByStatusKey(form.Enabled)
-		pipe.SRem(ctx, oldStatusKey, form.ID)
-		pipe.SAdd(ctx, newStatusKey, form.ID)
+		r.client.client.SRem(ctx, oldStatusKey, form.ID)
+		r.client.client.SAdd(ctx, newStatusKey, form.ID)
 	}
 
-	_, err = pipe.Exec(ctx)
-	return err
+	return nil
 }
 
 // Delete deletes a form and all related data
@@ -165,39 +178,42 @@ func (r *RedisFormRepository) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("form not found: %w", err)
 	}
 
-	pipe := r.client.client.TxPipeline()
+	// Step 1: Delete form data and stats in same slot
+	formSlotPipe := r.client.client.TxPipeline()
 
-	// Delete form data
 	formKey := GenerateFormKey(id)
-	pipe.Del(ctx, formKey)
+	formSlotPipe.Del(ctx, formKey)
 
-	// Remove from indexes
-	pipe.ZRem(ctx, FormsByTimeKey, id)
-
-	userFormsKey := GenerateUserFormsKey(form.OwnerID)
-	pipe.SRem(ctx, userFormsKey, id)
-
-	typeKey := GenerateFormsByTypeKey(form.Type)
-	pipe.SRem(ctx, typeKey, id)
-
-	statusKey := GenerateFormsByStatusKey(form.Enabled)
-	pipe.SRem(ctx, statusKey, id)
-
-	// Delete stats
 	statsKey := GenerateFormStatsKey(id)
-	pipe.Del(ctx, statsKey)
+	formSlotPipe.Del(ctx, statsKey)
 
-	// Delete all submissions for this form
+	// Delete submissions in same slot
 	submissionsKey := GenerateFormSubmissionsKey(id)
 	submissionIDs, _ := r.client.client.ZRange(ctx, submissionsKey, 0, -1).Result()
 	for _, submissionID := range submissionIDs {
 		submissionKey := GenerateSubmissionKey(id, submissionID)
-		pipe.Del(ctx, submissionKey)
+		formSlotPipe.Del(ctx, submissionKey)
 	}
-	pipe.Del(ctx, submissionsKey)
+	formSlotPipe.Del(ctx, submissionsKey)
 
-	_, err = pipe.Exec(ctx)
-	return err
+	_, err = formSlotPipe.Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to delete form data: %w", err)
+	}
+
+	// Step 2: Remove from global indexes (separate operations)
+	r.client.client.ZRem(ctx, FormsByTimeKey, id)
+
+	userFormsKey := GenerateUserFormsKey(form.OwnerID)
+	r.client.client.SRem(ctx, userFormsKey, id)
+
+	typeKey := GenerateFormsByTypeKey(form.Type)
+	r.client.client.SRem(ctx, typeKey, id)
+
+	statusKey := GenerateFormsByStatusKey(form.Enabled)
+	r.client.client.SRem(ctx, statusKey, id)
+
+	return nil
 }
 
 // GetFormsByType retrieves forms by type with pagination

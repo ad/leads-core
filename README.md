@@ -28,13 +28,48 @@ cd leads-core
 ```
 
 2. Start all services:
+
+**Option A: Single Redis instance (for development):**
 ```bash
 make run
+# или
+docker-compose up -d
+```
+
+**Option B: Redis cluster (for production-like testing):**
+```bash
+./redis-cluster.sh start
+# или
+docker-compose -f docker-compose.cluster.yml up -d
 ```
 
 3. Check service health:
 ```bash
 curl http://localhost:8080/health
+```
+
+### Redis Cluster Management
+
+For Redis cluster deployments, use the provided management script:
+
+```bash
+# Start Redis cluster
+./redis-cluster.sh start
+
+# Check cluster status
+./redis-cluster.sh status
+
+# Test cluster functionality
+./redis-cluster.sh test
+
+# View cluster logs
+./redis-cluster.sh logs
+
+# Stop cluster
+./redis-cluster.sh stop
+
+# Clean all cluster data
+./redis-cluster.sh clean
 ```
 
 ### API Examples
@@ -114,7 +149,10 @@ SERVER_READ_TIMEOUT=30s
 SERVER_WRITE_TIMEOUT=30s
 
 # Redis Configuration  
-REDIS_ADDRESSES=redis1:7001,redis2:7002,redis3:7003
+# Single Redis instance
+REDIS_ADDRESSES=redis:6379
+# Redis cluster (comma-separated addresses)
+REDIS_ADDRESSES=redis-node-1:6379,redis-node-2:6379,redis-node-3:6379,redis-node-4:6379,redis-node-5:6379,redis-node-6:6379
 REDIS_PASSWORD=
 REDIS_DB=0
 
