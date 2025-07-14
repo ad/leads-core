@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Form Event Request",
+  "description": "Schema for form events",
+  "required": ["type"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["view", "close"],
+      "description": "Type of event"
+    }
+  },
+  "additionalProperties": false
+}

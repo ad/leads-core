@@ -1,0 +1,96 @@
+package handlers
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+	"strings"
+
+	"github.com/ad/leads-core/internal/auth"
+	"github.com/ad/leads-core/internal/models"
+	"github.com/ad/leads-core/internal/services"
+	"github.com/ad/leads-core/internal/validation"
+)
+
+// UserHandler handles user-related HTTP requests
+type UserHandler struct {
+	formService *services.FormService
+	validator   *validation.SchemaValidator
+}
+
+// NewUserHandler creates a new user handler
+func NewUserHandler(formService *services.FormService, validator *validation.SchemaValidator) *UserHandler {
+	return &UserHandler{
+		formService: formService,
+		validator:   validator,
+	}
+}
+
+// UpdateUserTTL handles PUT /users/{id}/ttl
+func (h *UserHandler) UpdateUserTTL(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// Get user from context
+	user, ok := auth.GetUserFromContext(r.Context())
+	if !ok {
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found in context")
+		return
+	}
+
+	// Extract user ID from URL
+	userID := extractUserIDFromTTLPath(r.URL.Path)
+	if userID == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "User ID is required")
+		return
+	}
+
+	// Check if user can update TTL for this user (only self or admin)
+	if user.ID != userID {
+		writeErrorResponse(w, http.StatusForbidden, "Cannot update TTL for other users")
+		return
+	}
+
+	// Parse request
+	var req models.UpdateTTLRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON")
+		return
+	}
+
+	// Validate TTL days
+	if req.TTLDays <= 0 || req.TTLDays > 3650 { // Max 10 years
+		writeErrorResponse(w, http.StatusBadRequest, "TTL days must be between 1 and 3650")
+		return
+	}
+
+	// Update TTL for user's submissions
+	err := h.formService.UpdateUserSubmissionsTTL(r.Context(), userID, req.TTLDays)
+	if err != nil {
+		log.Printf("action=update_user_ttl user_id=%s ttl_days=%d error=%q", userID, req.TTLDays, err.Error())
+		writeErrorResponse(w, http.StatusInternalServerError, "Failed to update TTL")
+		return
+	}
+
+	log.Printf("action=update_user_ttl user_id=%s ttl_days=%d", userID, req.TTLDays)
+	writeJSONResponse(w, http.StatusOK, models.Response{
+		Data: map[string]interface{}{
+			"message":  "TTL updated successfully",
+			"user_id":  userID,
+			"ttl_days": req.TTLDays,
+		},
+	})
+}
+
+// extractUserIDFromTTLPath extracts user ID from paths like /users/{id}/ttl
+func extractUserIDFromTTLPath(path string) string {
+	// Remove leading/trailing slashes and split
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	// Expected format: ["users", "{id}", "ttl"]
+	if len(parts) == 3 && parts[0] == "users" && parts[2] == "ttl" {
+		return parts[1]
+	}
+	return ""
+}
