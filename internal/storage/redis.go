@@ -16,22 +16,63 @@ type RedisClient struct {
 
 // NewRedisClient creates a new Redis client
 func NewRedisClient(cfg config.RedisConfig) (*RedisClient, error) {
-	client := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:    cfg.Addresses,
-		Password: cfg.Password,
+	var client redis.UniversalClient
 
-		// Connection pool optimization
-		PoolSize:        50, // Maximum number of connections per shard
-		PoolTimeout:     30 * time.Second,
-		MaxRetries:      3,
-		MinRetryBackoff: 8 * time.Millisecond,
-		MaxRetryBackoff: 512 * time.Millisecond,
+	// Check if we have cluster configuration by looking at multiple addresses
+	// or specific cluster indicators in the first address
+	isCluster := len(cfg.Addresses) > 1
 
-		// Timeouts
-		DialTimeout:  5 * time.Second,
-		ReadTimeout:  3 * time.Second,
-		WriteTimeout: 3 * time.Second,
-	})
+	// // Also check if the first address contains a cluster port pattern (7000-7999)
+	// if len(cfg.Addresses) == 1 {
+	// 	addr := cfg.Addresses[0]
+	// 	// Check for cluster port pattern
+	// 	if strings.Contains(addr, ":700") || strings.Contains(addr, ":701") ||
+	// 		strings.Contains(addr, ":702") || strings.Contains(addr, ":703") ||
+	// 		strings.Contains(addr, ":704") || strings.Contains(addr, ":705") ||
+	// 		strings.Contains(addr, ":706") || strings.Contains(addr, ":707") ||
+	// 		strings.Contains(addr, ":708") || strings.Contains(addr, ":709") {
+	// 		isCluster = true
+	// 	}
+	// }
+
+	if isCluster {
+		// Use cluster client
+		client = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs:    cfg.Addresses,
+			Password: cfg.Password,
+
+			// Connection pool optimization
+			PoolSize:        50, // Maximum number of connections per shard
+			PoolTimeout:     30 * time.Second,
+			MaxRetries:      3,
+			MinRetryBackoff: 8 * time.Millisecond,
+			MaxRetryBackoff: 512 * time.Millisecond,
+
+			// Timeouts
+			DialTimeout:  5 * time.Second,
+			ReadTimeout:  3 * time.Second,
+			WriteTimeout: 3 * time.Second,
+		})
+	} else {
+		// Single Redis instance
+		client = redis.NewClient(&redis.Options{
+			Addr:     cfg.Addresses[0],
+			Password: cfg.Password,
+			DB:       cfg.DB,
+
+			// Connection pool optimization
+			PoolSize:        50,
+			PoolTimeout:     30 * time.Second,
+			MaxRetries:      3,
+			MinRetryBackoff: 8 * time.Millisecond,
+			MaxRetryBackoff: 512 * time.Millisecond,
+
+			// Timeouts
+			DialTimeout:  5 * time.Second,
+			ReadTimeout:  3 * time.Second,
+			WriteTimeout: 3 * time.Second,
+		})
+	}
 
 	// Test connection
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -81,9 +122,9 @@ const (
 	FormStatsKey  = "form:%s:stats"          // HASH - form statistics
 	DailyViewsKey = "stats:form:%s:views:%s" // INCR - daily views (YYYY-MM-DD)
 
-	// Rate limiting
-	RateLimitIPKey     = "rate_limit:ip:%s:%s"  // INCR - IP rate limit
-	RateLimitGlobalKey = "rate_limit:global:%s" // INCR - global rate limit
+	// Rate limiting with hash tags for cluster compatibility
+	RateLimitIPKey     = "rate_limit:{%s}:ip:%s"  // INCR - IP rate limit with hash tag
+	RateLimitGlobalKey = "rate_limit:{%s}:global" // INCR - global rate limit with hash tag
 )
 
 // GenerateFormKey generates a form key
@@ -132,7 +173,7 @@ func GenerateDailyViewsKey(formID, date string) string {
 
 // GenerateRateLimitIPKey generates a rate limit IP key
 func GenerateRateLimitIPKey(ip, window string) string {
-	return fmt.Sprintf(RateLimitIPKey, ip, window)
+	return fmt.Sprintf(RateLimitIPKey, window, ip)
 }
 
 // GenerateRateLimitGlobalKey generates a rate limit global key
