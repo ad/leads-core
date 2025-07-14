@@ -43,7 +43,6 @@ test-race: ## Run tests with race check
 clean: ## Clean up docker containers, images, and volumes
 	@echo "Cleaning up..."
 	docker-compose down -v --rmi all --remove-orphans
-	docker system prune -f
 
 # Show logs
 logs: ## Show docker-compose logs
