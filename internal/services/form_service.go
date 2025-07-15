@@ -264,21 +264,33 @@ func (s *FormService) UpdateUserTTL(ctx context.Context, userID string, plan str
 
 // UpdateUserSubmissionsTTL updates TTL for all submissions of a user
 func (s *FormService) UpdateUserSubmissionsTTL(ctx context.Context, userID string, ttlDays int) error {
-	// Get all user's forms
-	forms, err := s.formRepo.GetByUserID(ctx, userID, models.PaginationOptions{
-		Page:    1,
-		PerPage: 1000, // Get all forms
-	})
-	if err != nil {
-		return fmt.Errorf("failed to get user forms: %w", err)
-	}
+	const perPage = 100 // Process in batches of 100
+	page := 1
 
-	// Update TTL for submissions of each form
-	for _, form := range forms {
-		if err := s.submissionRepo.UpdateFormSubmissionsTTL(ctx, form.ID, ttlDays); err != nil {
-			log.Printf("Failed to update TTL for form %s submissions: %v", form.ID, err)
-			// Continue with other forms
+	for {
+		// Get a page of user's forms
+		forms, _, err := s.formRepo.GetByUserID(ctx, userID, models.PaginationOptions{
+			Page:    page,
+			PerPage: perPage,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get user forms on page %d: %w", page, err)
 		}
+
+		// Update TTL for submissions of each form
+		for _, form := range forms {
+			if err := s.submissionRepo.UpdateFormSubmissionsTTL(ctx, form.ID, ttlDays); err != nil {
+				log.Printf("Failed to update TTL for form %s submissions: %v", form.ID, err)
+				// Continue with other forms
+			}
+		}
+
+		// If we received fewer forms than we asked for, it's the last page
+		if len(forms) < perPage {
+			break
+		}
+
+		page++
 	}
 
 	return nil
@@ -286,35 +298,49 @@ func (s *FormService) UpdateUserSubmissionsTTL(ctx context.Context, userID strin
 
 // GetFormsSummary returns a summary of user's forms
 func (s *FormService) GetFormsSummary(ctx context.Context, userID string) (*models.FormsSummary, error) {
-	forms, err := s.formRepo.GetByUserID(ctx, userID, models.PaginationOptions{
-		Page:    1,
-		PerPage: 1000, // Get all forms for summary
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user forms: %w", err)
-	}
-
 	summary := &models.FormsSummary{}
-	summary.TotalForms = len(forms)
+	const perPage = 100 // Process in batches of 100
+	page := 1
 
-	// Count active/disabled forms and calculate totals
-	for _, form := range forms {
-		if form.Enabled {
-			summary.ActiveForms++
-		} else {
-			summary.DisabledForms++
-		}
-
-		// Get form stats
-		stats, err := s.statsRepo.GetFormStats(ctx, form.ID)
+	for {
+		forms, total, err := s.formRepo.GetByUserID(ctx, userID, models.PaginationOptions{
+			Page:    page,
+			PerPage: perPage,
+		})
 		if err != nil {
-			// Log error but continue
-			log.Printf("Failed to get stats for form %s: %v", form.ID, err)
-			continue
+			return nil, fmt.Errorf("failed to get user forms for summary on page %d: %w", page, err)
 		}
 
-		summary.TotalViews += int(stats.Views)
-		summary.TotalSubmissions += int(stats.Submits)
+		if page == 1 {
+			summary.TotalForms = total
+		}
+
+		// Count active/disabled forms and calculate totals
+		for _, form := range forms {
+			if form.Enabled {
+				summary.ActiveForms++
+			} else {
+				summary.DisabledForms++
+			}
+
+			// Get form stats
+			stats, err := s.statsRepo.GetFormStats(ctx, form.ID)
+			if err != nil {
+				// Log error but continue
+				log.Printf("Failed to get stats for form %s: %v", form.ID, err)
+				continue
+			}
+
+			summary.TotalViews += int(stats.Views)
+			summary.TotalSubmissions += int(stats.Submits)
+		}
+
+		// If we received fewer forms than we asked for, it's the last page
+		if len(forms) < perPage {
+			break
+		}
+
+		page++
 	}
 
 	return summary, nil
