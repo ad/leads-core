@@ -55,12 +55,13 @@ func (r *RedisFormRepository) Create(ctx context.Context, form *models.Form) err
 
 	// Step 2: Update user forms index (separate slot)
 	userFormsKey := GenerateUserFormsKey(form.OwnerID)
-	if err := r.client.client.SAdd(ctx, userFormsKey, form.ID).Err(); err != nil {
+	timestamp := float64(form.CreatedAt.UnixNano())
+	if err := r.client.client.ZAdd(ctx, userFormsKey, redis.Z{Score: timestamp, Member: form.ID}).Err(); err != nil {
 		return fmt.Errorf("failed to update user forms index: %w", err)
 	}
 
 	// Step 3: Update global indexes (separate operations to avoid cross-slot issues)
-	timestamp := float64(form.CreatedAt.Unix())
+	timestamp = float64(form.CreatedAt.Unix())
 	if err := r.client.client.ZAdd(ctx, FormsByTimeKey, redis.Z{Score: timestamp, Member: form.ID}).Err(); err != nil {
 		return fmt.Errorf("failed to update time index: %w", err)
 	}
@@ -103,36 +104,29 @@ func (r *RedisFormRepository) GetByUserID(ctx context.Context, userID string, op
 	userFormsKey := GenerateUserFormsKey(userID)
 
 	// Get total number of forms for the user
-	total, err := r.client.client.SCard(ctx, userFormsKey).Result()
+	total, err := r.client.client.ZCard(ctx, userFormsKey).Result()
 	if err != nil {
 		return nil, 0, err
 	}
 
-	// Get form IDs for the user
-	formIDs, err := r.client.client.SMembers(ctx, userFormsKey).Result()
+	// Calculate pagination range
+	start := int64(opts.Page-1) * int64(opts.PerPage)
+	end := start + int64(opts.PerPage) - 1
+
+	// Get form IDs for the user, sorted by creation time (newest first)
+	formIDs, err := r.client.client.ZRevRange(ctx, userFormsKey, start, end).Result()
 	if err != nil {
 		return nil, 0, err
 	}
 
 	if len(formIDs) == 0 {
-		return []*models.Form{}, 0, nil
-	}
-
-	// Calculate pagination
-	start := opts.Page * opts.PerPage
-	end := start + opts.PerPage
-	if start >= len(formIDs) {
 		return []*models.Form{}, int(total), nil
-	}
-	if end > len(formIDs) {
-		end = len(formIDs)
 	}
 
 	// Get forms for the page
-	paginatedIDs := formIDs[start:end]
-	forms := make([]*models.Form, 0, len(paginatedIDs))
+	forms := make([]*models.Form, 0, len(formIDs))
 
-	for _, formID := range paginatedIDs {
+	for _, formID := range formIDs {
 		form, err := r.GetByID(ctx, formID)
 		if err != nil {
 			continue // Skip forms that can't be loaded
@@ -211,7 +205,7 @@ func (r *RedisFormRepository) Delete(ctx context.Context, id string) error {
 	r.client.client.ZRem(ctx, FormsByTimeKey, id)
 
 	userFormsKey := GenerateUserFormsKey(form.OwnerID)
-	r.client.client.SRem(ctx, userFormsKey, id)
+	r.client.client.ZRem(ctx, userFormsKey, id)
 
 	typeKey := GenerateFormsByTypeKey(form.Type)
 	r.client.client.SRem(ctx, typeKey, id)
