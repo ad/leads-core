@@ -40,7 +40,7 @@ type monitoredRedisClient struct {
 }
 
 // executeWithMonitoring wraps Redis operations with monitoring
-func (rm *RedisMonitor) executeWithMonitoring(ctx context.Context, operation string, fn func() error) error {
+func (rm *RedisMonitor) executeWithMonitoring(operation string, fn func() error) error {
 	start := time.Now()
 
 	// Log operation start
@@ -84,7 +84,7 @@ func (rm *RedisMonitor) executeWithMonitoring(ctx context.Context, operation str
 // Override key Redis methods with monitoring
 func (mrc *monitoredRedisClient) Get(ctx context.Context, key string) *redis.StringCmd {
 	var result *redis.StringCmd
-	mrc.monitor.executeWithMonitoring(ctx, "GET", func() error {
+	mrc.monitor.executeWithMonitoring("GET", func() error {
 		result = mrc.UniversalClient.Get(ctx, key)
 		return result.Err()
 	})
@@ -93,7 +93,7 @@ func (mrc *monitoredRedisClient) Get(ctx context.Context, key string) *redis.Str
 
 func (mrc *monitoredRedisClient) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd {
 	var result *redis.StatusCmd
-	mrc.monitor.executeWithMonitoring(ctx, "SET", func() error {
+	mrc.monitor.executeWithMonitoring("SET", func() error {
 		result = mrc.UniversalClient.Set(ctx, key, value, expiration)
 		return result.Err()
 	})
@@ -102,7 +102,7 @@ func (mrc *monitoredRedisClient) Set(ctx context.Context, key string, value inte
 
 func (mrc *monitoredRedisClient) HSet(ctx context.Context, key string, values ...interface{}) *redis.IntCmd {
 	var result *redis.IntCmd
-	mrc.monitor.executeWithMonitoring(ctx, "HSET", func() error {
+	mrc.monitor.executeWithMonitoring("HSET", func() error {
 		result = mrc.UniversalClient.HSet(ctx, key, values...)
 		return result.Err()
 	})
@@ -111,7 +111,7 @@ func (mrc *monitoredRedisClient) HSet(ctx context.Context, key string, values ..
 
 func (mrc *monitoredRedisClient) HMSet(ctx context.Context, key string, values ...interface{}) *redis.BoolCmd {
 	var result *redis.BoolCmd
-	mrc.monitor.executeWithMonitoring(ctx, "HMSET", func() error {
+	mrc.monitor.executeWithMonitoring("HMSET", func() error {
 		result = mrc.UniversalClient.HMSet(ctx, key, values...)
 		return result.Err()
 	})
@@ -120,7 +120,7 @@ func (mrc *monitoredRedisClient) HMSet(ctx context.Context, key string, values .
 
 func (mrc *monitoredRedisClient) HGetAll(ctx context.Context, key string) *redis.MapStringStringCmd {
 	var result *redis.MapStringStringCmd
-	mrc.monitor.executeWithMonitoring(ctx, "HGETALL", func() error {
+	mrc.monitor.executeWithMonitoring("HGETALL", func() error {
 		result = mrc.UniversalClient.HGetAll(ctx, key)
 		return result.Err()
 	})
@@ -129,7 +129,7 @@ func (mrc *monitoredRedisClient) HGetAll(ctx context.Context, key string) *redis
 
 func (mrc *monitoredRedisClient) Del(ctx context.Context, keys ...string) *redis.IntCmd {
 	var result *redis.IntCmd
-	mrc.monitor.executeWithMonitoring(ctx, "DEL", func() error {
+	mrc.monitor.executeWithMonitoring("DEL", func() error {
 		result = mrc.UniversalClient.Del(ctx, keys...)
 		return result.Err()
 	})
@@ -138,7 +138,7 @@ func (mrc *monitoredRedisClient) Del(ctx context.Context, keys ...string) *redis
 
 func (mrc *monitoredRedisClient) ZAdd(ctx context.Context, key string, members ...redis.Z) *redis.IntCmd {
 	var result *redis.IntCmd
-	mrc.monitor.executeWithMonitoring(ctx, "ZADD", func() error {
+	mrc.monitor.executeWithMonitoring("ZADD", func() error {
 		result = mrc.UniversalClient.ZAdd(ctx, key, members...)
 		return result.Err()
 	})
@@ -147,7 +147,7 @@ func (mrc *monitoredRedisClient) ZAdd(ctx context.Context, key string, members .
 
 func (mrc *monitoredRedisClient) ZRange(ctx context.Context, key string, start, stop int64) *redis.StringSliceCmd {
 	var result *redis.StringSliceCmd
-	mrc.monitor.executeWithMonitoring(ctx, "ZRANGE", func() error {
+	mrc.monitor.executeWithMonitoring("ZRANGE", func() error {
 		result = mrc.UniversalClient.ZRange(ctx, key, start, stop)
 		return result.Err()
 	})
@@ -156,7 +156,7 @@ func (mrc *monitoredRedisClient) ZRange(ctx context.Context, key string, start, 
 
 func (mrc *monitoredRedisClient) ZRevRange(ctx context.Context, key string, start, stop int64) *redis.StringSliceCmd {
 	var result *redis.StringSliceCmd
-	mrc.monitor.executeWithMonitoring(ctx, "ZREVRANGE", func() error {
+	mrc.monitor.executeWithMonitoring("ZREVRANGE", func() error {
 		result = mrc.UniversalClient.ZRevRange(ctx, key, start, stop)
 		return result.Err()
 	})
@@ -165,7 +165,7 @@ func (mrc *monitoredRedisClient) ZRevRange(ctx context.Context, key string, star
 
 func (mrc *monitoredRedisClient) SAdd(ctx context.Context, key string, members ...interface{}) *redis.IntCmd {
 	var result *redis.IntCmd
-	mrc.monitor.executeWithMonitoring(ctx, "SADD", func() error {
+	mrc.monitor.executeWithMonitoring("SADD", func() error {
 		result = mrc.UniversalClient.SAdd(ctx, key, members...)
 		return result.Err()
 	})
@@ -174,7 +174,7 @@ func (mrc *monitoredRedisClient) SAdd(ctx context.Context, key string, members .
 
 func (mrc *monitoredRedisClient) SMembers(ctx context.Context, key string) *redis.StringSliceCmd {
 	var result *redis.StringSliceCmd
-	mrc.monitor.executeWithMonitoring(ctx, "SMEMBERS", func() error {
+	mrc.monitor.executeWithMonitoring("SMEMBERS", func() error {
 		result = mrc.UniversalClient.SMembers(ctx, key)
 		return result.Err()
 	})
@@ -183,7 +183,7 @@ func (mrc *monitoredRedisClient) SMembers(ctx context.Context, key string) *redi
 
 func (mrc *monitoredRedisClient) Incr(ctx context.Context, key string) *redis.IntCmd {
 	var result *redis.IntCmd
-	mrc.monitor.executeWithMonitoring(ctx, "INCR", func() error {
+	mrc.monitor.executeWithMonitoring("INCR", func() error {
 		result = mrc.UniversalClient.Incr(ctx, key)
 		return result.Err()
 	})
@@ -192,7 +192,7 @@ func (mrc *monitoredRedisClient) Incr(ctx context.Context, key string) *redis.In
 
 func (mrc *monitoredRedisClient) Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd {
 	var result *redis.BoolCmd
-	mrc.monitor.executeWithMonitoring(ctx, "EXPIRE", func() error {
+	mrc.monitor.executeWithMonitoring("EXPIRE", func() error {
 		result = mrc.UniversalClient.Expire(ctx, key, expiration)
 		return result.Err()
 	})
@@ -201,7 +201,7 @@ func (mrc *monitoredRedisClient) Expire(ctx context.Context, key string, expirat
 
 func (mrc *monitoredRedisClient) Ping(ctx context.Context) *redis.StatusCmd {
 	var result *redis.StatusCmd
-	mrc.monitor.executeWithMonitoring(ctx, "PING", func() error {
+	mrc.monitor.executeWithMonitoring("PING", func() error {
 		result = mrc.UniversalClient.Ping(ctx)
 		return result.Err()
 	})
