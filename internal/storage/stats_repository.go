@@ -30,6 +30,7 @@ func NewRedisStatsRepository(client *RedisClient) *RedisStatsRepository {
 
 // IncrementViews increments view count for a form
 func (r *RedisStatsRepository) IncrementViews(ctx context.Context, formID string) error {
+	// All keys use {formID} hash tag, so they'll be in same slot
 	pipe := r.client.client.TxPipeline()
 
 	// Increment total views
@@ -37,7 +38,7 @@ func (r *RedisStatsRepository) IncrementViews(ctx context.Context, formID string
 	pipe.HIncrBy(ctx, statsKey, "views", 1)
 	pipe.HSet(ctx, statsKey, "last_view", time.Now().Unix())
 
-	// Increment daily views
+	// Increment daily views (same slot due to hash tag)
 	today := time.Now().Format("2006-01-02")
 	dailyKey := GenerateDailyViewsKey(formID, today)
 	pipe.Incr(ctx, dailyKey)

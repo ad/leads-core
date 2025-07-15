@@ -134,19 +134,23 @@ func main() { // Initialize logging
 	// Setup HTTP server with routes
 	mux := http.NewServeMux()
 
-	// System endpoints
+	// System endpoints (no rate limiting)
 	mux.HandleFunc("/health", healthHandler.Health)
 	mux.HandleFunc("/metrics", metrics.Handler())
+
 	// Public endpoints (with logging, metrics, and rate limiting)
+	// These handle /forms/{id}/submit and /forms/{id}/events
 	publicChain := middleware.LogRequests(metrics.HTTPMiddleware(rateLimiter.RateLimit(http.HandlerFunc(routePublicFormEndpoints(publicHandler)))))
 	mux.Handle("/forms/", publicChain)
 
-	// Private endpoints (with logging, metrics, authentication, and rate limiting)
-	privateFormsChain := middleware.LogRequests(metrics.HTTPMiddleware(rateLimiter.RateLimit(authMiddleware.Authenticate(http.HandlerFunc(routePrivateFormEndpoints(formHandler))))))
-	privateUsersChain := middleware.LogRequests(metrics.HTTPMiddleware(rateLimiter.RateLimit(authMiddleware.Authenticate(http.HandlerFunc(routeUserEndpoints(userHandler))))))
+	// Private API endpoints (with logging, metrics, and authentication only - no rate limiting)
+	// API v1 endpoints for authenticated users
+	privateFormsChain := middleware.LogRequests(metrics.HTTPMiddleware(authMiddleware.Authenticate(http.HandlerFunc(routePrivateFormEndpoints(formHandler)))))
+	privateUsersChain := middleware.LogRequests(metrics.HTTPMiddleware(authMiddleware.Authenticate(http.HandlerFunc(routeUserEndpoints(userHandler)))))
 
-	mux.Handle("/forms", privateFormsChain)
-	mux.Handle("/users/", privateUsersChain)
+	mux.Handle("/api/v1/forms/", privateFormsChain)
+	mux.Handle("/api/v1/forms", privateFormsChain)
+	mux.Handle("/api/v1/users/", privateUsersChain)
 
 	// Create HTTP server
 	server := &http.Server{
@@ -187,15 +191,16 @@ func main() { // Initialize logging
 	logger.Info("Server exited gracefully")
 }
 
-// routePrivateFormEndpoints routes private form endpoints
+// routePrivateFormEndpoints routes private form endpoints for /api/v1/forms/*
 func routePrivateFormEndpoints(handler *handlers.FormHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/forms")
+		// Remove /api/v1/forms prefix to get the actual path
+		path := strings.TrimPrefix(r.URL.Path, "/api/v1/forms")
 
 		switch {
 		case path == "" || path == "/":
-			// GET /forms - list forms
-			// POST /forms - create form
+			// GET /api/v1/forms - list forms
+			// POST /api/v1/forms - create form
 			switch r.Method {
 			case http.MethodGet:
 				handler.GetForms(w, r)
@@ -205,22 +210,28 @@ func routePrivateFormEndpoints(handler *handlers.FormHandler) http.HandlerFunc {
 				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			}
 		case path == "/summary":
-			// GET /forms/summary
+			// GET /api/v1/forms/summary
 			if r.Method == http.MethodGet {
 				handler.GetFormsSummary(w, r)
 			} else {
 				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			}
 		case strings.HasSuffix(path, "/stats"):
-			// GET /forms/{id}/stats
+			// GET /api/v1/forms/{id}/stats
+			// Reconstruct URL as /forms/{id}/stats for handler
+			r.URL.Path = "/forms" + path
 			handler.GetFormStats(w, r)
 		case strings.HasSuffix(path, "/submissions"):
-			// GET /forms/{id}/submissions
+			// GET /api/v1/forms/{id}/submissions
+			// Reconstruct URL as /forms/{id}/submissions for handler
+			r.URL.Path = "/forms" + path
 			handler.GetFormSubmissions(w, r)
 		default:
-			// GET /forms/{id} - get form
-			// PUT /forms/{id} - update form
-			// DELETE /forms/{id} - delete form
+			// GET /api/v1/forms/{id} - get form
+			// PUT /api/v1/forms/{id} - update form
+			// DELETE /api/v1/forms/{id} - delete form
+			// Reconstruct URL as /forms/{id} for handler
+			r.URL.Path = "/forms" + path
 			switch r.Method {
 			case http.MethodGet:
 				handler.GetForm(w, r)
@@ -253,14 +264,16 @@ func routePublicFormEndpoints(handler *handlers.PublicHandler) http.HandlerFunc 
 	}
 }
 
-// routeUserEndpoints routes user endpoints
+// routeUserEndpoints routes user endpoints for /api/v1/users/*
 func routeUserEndpoints(handler *handlers.UserHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/users")
+		path := strings.TrimPrefix(r.URL.Path, "/api/v1/users")
 
 		switch {
 		case strings.HasSuffix(path, "/ttl"):
-			// PUT /users/{id}/ttl
+			// PUT /api/v1/users/{id}/ttl
+			// Reconstruct URL as /users/{id}/ttl for handler
+			r.URL.Path = "/users" + path
 			if r.Method == http.MethodPut {
 				handler.UpdateUserTTL(w, r)
 			} else {

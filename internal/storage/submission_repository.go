@@ -30,6 +30,7 @@ func NewRedisSubmissionRepository(client *RedisClient) *RedisSubmissionRepositor
 
 // Create creates a new submission with TTL
 func (r *RedisSubmissionRepository) Create(ctx context.Context, submission *models.Submission) error {
+	// All submission-related keys use {formID} hash tag, so they'll be in same slot
 	pipe := r.client.client.TxPipeline()
 
 	// Store submission data
@@ -41,7 +42,7 @@ func (r *RedisSubmissionRepository) Create(ctx context.Context, submission *mode
 		pipe.Expire(ctx, submissionKey, submission.TTL)
 	}
 
-	// Add to form submissions index
+	// Add to form submissions index (same slot due to hash tag)
 	formSubmissionsKey := GenerateFormSubmissionsKey(submission.FormID)
 	timestamp := float64(submission.CreatedAt.Unix())
 	pipe.ZAdd(ctx, formSubmissionsKey, redis.Z{Score: timestamp, Member: submission.ID})

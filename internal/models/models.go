@@ -118,7 +118,7 @@ func (f *Form) ToRedisHash() map[string]interface{} {
 		"owner_id":   f.OwnerID,
 		"type":       f.Type,
 		"name":       f.Name,
-		"enabled":    f.Enabled,
+		"enabled":    strconv.FormatBool(f.Enabled),
 		"fields":     string(fieldsJSON),
 		"created_at": f.CreatedAt.Unix(),
 		"updated_at": f.UpdatedAt.Unix(),
