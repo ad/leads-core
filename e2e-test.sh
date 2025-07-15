@@ -5,6 +5,11 @@
 
 # set -e  # Exit on any error (commented out for debugging)
 
+
+# Start cluster
+echo "🚀 Starting Redis cluster..."
+docker-compose -f docker-compose.cluster.yml up -d
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
