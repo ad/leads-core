@@ -5,6 +5,9 @@
 
 set -e
 
+JWT_SECRET="super-secret-jwt-key-change-in-production"
+JWT_USER="test-user"
+
 CLUSTER_COMPOSE_FILE="docker-compose.cluster.yml"
 APP_URL="http://localhost:8080"
 
@@ -39,21 +42,35 @@ test_api() {
     local endpoint=$2
     local data=${3:-""}
     local expected_status=${4:-200}
-    
+
     echo "🔍 Testing $method $endpoint"
-    
+
     if [ -n "$data" ]; then
-        response=$(curl -s -w "%{http_code}" -X "$method" \
-            -H "Content-Type: application/json" \
-            -d "$data" \
-            "$APP_URL$endpoint")
+        if [ -n "$JWT_TOKEN" ]; then
+            response=$(curl -s -w "%{http_code}" -X "$method" \
+                -H "Authorization: Bearer $JWT_TOKEN" \
+                -H "Content-Type: application/json" \
+                -d "$data" \
+                "$APP_URL$endpoint")
+        else
+            response=$(curl -s -w "%{http_code}" -X "$method" \
+                -H "Content-Type: application/json" \
+                -d "$data" \
+                "$APP_URL$endpoint")
+        fi
     else
-        response=$(curl -s -w "%{http_code}" -X "$method" "$APP_URL$endpoint")
+        if [ -n "$JWT_TOKEN" ]; then
+            response=$(curl -s -w "%{http_code}" -X "$method" \
+                -H "Authorization: Bearer $JWT_TOKEN" \
+                "$APP_URL$endpoint")
+        else
+            response=$(curl -s -w "%{http_code}" -X "$method" "$APP_URL$endpoint")
+        fi
     fi
-    
+
     status_code="${response: -3}"
     response_body="${response%???}"
-    
+
     if [ "$status_code" -eq "$expected_status" ]; then
         echo "✅ $method $endpoint - Status: $status_code"
         return 0
@@ -92,7 +109,7 @@ echo "🔧 Testing Redis cluster through application..."
 # Generate a test JWT token (if jwt-gen exists)
 if [ -f "./bin/jwt-gen" ]; then
     echo "🔑 Generating test JWT token..."
-    JWT_TOKEN=$(./bin/jwt-gen)
+    JWT_TOKEN=$(./bin/jwt-gen -secret="$JWT_SECRET" -user="$JWT_USER")
     echo "Generated JWT: ${JWT_TOKEN:0:50}..."
     
     # Test form creation (requires JWT)
@@ -108,11 +125,11 @@ if [ -f "./bin/jwt-gen" ]; then
         }
     }'
     
-    create_response=$(curl -s -w "%{http_code}" -X POST \
+    create_response=$(curl -s -L -w "%{http_code}" -X POST \
         -H "Authorization: Bearer $JWT_TOKEN" \
         -H "Content-Type: application/json" \
         -d "$form_data" \
-        "$APP_URL/forms")
+        "$APP_URL/api/v1/forms")
     
     status_code="${create_response: -3}"
     response_body="${create_response%???}"
@@ -140,19 +157,19 @@ if [ -f "./bin/jwt-gen" ]; then
             
             # Test form events
             echo ""
-            echo "👁️ Testing form view event..."
+            echo "Testing form view event..."
             view_event='{"type": "view"}'
-            test_api "POST" "/forms/$form_id/events" "$view_event" 200
+            test_api "POST" "/forms/$form_id/events" "$view_event" 204
             
             echo ""
-            echo "❌ Testing form close event..."
+            echo "Testing form close event..."
             close_event='{"type": "close"}'
-            test_api "POST" "/forms/$form_id/events" "$close_event" 200
+            test_api "POST" "/forms/$form_id/events" "$close_event" 204
             
             # Test form stats
             echo ""
-            echo "📈 Testing form statistics..."
-            test_api "GET" "/forms/$form_id/stats" "" 200
+            echo "Testing form statistics..."
+            test_api "GET" "/api/v1/forms/$form_id/stats" "" 200
         else
             echo "⚠️ Could not extract form ID from response"
         fi
@@ -172,7 +189,7 @@ docker-compose -f $CLUSTER_COMPOSE_FILE exec -T redis-node-1 redis-cli cluster i
 # Test data distribution
 echo ""
 echo "📊 Testing data distribution across cluster..."
-for i in {1..6}; do
+for i in {1..3}; do
     echo -n "Node $i keys: "
     docker-compose -f $CLUSTER_COMPOSE_FILE exec -T redis-node-$i redis-cli dbsize 2>/dev/null || echo "0"
 done
