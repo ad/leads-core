@@ -117,11 +117,6 @@ setup-dev: ## Setup development environment (.env file)
 		echo ".env file already exists."; \
 	fi
 
-# Test configuration loading
-config-test: ## Test configuration loading (including .env)
-	@echo "Testing configuration loading..."
-	go run cmd/config-test/main.go
-
 # Install dependencies
 deps: ## Download Go dependencies
 	@echo "Downloading dependencies..."

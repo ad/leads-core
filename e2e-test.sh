@@ -133,6 +133,11 @@ echo "🚀 Leads Core Service - Full E2E Test Suite"
 echo "==========================================="
 echo
 
+log_info "Cleaning up Redis database..."
+docker-compose -f docker-compose.cluster.yml exec -T redis-node-0 redis-cli FLUSHALL
+docker-compose -f docker-compose.cluster.yml exec -T redis-node-1 redis-cli FLUSHALL
+docker-compose -f docker-compose.cluster.yml exec -T redis-node-2 redis-cli FLUSHALL
+
 # Generate test JWT token
 log_info "Setting up test environment..."
 if [ ! -f "./bin/jwt-gen" ]; then

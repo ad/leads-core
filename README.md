@@ -205,7 +205,6 @@ This makes it easy to override settings for different environments.
 - `make logs` - Show logs
 - `make dev` - Run application locally
 - `make setup-dev` - Setup development environment (.env file)
-- `make config-test` - Test configuration loading
 
 ### Testing
 
