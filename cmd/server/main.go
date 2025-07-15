@@ -21,6 +21,7 @@ import (
 	"github.com/ad/leads-core/pkg/logger"
 	"github.com/ad/leads-core/pkg/metrics"
 	"github.com/ad/leads-core/pkg/monitoring"
+	"github.com/ad/leads-core/pkg/panel"
 )
 
 func main() { // Initialize logging
@@ -131,12 +132,19 @@ func main() { // Initialize logging
 	userHandler := handlers.NewUserHandler(formService, validator)
 	healthHandler := handlers.NewHealthHandler(redisClient)
 
+	// Panel handler
+	panelHandler := panel.NewHandler()
+
 	// Setup HTTP server with routes
 	mux := http.NewServeMux()
 
 	// System endpoints (no rate limiting)
 	mux.HandleFunc("/health", healthHandler.Health)
 	mux.HandleFunc("/metrics", metrics.Handler())
+
+	// Admin panel (no authentication required as it handles auth internally)
+	mux.Handle("/panel/", panelHandler)
+	mux.Handle("/panel", panelHandler)
 
 	// Public endpoints (with logging, metrics, and rate limiting)
 	// These handle /forms/{id}/submit and /forms/{id}/events
