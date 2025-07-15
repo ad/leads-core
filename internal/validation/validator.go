@@ -27,6 +27,7 @@ func NewSchemaValidator() (*SchemaValidator, error) {
 	// Load all schemas
 	schemaNames := []string{
 		"form-create.json",
+		"form-update.json",
 		"submission.json",
 		"event.json",
 	}
@@ -100,19 +101,36 @@ func (e *ValidationError) Error() string {
 
 // ValidateAndDecode validates request and decodes into target struct
 func (v *SchemaValidator) ValidateAndDecode(r *http.Request, schemaName string, target interface{}) error {
-	data, err := v.ValidateRequest(r, schemaName)
-	if err != nil {
-		return err
+	schema, exists := v.schemas[schemaName]
+	if !exists {
+		return fmt.Errorf("schema %s not found", schemaName)
 	}
 
-	// Convert back to JSON and decode into target
-	jsonData, err := json.Marshal(data)
+	// Read and parse request body once
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		return fmt.Errorf("failed to marshal validated data: %w", err)
+		return fmt.Errorf("failed to read request body: %w", err)
 	}
 
-	if err := json.Unmarshal(jsonData, target); err != nil {
-		return fmt.Errorf("failed to decode into target struct: %w", err)
+	// Parse JSON into target struct
+	if err := json.Unmarshal(body, target); err != nil {
+		return fmt.Errorf("invalid JSON: %w", err)
+	}
+
+	// Validate the parsed data
+	documentLoader := gojsonschema.NewGoLoader(target)
+	result, err := schema.Validate(documentLoader)
+	if err != nil {
+		return fmt.Errorf("validation error: %w", err)
+	}
+
+	if !result.Valid() {
+		// Collect validation errors
+		var errors []string
+		for _, desc := range result.Errors() {
+			errors = append(errors, desc.String())
+		}
+		return &ValidationError{Errors: errors}
 	}
 
 	return nil

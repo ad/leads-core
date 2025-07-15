@@ -1,13 +1,14 @@
 package handlers
 
 import (
-	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/ad/leads-core/internal/auth"
+	customErrors "github.com/ad/leads-core/internal/errors"
 	"github.com/ad/leads-core/internal/models"
 	"github.com/ad/leads-core/internal/services"
 	"github.com/ad/leads-core/internal/validation"
@@ -126,7 +127,7 @@ func (h *FormHandler) GetForm(w http.ResponseWriter, r *http.Request) {
 	form, err := h.formService.GetForm(r.Context(), formID, user.ID)
 	if err != nil {
 		log.Printf("action=get_form user_id=%s form_id=%s error=%q", user.ID, formID, err.Error())
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "access denied") {
+		if errors.Is(err, customErrors.ErrNotFound) || errors.Is(err, customErrors.ErrAccessDenied) {
 			writeErrorResponse(w, http.StatusNotFound, "Form not found")
 		} else {
 			writeErrorResponse(w, http.StatusInternalServerError, "Failed to get form")
@@ -159,9 +160,13 @@ func (h *FormHandler) UpdateForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse request
+	// Parse and validate request
 	var req models.UpdateFormRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := h.validator.ValidateAndDecode(r, "form-update", &req); err != nil {
+		if valErr, ok := err.(*validation.ValidationError); ok {
+			writeErrorResponse(w, http.StatusBadRequest, "Validation error", valErr.Errors)
+			return
+		}
 		writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
@@ -170,7 +175,7 @@ func (h *FormHandler) UpdateForm(w http.ResponseWriter, r *http.Request) {
 	form, err := h.formService.UpdateForm(r.Context(), formID, user.ID, req)
 	if err != nil {
 		log.Printf("action=update_form user_id=%s form_id=%s error=%q", user.ID, formID, err.Error())
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "access denied") {
+		if errors.Is(err, customErrors.ErrNotFound) || errors.Is(err, customErrors.ErrAccessDenied) {
 			writeErrorResponse(w, http.StatusNotFound, "Form not found")
 		} else {
 			writeErrorResponse(w, http.StatusBadRequest, err.Error())
@@ -206,7 +211,7 @@ func (h *FormHandler) DeleteForm(w http.ResponseWriter, r *http.Request) {
 	// Delete form
 	if err := h.formService.DeleteForm(r.Context(), formID, user.ID); err != nil {
 		log.Printf("action=delete_form user_id=%s form_id=%s error=%q", user.ID, formID, err.Error())
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "access denied") {
+		if errors.Is(err, customErrors.ErrNotFound) || errors.Is(err, customErrors.ErrAccessDenied) {
 			writeErrorResponse(w, http.StatusNotFound, "Form not found")
 		} else {
 			writeErrorResponse(w, http.StatusInternalServerError, "Failed to delete form")
@@ -243,7 +248,7 @@ func (h *FormHandler) GetFormStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.formService.GetFormStats(r.Context(), formID, user.ID)
 	if err != nil {
 		log.Printf("action=get_form_stats user_id=%s form_id=%s error=%q", user.ID, formID, err.Error())
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "access denied") {
+		if errors.Is(err, customErrors.ErrNotFound) || errors.Is(err, customErrors.ErrAccessDenied) {
 			writeErrorResponse(w, http.StatusNotFound, "Form not found")
 		} else {
 			writeErrorResponse(w, http.StatusInternalServerError, "Failed to get form stats")
@@ -283,7 +288,7 @@ func (h *FormHandler) GetFormSubmissions(w http.ResponseWriter, r *http.Request)
 	submissions, total, err := h.formService.GetFormSubmissions(r.Context(), formID, user.ID, opts)
 	if err != nil {
 		log.Printf("action=get_form_submissions user_id=%s form_id=%s error=%q", user.ID, formID, err.Error())
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "access denied") {
+		if errors.Is(err, customErrors.ErrNotFound) || errors.Is(err, customErrors.ErrAccessDenied) {
 			writeErrorResponse(w, http.StatusNotFound, "Form not found")
 		} else {
 			writeErrorResponse(w, http.StatusInternalServerError, "Failed to get form submissions")
@@ -354,10 +359,12 @@ func parsePaginationOptions(r *http.Request) models.PaginationOptions {
 
 // extractFormID extracts form ID from URL path
 func extractFormID(path string) string {
-	// Extract ID from paths like /forms/{id} or /forms/{id}/stats
-	parts := strings.Split(strings.Trim(path, "/"), "/")
-	if len(parts) >= 2 && parts[0] == "forms" {
-		return parts[1]
+	// Trim the prefix and then split to get the ID
+	// e.g., /forms/{id} or /forms/{id}/stats
+	trimmedPath := strings.TrimPrefix(path, "/forms/")
+	parts := strings.SplitN(trimmedPath, "/", 2)
+	if len(parts) > 0 {
+		return parts[0]
 	}
 	return ""
 }

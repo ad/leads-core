@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/ad/leads-core/internal/errors"
 	"github.com/ad/leads-core/internal/models"
 	"github.com/ad/leads-core/internal/storage"
 )
@@ -75,12 +76,12 @@ func (s *FormService) CreateForm(ctx context.Context, userID string, req models.
 func (s *FormService) GetForm(ctx context.Context, formID, userID string) (*models.Form, error) {
 	form, err := s.formRepo.GetByID(ctx, formID)
 	if err != nil {
-		return nil, fmt.Errorf("form not found: %w", err)
+		return nil, errors.ErrNotFound
 	}
 
 	// Check ownership
 	if form.OwnerID != userID {
-		return nil, fmt.Errorf("access denied: form does not belong to user")
+		return nil, errors.ErrAccessDenied
 	}
 
 	return form, nil
@@ -179,12 +180,12 @@ func (s *FormService) SubmitForm(ctx context.Context, formID string, req models.
 	// Get form (no ownership check for public endpoint)
 	form, err := s.formRepo.GetByID(ctx, formID)
 	if err != nil {
-		return nil, fmt.Errorf("form not found: %w", err)
+		return nil, errors.ErrNotFound
 	}
 
 	// Check if form is enabled
 	if !form.Enabled {
-		return nil, fmt.Errorf("form is disabled")
+		return nil, errors.ErrFormDisabled
 	}
 
 	// Generate submission ID

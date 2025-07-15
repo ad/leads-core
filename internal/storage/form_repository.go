@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ad/leads-core/internal/errors"
 	"github.com/ad/leads-core/internal/models"
 	"github.com/redis/go-redis/v9"
 )
@@ -88,7 +89,7 @@ func (r *RedisFormRepository) GetByID(ctx context.Context, id string) (*models.F
 	}
 
 	if len(hash) == 0 {
-		return nil, fmt.Errorf("form not found")
+		return nil, errors.ErrNotFound
 	}
 
 	form := &models.Form{}
