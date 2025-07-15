@@ -12,7 +12,7 @@ import (
 // SubmissionRepository defines interface for submission storage operations
 type SubmissionRepository interface {
 	Create(ctx context.Context, submission *models.Submission) error
-	GetByFormID(ctx context.Context, formID string, opts models.PaginationOptions) ([]*models.Submission, error)
+	GetByFormID(ctx context.Context, formID string, opts models.PaginationOptions) ([]*models.Submission, int, error)
 	GetByID(ctx context.Context, formID, submissionID string) (*models.Submission, error)
 	UpdateTTL(ctx context.Context, userID string, newTTL time.Duration) error
 	UpdateFormSubmissionsTTL(ctx context.Context, formID string, ttlDays int) error
@@ -52,8 +52,14 @@ func (r *RedisSubmissionRepository) Create(ctx context.Context, submission *mode
 }
 
 // GetByFormID retrieves submissions for a specific form with pagination
-func (r *RedisSubmissionRepository) GetByFormID(ctx context.Context, formID string, opts models.PaginationOptions) ([]*models.Submission, error) {
+func (r *RedisSubmissionRepository) GetByFormID(ctx context.Context, formID string, opts models.PaginationOptions) ([]*models.Submission, int, error) {
 	formSubmissionsKey := GenerateFormSubmissionsKey(formID)
+
+	// Get total number of submissions
+	total, err := r.client.client.ZCard(ctx, formSubmissionsKey).Result()
+	if err != nil {
+		return nil, 0, err
+	}
 
 	// Calculate pagination range
 	start := int64(opts.Page * opts.PerPage)
@@ -62,11 +68,11 @@ func (r *RedisSubmissionRepository) GetByFormID(ctx context.Context, formID stri
 	// Get submission IDs (sorted by timestamp, newest first)
 	submissionIDs, err := r.client.client.ZRevRange(ctx, formSubmissionsKey, start, end).Result()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	if len(submissionIDs) == 0 {
-		return []*models.Submission{}, nil
+		return []*models.Submission{}, 0, nil
 	}
 
 	// Get submissions
@@ -79,7 +85,7 @@ func (r *RedisSubmissionRepository) GetByFormID(ctx context.Context, formID stri
 		submissions = append(submissions, submission)
 	}
 
-	return submissions, nil
+	return submissions, int(total), nil
 }
 
 // GetByID retrieves a specific submission

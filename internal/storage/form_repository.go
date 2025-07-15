@@ -13,7 +13,7 @@ import (
 type FormRepository interface {
 	Create(ctx context.Context, form *models.Form) error
 	GetByID(ctx context.Context, id string) (*models.Form, error)
-	GetByUserID(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Form, error)
+	GetByUserID(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Form, int, error)
 	Update(ctx context.Context, form *models.Form) error
 	Delete(ctx context.Context, id string) error
 	GetFormsByType(ctx context.Context, formType string, opts models.PaginationOptions) ([]*models.Form, error)
@@ -99,24 +99,30 @@ func (r *RedisFormRepository) GetByID(ctx context.Context, id string) (*models.F
 }
 
 // GetByUserID retrieves forms for a specific user with pagination
-func (r *RedisFormRepository) GetByUserID(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Form, error) {
+func (r *RedisFormRepository) GetByUserID(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Form, int, error) {
 	userFormsKey := GenerateUserFormsKey(userID)
+
+	// Get total number of forms for the user
+	total, err := r.client.client.SCard(ctx, userFormsKey).Result()
+	if err != nil {
+		return nil, 0, err
+	}
 
 	// Get form IDs for the user
 	formIDs, err := r.client.client.SMembers(ctx, userFormsKey).Result()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	if len(formIDs) == 0 {
-		return []*models.Form{}, nil
+		return []*models.Form{}, 0, nil
 	}
 
 	// Calculate pagination
 	start := opts.Page * opts.PerPage
 	end := start + opts.PerPage
 	if start >= len(formIDs) {
-		return []*models.Form{}, nil
+		return []*models.Form{}, int(total), nil
 	}
 	if end > len(formIDs) {
 		end = len(formIDs)
@@ -134,7 +140,7 @@ func (r *RedisFormRepository) GetByUserID(ctx context.Context, userID string, op
 		forms = append(forms, form)
 	}
 
-	return forms, nil
+	return forms, int(total), nil
 }
 
 // Update updates an existing form

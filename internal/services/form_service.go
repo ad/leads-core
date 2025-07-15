@@ -133,13 +133,13 @@ func (s *FormService) DeleteForm(ctx context.Context, formID, userID string) err
 }
 
 // GetUserForms retrieves forms for a user with pagination
-func (s *FormService) GetUserForms(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Form, error) {
-	forms, err := s.formRepo.GetByUserID(ctx, userID, opts)
+func (s *FormService) GetUserForms(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Form, int, error) {
+	forms, total, err := s.formRepo.GetByUserID(ctx, userID, opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user forms: %w", err)
+		return nil, 0, fmt.Errorf("failed to get user forms: %w", err)
 	}
 
-	return forms, nil
+	return forms, total, nil
 }
 
 // GetFormStats retrieves statistics for a form
@@ -159,19 +159,19 @@ func (s *FormService) GetFormStats(ctx context.Context, formID, userID string) (
 }
 
 // GetFormSubmissions retrieves submissions for a form
-func (s *FormService) GetFormSubmissions(ctx context.Context, formID, userID string, opts models.PaginationOptions) ([]*models.Submission, error) {
+func (s *FormService) GetFormSubmissions(ctx context.Context, formID, userID string, opts models.PaginationOptions) ([]*models.Submission, int, error) {
 	// Check ownership
 	_, err := s.GetForm(ctx, formID, userID)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	submissions, err := s.submissionRepo.GetByFormID(ctx, formID, opts)
+	submissions, total, err := s.submissionRepo.GetByFormID(ctx, formID, opts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get form submissions: %w", err)
+		return nil, 0, fmt.Errorf("failed to get form submissions: %w", err)
 	}
 
-	return submissions, nil
+	return submissions, total, nil
 }
 
 // SubmitForm submits data to a form (public endpoint)

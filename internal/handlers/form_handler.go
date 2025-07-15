@@ -82,7 +82,7 @@ func (h *FormHandler) GetForms(w http.ResponseWriter, r *http.Request) {
 	opts := parsePaginationOptions(r)
 
 	// Get forms
-	forms, err := h.formService.GetUserForms(r.Context(), user.ID, opts)
+	forms, total, err := h.formService.GetUserForms(r.Context(), user.ID, opts)
 	if err != nil {
 		log.Printf("action=get_forms user_id=%s error=%q", user.ID, err.Error())
 		writeErrorResponse(w, http.StatusInternalServerError, "Failed to get forms")
@@ -93,7 +93,7 @@ func (h *FormHandler) GetForms(w http.ResponseWriter, r *http.Request) {
 	meta := &models.Meta{
 		Page:    opts.Page,
 		PerPage: opts.PerPage,
-		Total:   len(forms), // This is simplified; in real implementation would get total count
+		Total:   total,
 		HasMore: len(forms) == opts.PerPage,
 	}
 
@@ -280,7 +280,7 @@ func (h *FormHandler) GetFormSubmissions(w http.ResponseWriter, r *http.Request)
 	opts := parsePaginationOptions(r)
 
 	// Get submissions
-	submissions, err := h.formService.GetFormSubmissions(r.Context(), formID, user.ID, opts)
+	submissions, total, err := h.formService.GetFormSubmissions(r.Context(), formID, user.ID, opts)
 	if err != nil {
 		log.Printf("action=get_form_submissions user_id=%s form_id=%s error=%q", user.ID, formID, err.Error())
 		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "access denied") {
@@ -295,7 +295,7 @@ func (h *FormHandler) GetFormSubmissions(w http.ResponseWriter, r *http.Request)
 	meta := &models.Meta{
 		Page:    opts.Page,
 		PerPage: opts.PerPage,
-		Total:   len(submissions), // Simplified
+		Total:   total,
 		HasMore: len(submissions) == opts.PerPage,
 	}
 
@@ -331,11 +331,11 @@ func (h *FormHandler) GetFormsSummary(w http.ResponseWriter, r *http.Request) {
 
 // parsePaginationOptions parses pagination parameters from request
 func parsePaginationOptions(r *http.Request) models.PaginationOptions {
-	page := 0
+	page := 1
 	perPage := 20
 
 	if pageStr := r.URL.Query().Get("page"); pageStr != "" {
-		if p, err := strconv.Atoi(pageStr); err == nil && p >= 0 {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
 			page = p
 		}
 	}
