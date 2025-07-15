@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -36,7 +37,7 @@ func TestFormToRedisHash(t *testing.T) {
 		t.Errorf("Expected name %s, got %v", form.Name, hash["name"])
 	}
 
-	if hash["enabled"] != form.Enabled {
+	if hash["enabled"] != fmt.Sprintf("%v", form.Enabled) {
 		t.Errorf("Expected enabled %v, got %v", form.Enabled, hash["enabled"])
 	}
 }

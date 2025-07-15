@@ -40,7 +40,7 @@ docker-compose up -d
 ```bash
 ./redis-cluster.sh start
 # или
-docker-compose -f docker-compose.cluster.yml up -d
+docker-compose -f docker-compose.cluster.yml up --build -d
 ```
 
 3. Check service health:

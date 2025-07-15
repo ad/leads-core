@@ -46,7 +46,7 @@ func (h *FormHandler) CreateForm(w http.ResponseWriter, r *http.Request) {
 	var req models.CreateFormRequest
 	if err := h.validator.ValidateAndDecode(r, "form-create", &req); err != nil {
 		if valErr, ok := err.(*validation.ValidationError); ok {
-			writeErrorResponse(w, http.StatusBadRequest, "Validation error", valErr.Errors)
+			writeValidationErrors(w, valErr.Errors)
 			return
 		}
 		writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON")
@@ -164,7 +164,7 @@ func (h *FormHandler) UpdateForm(w http.ResponseWriter, r *http.Request) {
 	var req models.UpdateFormRequest
 	if err := h.validator.ValidateAndDecode(r, "form-update", &req); err != nil {
 		if valErr, ok := err.(*validation.ValidationError); ok {
-			writeErrorResponse(w, http.StatusBadRequest, "Validation error", valErr.Errors)
+			writeValidationErrors(w, valErr.Errors)
 			return
 		}
 		writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON")

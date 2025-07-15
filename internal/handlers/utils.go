@@ -35,7 +35,11 @@ func writeErrorResponse(w http.ResponseWriter, statusCode int, message string, d
 
 	if err := json.NewEncoder(w).Encode(errorResp); err != nil {
 		// Fallback to simple string response if JSON encoding fails
-		response := `{"error":"` + strings.ReplaceAll(message, `"`, `\"`) + `"}`
+		response := `{\"error\":\"` + strings.ReplaceAll(message, `"`, `\"`) + `\"}`
 		w.Write([]byte(response))
 	}
+}
+
+func writeValidationErrors(w http.ResponseWriter, errors []*models.FieldError) {
+	writeErrorResponse(w, http.StatusBadRequest, "Validation failed", errors)
 }

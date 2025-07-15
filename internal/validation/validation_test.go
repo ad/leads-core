@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"net/http"
 	"testing"
+
+	"github.com/ad/leads-core/internal/models"
 )
 
 func TestSchemaValidator_Initialization(t *testing.T) {
@@ -145,11 +147,14 @@ func TestSchemaValidator_InvalidJSON(t *testing.T) {
 
 func TestValidationError_Error(t *testing.T) {
 	validationErr := &ValidationError{
-		Errors: []string{"Field 'name' is required", "Field 'email' is invalid"},
+		Errors: []*models.FieldError{
+			{Field: "name", Message: "Field 'name' is required"},
+			{Field: "email", Message: "Field 'email' is invalid"},
+		},
 	}
 
 	errMsg := validationErr.Error()
-	expectedMsg := "validation failed: [Field 'name' is required Field 'email' is invalid]"
+	expectedMsg := "validation failed: [&{name Field 'name' is required} &{email Field 'email' is invalid}]"
 
 	if errMsg != expectedMsg {
 		t.Errorf("Expected error message '%s', got '%s'", expectedMsg, errMsg)

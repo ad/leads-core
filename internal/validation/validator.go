@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/ad/leads-core/internal/models"
 	"github.com/xeipuuv/gojsonschema"
 )
 
@@ -80,9 +81,12 @@ func (v *SchemaValidator) ValidateRequest(r *http.Request, schemaName string) (m
 
 	if !result.Valid() {
 		// Collect validation errors
-		var errors []string
+		var errors []*models.FieldError
 		for _, desc := range result.Errors() {
-			errors = append(errors, desc.String())
+			errors = append(errors, &models.FieldError{
+				Field:   desc.Field(),
+				Message: desc.Description(),
+			})
 		}
 		return nil, &ValidationError{Errors: errors}
 	}
@@ -92,7 +96,7 @@ func (v *SchemaValidator) ValidateRequest(r *http.Request, schemaName string) (m
 
 // ValidationError represents validation errors
 type ValidationError struct {
-	Errors []string
+	Errors []*models.FieldError
 }
 
 func (e *ValidationError) Error() string {
@@ -126,9 +130,12 @@ func (v *SchemaValidator) ValidateAndDecode(r *http.Request, schemaName string, 
 
 	if !result.Valid() {
 		// Collect validation errors
-		var errors []string
+		var errors []*models.FieldError
 		for _, desc := range result.Errors() {
-			errors = append(errors, desc.String())
+			errors = append(errors, &models.FieldError{
+				Field:   desc.Field(),
+				Message: desc.Description(),
+			})
 		}
 		return &ValidationError{Errors: errors}
 	}
