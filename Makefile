@@ -7,6 +7,7 @@
 build: ## Build the Go application
 	@echo "Building Go application..."
 	go build -o bin/leads-core cmd/server/main.go
+	go build -o bin/jwt-gen cmd/jwt/main.go
 
 # Build Docker image
 docker-build: ## Build Docker image
