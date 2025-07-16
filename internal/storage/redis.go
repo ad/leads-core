@@ -11,54 +11,31 @@ import (
 
 // RedisClient wraps Redis cluster client
 type RedisClient struct {
-	client redis.UniversalClient
+	client         redis.UniversalClient
+	embeddedServer *EmbeddedRedisServer
 }
 
 // NewRedisClient creates a new Redis client
 func NewRedisClient(cfg config.RedisConfig) (*RedisClient, error) {
 	var client redis.UniversalClient
+	var embeddedServer *EmbeddedRedisServer
 
-	// Check if we have cluster configuration by looking at multiple addresses
-	// or specific cluster indicators in the first address
-	isCluster := len(cfg.Addresses) > 1
+	// Проверяем, нужно ли использовать встроенный сервер
+	if cfg.UseEmbedded {
+		// Создаем и запускаем встроенный Redis сервер
+		var err error
+		embeddedServer, err = NewEmbeddedRedisServer(cfg.EmbeddedPort, cfg.EmbeddedDBPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create embedded Redis server: %w", err)
+		}
 
-	// // Also check if the first address contains a cluster port pattern (7000-7999)
-	// if len(cfg.Addresses) == 1 {
-	// 	addr := cfg.Addresses[0]
-	// 	// Check for cluster port pattern
-	// 	if strings.Contains(addr, ":700") || strings.Contains(addr, ":701") ||
-	// 		strings.Contains(addr, ":702") || strings.Contains(addr, ":703") ||
-	// 		strings.Contains(addr, ":704") || strings.Contains(addr, ":705") ||
-	// 		strings.Contains(addr, ":706") || strings.Contains(addr, ":707") ||
-	// 		strings.Contains(addr, ":708") || strings.Contains(addr, ":709") {
-	// 		isCluster = true
-	// 	}
-	// }
+		if err := embeddedServer.Start(); err != nil {
+			return nil, fmt.Errorf("failed to start embedded Redis server: %w", err)
+		}
 
-	if isCluster {
-		// Use cluster client
-		client = redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs:    cfg.Addresses,
-			Password: cfg.Password,
-
-			// Connection pool optimization
-			PoolSize:        50, // Maximum number of connections per shard
-			PoolTimeout:     30 * time.Second,
-			MaxRetries:      3,
-			MinRetryBackoff: 8 * time.Millisecond,
-			MaxRetryBackoff: 512 * time.Millisecond,
-
-			// Timeouts
-			DialTimeout:  5 * time.Second,
-			ReadTimeout:  3 * time.Second,
-			WriteTimeout: 3 * time.Second,
-		})
-	} else {
-		// Single Redis instance
+		// Создаем клиент для подключения к встроенному серверу
 		client = redis.NewClient(&redis.Options{
-			Addr:     cfg.Addresses[0],
-			Password: cfg.Password,
-			DB:       cfg.DB,
+			Addr: "localhost" + embeddedServer.GetAddr(),
 
 			// Connection pool optimization
 			PoolSize:        50,
@@ -72,6 +49,62 @@ func NewRedisClient(cfg config.RedisConfig) (*RedisClient, error) {
 			ReadTimeout:  3 * time.Second,
 			WriteTimeout: 3 * time.Second,
 		})
+	} else {
+		// Используем внешний Redis
+		// Check if we have cluster configuration by looking at multiple addresses
+		isCluster := len(cfg.Addresses) > 1
+
+		// // Also check if the first address contains a cluster port pattern (7000-7999)
+		// if len(cfg.Addresses) == 1 {
+		// 	addr := cfg.Addresses[0]
+		// 	// Check for cluster port pattern
+		// 	if strings.Contains(addr, ":700") || strings.Contains(addr, ":701") ||
+		// 		strings.Contains(addr, ":702") || strings.Contains(addr, ":703") ||
+		// 		strings.Contains(addr, ":704") || strings.Contains(addr, ":705") ||
+		// 		strings.Contains(addr, ":706") || strings.Contains(addr, ":707") ||
+		// 		strings.Contains(addr, ":708") || strings.Contains(addr, ":709") {
+		// 		isCluster = true
+		// 	}
+		// }
+
+		if isCluster {
+			// Use cluster client
+			client = redis.NewClusterClient(&redis.ClusterOptions{
+				Addrs:    cfg.Addresses,
+				Password: cfg.Password,
+
+				// Connection pool optimization
+				PoolSize:        50, // Maximum number of connections per shard
+				PoolTimeout:     30 * time.Second,
+				MaxRetries:      3,
+				MinRetryBackoff: 8 * time.Millisecond,
+				MaxRetryBackoff: 512 * time.Millisecond,
+
+				// Timeouts
+				DialTimeout:  5 * time.Second,
+				ReadTimeout:  3 * time.Second,
+				WriteTimeout: 3 * time.Second,
+			})
+		} else {
+			// Single Redis instance
+			client = redis.NewClient(&redis.Options{
+				Addr:     cfg.Addresses[0],
+				Password: cfg.Password,
+				DB:       cfg.DB,
+
+				// Connection pool optimization
+				PoolSize:        50,
+				PoolTimeout:     30 * time.Second,
+				MaxRetries:      3,
+				MinRetryBackoff: 8 * time.Millisecond,
+				MaxRetryBackoff: 512 * time.Millisecond,
+
+				// Timeouts
+				DialTimeout:  5 * time.Second,
+				ReadTimeout:  3 * time.Second,
+				WriteTimeout: 3 * time.Second,
+			})
+		}
 	}
 
 	// Test connection
@@ -79,10 +112,17 @@ func NewRedisClient(cfg config.RedisConfig) (*RedisClient, error) {
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
+		// Если встроенный сервер не удалось запустить, останавливаем его
+		if embeddedServer != nil {
+			embeddedServer.Stop()
+		}
 		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
 	}
 
-	return &RedisClient{client: client}, nil
+	return &RedisClient{
+		client:         client,
+		embeddedServer: embeddedServer,
+	}, nil
 }
 
 // NewRedisClientWithUniversal creates a Redis client from UniversalClient
@@ -92,7 +132,19 @@ func NewRedisClientWithUniversal(client redis.UniversalClient) *RedisClient {
 
 // Close closes the Redis connection
 func (r *RedisClient) Close() error {
-	return r.client.Close()
+	// Сначала закрываем клиент
+	err := r.client.Close()
+
+	// Затем останавливаем встроенный сервер, если он есть
+	if r.embeddedServer != nil {
+		if stopErr := r.embeddedServer.Stop(); stopErr != nil {
+			if err == nil {
+				err = stopErr
+			}
+		}
+	}
+
+	return err
 }
 
 // Ping checks Redis connection

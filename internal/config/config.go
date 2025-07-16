@@ -26,9 +26,12 @@ type ServerConfig struct {
 
 // RedisConfig holds Redis cluster configuration
 type RedisConfig struct {
-	Addresses []string
-	Password  string
-	DB        int
+	Addresses      []string
+	Password       string
+	DB             int
+	UseEmbedded    bool
+	EmbeddedPort   string
+	EmbeddedDBPath string
 }
 
 // JWTConfig holds JWT token validation configuration
@@ -57,9 +60,12 @@ func Load() (*Config, error) {
 			WriteTimeout: getEnvDuration("SERVER_WRITE_TIMEOUT", 30*time.Second),
 		},
 		Redis: RedisConfig{
-			Addresses: getEnvStringSlice("REDIS_ADDRESSES", []string{"localhost:6379"}),
-			Password:  getEnv("REDIS_PASSWORD", ""),
-			DB:        getEnvInt("REDIS_DB", 0),
+			Addresses:      getEnvStringSlice("REDIS_ADDRESSES", []string{"localhost:6379"}),
+			Password:       getEnv("REDIS_PASSWORD", ""),
+			DB:             getEnvInt("REDIS_DB", 0),
+			UseEmbedded:    false, // будет установлено ниже
+			EmbeddedPort:   getEnv("REDKA_PORT", "6379"),
+			EmbeddedDBPath: getEnv("REDKA_DB_PATH", "file:redka.db"),
 		},
 		JWT: JWTConfig{
 			Secret: getEnv("JWT_SECRET", ""),
@@ -76,6 +82,11 @@ func Load() (*Config, error) {
 
 	if config.JWT.Secret == "" {
 		return nil, fmt.Errorf("JWT_SECRET environment variable is required")
+	}
+
+	// Определяем, нужно ли использовать встроенный Redis сервер
+	if len(config.Redis.Addresses) > 0 && config.Redis.Addresses[0] == "redka" {
+		config.Redis.UseEmbedded = true
 	}
 
 	return config, nil

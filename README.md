@@ -9,7 +9,10 @@ A Go-based leads management service that handles widgets, submissions, and real-
 - **Real-time Statistics**: Track views, submissions, and closes
 - **JWT Authentication**: Secure API endpoints with JWT tokens
 - **Rate Limiting**: IP-based and global rate limiting
-- **Redis Cluster**: Scalable storage with Redis Cluster
+- **Redis Storage**: Flexible Redis configuration with three options:
+  - External Redis instance
+  - Redis Cluster for high availability
+  - **Embedded Redis server** (Redka) for simplified deployment
 - **Docker Support**: Full containerization with docker-compose
 
 ## Quick Start
@@ -41,6 +44,17 @@ docker-compose up -d
 ./redis-cluster.sh start
 # или
 docker-compose -f docker-compose.cluster.yml up --build -d
+```
+
+**Option C: Embedded Redis (no external dependencies):**
+```bash
+# Set REDIS_ADDRESSES=redka in .env file
+echo "REDIS_ADDRESSES=redka" >> .env
+
+# Run the application
+go run ./cmd/server/
+# or with Docker
+docker-compose up -d leads-server
 ```
 
 3. Check service health:
@@ -149,12 +163,18 @@ SERVER_READ_TIMEOUT=30s
 SERVER_WRITE_TIMEOUT=30s
 
 # Redis Configuration  
-# Single Redis instance
+# External Redis instance
 REDIS_ADDRESSES=redis:6379
-# Redis cluster (comma-separated addresses)
+# External Redis cluster (comma-separated addresses)
 REDIS_ADDRESSES=redis-node-1:6379,redis-node-2:6379,redis-node-3:6379,redis-node-4:6379,redis-node-5:6379,redis-node-6:6379
+# Embedded Redis server (Redka)
+REDIS_ADDRESSES=redka
 REDIS_PASSWORD=
 REDIS_DB=0
+
+# Embedded Redis Configuration (only used when REDIS_ADDRESSES=redka)
+REDKA_PORT=6379          # Port for embedded Redis server
+REDKA_DB_PATH=file:redka.db  # Database file path (:memory: for in-memory)
 
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key
@@ -254,3 +274,34 @@ The service uses Redis Cluster with the following key patterns:
 ## License
 
 See LICENSE file for details.
+
+## Redis Configuration Options
+
+The service supports three Redis deployment modes:
+
+### 1. External Redis Instance
+For development and small deployments:
+```bash
+REDIS_ADDRESSES=localhost:6379
+```
+
+### 2. Redis Cluster
+For production and high-availability setups:
+```bash
+REDIS_ADDRESSES=node1:6379,node2:6379,node3:6379,node4:6379,node5:6379,node6:6379
+```
+
+### 3. Embedded Redis (Redka)
+For simplified deployment without external Redis dependencies:
+```bash
+REDIS_ADDRESSES=redka
+REDKA_PORT=6379
+REDKA_DB_PATH=file:redka.db    # or :memory: for in-memory storage
+```
+
+**Benefits of Embedded Redis:**
+- ✅ No external Redis server required
+- ✅ Simplified deployment and testing
+- ✅ Full Redis API compatibility
+- ✅ Persistent or in-memory storage options
+- ✅ Perfect for development, testing, and small deployments

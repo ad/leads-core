@@ -60,3 +60,7 @@ temp/
 logs/
 server
 main
+
+redka.db
+redka.db-shm
+redka.db-wal
