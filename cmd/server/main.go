@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -26,10 +27,37 @@ import (
 )
 
 var version = "dev"
-var commit = "unknown"
+var GitCommit = "run"
+var BuildDate = ""
 
-func main() { // Initialize logging
-	logger.Init("leads-core", fmt.Sprintf("%s-%s", version, commit))
+func initVersion() {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+
+	modified := false
+	for _, setting := range info.Settings {
+		switch setting.Key {
+		case "vcs.revision":
+			GitCommit = setting.Value
+		case "vcs.time":
+			BuildDate = setting.Value
+		case "vcs.modified":
+			modified = true
+		}
+	}
+	if modified {
+		GitCommit += "+CHANGES"
+	}
+}
+
+func main() {
+	// Initialize version information
+	initVersion()
+
+	// Initialize logging
+	logger.Init("leads-core", fmt.Sprintf("%s-%s", version, GitCommit))
 
 	// Initialize metrics
 	metrics.Init()
