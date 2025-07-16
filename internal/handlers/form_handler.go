@@ -351,6 +351,13 @@ func parsePaginationOptions(r *http.Request) models.PaginationOptions {
 		}
 	}
 
+	// Also support 'limit' parameter as alias for per_page (for submissions API)
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			perPage = l
+		}
+	}
+
 	return models.PaginationOptions{
 		Page:    page,
 		PerPage: perPage,

@@ -23,6 +23,7 @@ type Form struct {
 	Fields    map[string]interface{} `json:"fields"`
 	CreatedAt time.Time              `json:"created_at"`
 	UpdatedAt time.Time              `json:"updated_at"`
+	Stats     *FormStats             `json:"stats,omitempty"`
 }
 
 // Submission represents a submission to a form

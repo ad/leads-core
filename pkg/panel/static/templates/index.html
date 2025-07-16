@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Leads Core - Admin Panel</title>
     <link rel="stylesheet" href="/panel/css/style.css">
 </head>
+
 <body>
     <div id="app">
         <!-- Loading Screen -->
@@ -21,38 +23,24 @@
                     <h1>🚀 Leads Core</h1>
                     <p>Admin Panel</p>
                 </div>
-                
+
                 <form id="login-form" class="login-form">
                     <div class="form-group">
                         <label for="secret">JWT Secret</label>
-                        <input 
-                            type="password" 
-                            id="secret" 
-                            name="secret" 
-                            placeholder="Enter JWT secret"
-                            required
-                            autocomplete="current-password"
-                        >
+                        <input type="password" id="secret" name="secret" placeholder="Enter JWT secret" required autocomplete="current-password">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="userId">User ID</label>
-                        <input 
-                            type="text" 
-                            id="userId" 
-                            name="userId" 
-                            placeholder="Enter user ID"
-                            required
-                            autocomplete="username"
-                        >
+                        <input type="text" id="userId" name="userId" placeholder="Enter user ID" required autocomplete="username">
                     </div>
-                    
+
                     <button type="submit" class="btn btn-primary">
                         <span class="btn-text">Access Panel</span>
                         <span class="btn-loading">Connecting...</span>
                     </button>
                 </form>
-                
+
                 <div id="login-error" class="error-message" style="display: none;"></div>
             </div>
         </div>
@@ -92,7 +80,7 @@
                         <div class="card-value" id="total-forms">-</div>
                         <div class="card-change" id="total-forms-change"></div>
                     </div>
-                    
+
                     <div class="summary-card">
                         <div class="card-header">
                             <span class="card-icon">✅</span>
@@ -101,7 +89,7 @@
                         <div class="card-value" id="active-forms">-</div>
                         <div class="card-change" id="active-forms-change"></div>
                     </div>
-                    
+
                     <div class="summary-card">
                         <div class="card-header">
                             <span class="card-icon">👀</span>
@@ -110,11 +98,11 @@
                         <div class="card-value" id="total-views">-</div>
                         <div class="card-change" id="total-views-change"></div>
                     </div>
-                    
+
                     <div class="summary-card">
                         <div class="card-header">
                             <span class="card-icon">📤</span>
-                            <span class="card-title">Submissions</span>
+                            <span class="card-title">Submits</span>
                         </div>
                         <div class="card-value" id="total-submissions">-</div>
                         <div class="card-change" id="total-submissions-change"></div>
@@ -128,12 +116,7 @@
                     <h2>📋 Recent Forms</h2>
                     <div class="section-controls">
                         <div class="search-box">
-                            <input 
-                                type="search" 
-                                id="search-input" 
-                                placeholder="Search forms..."
-                                class="search-input"
-                            >
+                            <input type="search" id="search-input" placeholder="Search forms..." class="search-input">
                         </div>
                         <select id="filter-status" class="filter-select">
                             <option value="">All Status</option>
@@ -145,7 +128,7 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="table-container">
                     <table class="forms-table">
                         <thead>
@@ -156,7 +139,7 @@
                                 <th>Status</th>
                                 <th>Created</th>
                                 <th>Views</th>
-                                <th>Submissions</th>
+                                <th>Submits</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -172,7 +155,7 @@
                         </tbody>
                     </table>
                 </div>
-                
+
                 <!-- Pagination -->
                 <div class="pagination-container">
                     <div class="pagination-info">
@@ -220,15 +203,9 @@
                             <div class="form-info-grid">
                                 <div class="form-group">
                                     <label for="form-name">Form Name *</label>
-                                    <input 
-                                        type="text" 
-                                        id="form-name" 
-                                        name="name" 
-                                        required 
-                                        placeholder="Enter form name"
-                                    >
+                                    <input type="text" id="form-name" name="name" required placeholder="Enter form name">
                                 </div>
-                                
+
                                 <div class="form-group">
                                     <label for="form-type">Form Type *</label>
                                     <select id="form-type" name="type" required>
@@ -243,10 +220,12 @@
                                         <option value="other">Other</option>
                                     </select>
                                 </div>
-                                
-                                <div class="checkbox-group">
-                                    <input type="checkbox" id="form-enabled" name="enabled" checked>
-                                    <label for="form-enabled">Form Active</label>
+
+                                <div class="form-group">
+                                    <div class="checkbox-group">
+                                        <input type="checkbox" id="form-enabled" name="enabled" checked>
+                                        <label for="form-enabled">Form Active</label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -265,12 +244,12 @@
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" id="form-editor-cancel" class="btn btn-outline">
-                        Cancel
-                    </button>
                     <button type="button" id="form-editor-save" class="btn btn-primary">
                         <span class="btn-text">Save Form</span>
                         <span class="btn-loading" style="display: none;">Saving...</span>
+                    </button>
+                    <button type="button" id="form-editor-cancel" class="btn btn-outline">
+                        Cancel
                     </button>
                 </div>
             </div>
@@ -289,12 +268,12 @@
                     <p style="color: #f44336; font-size: 0.9em;">This action cannot be undone.</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" id="delete-cancel" class="btn btn-outline">
-                        Cancel
-                    </button>
                     <button type="button" id="delete-confirm" class="btn btn-confirm-delete">
                         <span class="btn-text">Delete Form</span>
                         <span class="btn-loading" style="display: none;">Deleting...</span>
+                    </button>
+                    <button type="button" id="delete-cancel" class="btn btn-outline">
+                        Cancel
                     </button>
                 </div>
             </div>
@@ -311,4 +290,5 @@
     <script src="/panel/js/dashboard.js"></script>
     <script src="/panel/js/app.js"></script>
 </body>
+
 </html>

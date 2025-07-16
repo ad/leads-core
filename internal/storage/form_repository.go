@@ -23,12 +23,16 @@ type FormRepository interface {
 
 // RedisFormRepository implements FormRepository for Redis
 type RedisFormRepository struct {
-	client *RedisClient
+	client    *RedisClient
+	statsRepo StatsRepository
 }
 
 // NewRedisFormRepository creates a new Redis form repository
-func NewRedisFormRepository(client *RedisClient) *RedisFormRepository {
-	return &RedisFormRepository{client: client}
+func NewRedisFormRepository(client *RedisClient, statsRepo StatsRepository) *RedisFormRepository {
+	return &RedisFormRepository{
+		client:    client,
+		statsRepo: statsRepo,
+	}
 }
 
 // Create creates a new form
@@ -132,6 +136,12 @@ func (r *RedisFormRepository) GetByUserID(ctx context.Context, userID string, op
 		if err != nil {
 			continue // Skip forms that can't be loaded
 		}
+
+		// Load stats for the form
+		if stats, err := r.statsRepo.GetFormStats(ctx, formID); err == nil {
+			form.Stats = stats
+		}
+
 		forms = append(forms, form)
 	}
 
@@ -221,7 +231,7 @@ func (r *RedisFormRepository) Delete(ctx context.Context, id string) error {
 func (r *RedisFormRepository) GetFormsByType(ctx context.Context, formType string, opts models.PaginationOptions) ([]*models.Form, error) {
 	typeKey := GenerateFormsByTypeKey(formType)
 
-	start := int64(opts.Page * opts.PerPage)
+	start := int64((opts.Page - 1) * opts.PerPage)
 	end := start + int64(opts.PerPage) - 1
 
 	formIDs, err := r.client.client.SRandMemberN(ctx, typeKey, end-start+1).Result()
@@ -235,6 +245,12 @@ func (r *RedisFormRepository) GetFormsByType(ctx context.Context, formType strin
 		if err != nil {
 			continue // Skip forms that can't be loaded
 		}
+
+		// Load stats for the form
+		if stats, err := r.statsRepo.GetFormStats(ctx, formID); err == nil {
+			form.Stats = stats
+		}
+
 		forms = append(forms, form)
 	}
 
@@ -245,7 +261,7 @@ func (r *RedisFormRepository) GetFormsByType(ctx context.Context, formType strin
 func (r *RedisFormRepository) GetFormsByStatus(ctx context.Context, enabled bool, opts models.PaginationOptions) ([]*models.Form, error) {
 	statusKey := GenerateFormsByStatusKey(enabled)
 
-	start := int64(opts.Page * opts.PerPage)
+	start := int64((opts.Page - 1) * opts.PerPage)
 	end := start + int64(opts.PerPage) - 1
 
 	formIDs, err := r.client.client.SRandMemberN(ctx, statusKey, end-start+1).Result()
@@ -259,6 +275,12 @@ func (r *RedisFormRepository) GetFormsByStatus(ctx context.Context, enabled bool
 		if err != nil {
 			continue // Skip forms that can't be loaded
 		}
+
+		// Load stats for the form
+		if stats, err := r.statsRepo.GetFormStats(ctx, formID); err == nil {
+			form.Stats = stats
+		}
+
 		forms = append(forms, form)
 	}
 

@@ -78,7 +78,12 @@ class APIClient {
                 throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
             }
 
-            // Return JSON response
+            // For 204 No Content, return success status instead of trying to parse JSON
+            if (response.status === 204) {
+                return { success: true, status: 204 };
+            }
+
+            // Return JSON response for other successful responses
             return await response.json();
         } catch (error) {
             // Re-throw network errors or other issues
@@ -201,6 +206,36 @@ class APIClient {
      */
     async healthCheck() {
         const url = `${this.baseURL}/health`;
+        return await this.makeRequest(url);
+    }
+
+    /**
+     * Send form event (view, close)
+     */
+    async sendFormEvent(formId, eventType) {
+        const url = `${this.baseURL}/forms/${formId}/events`;
+        return await this.makeRequest(url, {
+            method: 'POST',
+            body: JSON.stringify({ type: eventType })
+        });
+    }
+
+    /**
+     * Submit test form data
+     */
+    async submitTestFormData(formId, testData) {
+        const url = `${this.baseURL}/forms/${formId}/submit`;
+        return await this.makeRequest(url, {
+            method: 'POST',
+            body: JSON.stringify(testData)
+        });
+    }
+
+    /**
+     * Get recent form submissions for preview
+     */
+    async getRecentSubmissions(formId, limit = 5) {
+        const url = `${this.baseURL}/api/v1/forms/${formId}/submissions?limit=${limit}&sort=desc`;
         return await this.makeRequest(url);
     }
 }

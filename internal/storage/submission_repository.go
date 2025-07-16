@@ -62,7 +62,7 @@ func (r *RedisSubmissionRepository) GetByFormID(ctx context.Context, formID stri
 	}
 
 	// Calculate pagination range
-	start := int64(opts.Page * opts.PerPage)
+	start := int64((opts.Page - 1) * opts.PerPage)
 	end := start + int64(opts.PerPage) - 1
 
 	// Get submission IDs (sorted by timestamp, newest first)

@@ -182,8 +182,8 @@ class DashboardManager {
                     </span>
                 </td>
                 <td class="form-created">${window.UI.formatDate(form.created_at)}</td>
-                <td class="form-views">${window.UI.formatNumber(form.views || 0)}</td>
-                <td class="form-submissions">${window.UI.formatNumber(form.submissions || 0)}</td>
+                <td class="form-views">${window.UI.formatNumber(form.stats.views || 0)}</td>
+                <td class="form-submissions">${window.UI.formatNumber(form.stats.submits || 0)}</td>
                 <td class="form-actions">
                     <div class="table-actions">
                         <button class="btn-icon" onclick="window.UI.showFormDetails('${form.id}')" title="View Details">

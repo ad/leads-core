@@ -100,9 +100,9 @@ func main() { // Initialize logging
 	})
 
 	// Initialize repositories
-	formRepo := storage.NewRedisFormRepository(monitoredRedisClient)
-	submissionRepo := storage.NewRedisSubmissionRepository(monitoredRedisClient)
 	statsRepo := storage.NewRedisStatsRepository(monitoredRedisClient)
+	formRepo := storage.NewRedisFormRepository(monitoredRedisClient, statsRepo)
+	submissionRepo := storage.NewRedisSubmissionRepository(monitoredRedisClient)
 
 	// Initialize services
 	ttlConfig := services.TTLConfig{
