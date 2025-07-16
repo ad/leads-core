@@ -690,22 +690,90 @@ body {
 }
 
 .toast {
-    background: white;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    border-left: 4px solid #48bb78;
-    animation: toastSlideIn 0.3s ease-out;
+    max-height: 25rem;
+	background: #fff;
+	color: #f5f5f5;
+	padding: 1rem 2rem 1rem 3rem;
+	text-align: center;
+	border-radius: 1rem;
+	position: relative;
+	font-weight: 300;
+	margin: 1rem 0;
+	text-align: left;
+	max-width: 16rem;
+	opacity: 1;
+	border: 0.15rem solid #fff2;
+	box-shadow: 0 0 1.5rem 0 #1a1f4360;
 }
 
-.toast.error {
-    border-left-color: #f56565;
+
+.toast:before {
+	content: "";
+	position: absolute;
+	width: 0.5rem;
+	height: calc(100% - 1.5rem);
+	top: 0.75rem;
+	left: 0.5rem;
+	z-index: 0;
+	border-radius: 1rem;
+	background: var(--clr);
 }
 
-.toast.warning {
-    border-left-color: #ed8936;
+.toast h3 {
+	font-size: 1.2rem;
+	margin: 0;
+	line-height: 1.35rem;
+	font-weight: 600;
+	position: relative;
+	color: var(--clr);
 }
+
+.toast p {
+	position: relative;
+	font-size: 0.95rem;
+	z-index: 1;
+	margin: 0.25rem 0 0;
+	color: #595959;
+	line-height: 1.3rem;
+}
+
+.toast.success {
+	--clr: #03a65a;
+	--brd: #03a65a40;
+}
+
+.toast .close {
+	position: absolute;
+	width: 1.35rem;
+	height: 1.35rem;
+	text-align: center;
+	right: 1rem;
+	cursor: pointer;
+	border-radius: 100%;
+}
+
+.toast .close:after {
+	position: absolute;
+	font-family: 'Varela Round', san-serif;
+	width: 100%;
+	height: 100%;
+	left: 0;
+	font-size: 1.8rem;
+	content: "+";
+	transform: rotate(-45deg);
+	border-radius: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #595959;
+	text-indent: 1px;
+}
+
+.toast .close:hover:after {
+	background: var(--clr);
+	color: #fff;
+}
+
 
 @keyframes toastSlideIn {
     from {
@@ -716,17 +784,6 @@ body {
         opacity: 1;
         transform: translateX(0);
     }
-}
-
-.toast-title {
-    font-weight: 600;
-    margin-bottom: 4px;
-    font-size: 14px;
-}
-
-.toast-message {
-    font-size: 13px;
-    color: #666;
 }
 
 /* Responsive Design */

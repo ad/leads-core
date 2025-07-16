@@ -64,8 +64,9 @@ class UIManager {
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         toast.innerHTML = `
-            <div class="toast-title">${this.escapeHtml(message)}</div>
-            <button class="toast-close" onclick="this.parentNode.remove()">×</button>
+            <label for="t-success" class="close" onclick="this.parentNode.remove()"></label>
+			<h3>Success!</h3>
+			<p>${this.escapeHtml(message)}!</p>
         `;
         
         this.toastContainer.appendChild(toast);
