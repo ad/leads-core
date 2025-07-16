@@ -101,11 +101,11 @@ body {
     font-size: 16px;
 }
 
-.form-group {
+.widget-group {
     margin-bottom: 20px;
 }
 
-.form-group label {
+.widget-group label {
     display: block;
     margin-bottom: 6px;
     font-weight: 500;
@@ -113,7 +113,7 @@ body {
     font-size: 14px;
 }
 
-.form-group input {
+.widget-group input {
     width: 100%;
     padding: 12px 16px;
     border: 2px solid #e1e5e9;
@@ -122,7 +122,7 @@ body {
     transition: border-color 0.2s ease;
 }
 
-.form-group input:focus {
+.widget-group input:focus {
     outline: none;
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
@@ -148,7 +148,7 @@ body {
 .btn-primary {
     background: #667eea;
     color: white;
-    width: 100%;
+    /* width: 100%; */
 }
 
 .btn-primary:hover {
@@ -319,8 +319,8 @@ body {
     color: #f56565;
 }
 
-/* Forms Section */
-.forms-section {
+/* Widgets Section */
+.widgets-section {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px 40px;
@@ -384,12 +384,12 @@ body {
     margin-bottom: 20px;
 }
 
-.forms-table {
+.widgets-table {
     width: 100%;
     border-collapse: collapse;
 }
 
-.forms-table th {
+.widgets-table th {
     background: #f7fafc;
     padding: 16px 12px;
     text-align: left;
@@ -401,14 +401,14 @@ body {
     border-bottom: 1px solid #e2e8f0;
 }
 
-.forms-table td {
+.widgets-table td {
     padding: 16px 12px;
     border-bottom: 1px solid #f1f5f9;
     font-size: 14px;
     color: #2d3748;
 }
 
-.forms-table tr:hover {
+.widgets-table tr:hover {
     background: #f7fafc;
 }
 
@@ -431,18 +431,18 @@ body {
     color: #742a2a;
 }
 
-.form-id {
+.widget-id {
     font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
     font-size: 12px;
     color: #666;
 }
 
-.form-name {
+.widget-name {
     font-weight: 500;
     color: #2d3748;
 }
 
-.form-type {
+.widget-type {
     color: #667eea;
     font-weight: 500;
     text-transform: capitalize;
@@ -598,8 +598,16 @@ body {
     font-size: 14px;
 }
 
-/* Form Details Modal Content */
-.form-details {
+.modal-footer {
+    padding: 16px 24px;
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid #e2e8f0;
+    gap: 8px;
+}
+
+/* Widget Details Modal Content */
+.widget-details {
     max-width: 100%;
 }
 
@@ -667,7 +675,7 @@ body {
     letter-spacing: 0.05em;
 }
 
-.form-fields-json {
+.widget-fields-json {
     background: #f7fafc;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
@@ -812,12 +820,12 @@ body {
         margin-bottom: 8px;
     }
     
-    .forms-table {
+    .widgets-table {
         font-size: 12px;
     }
     
-    .forms-table th,
-    .forms-table td {
+    .widgets-table th,
+    .widgets-table td {
         padding: 8px 6px;
     }
     
@@ -846,50 +854,50 @@ body {
     }
     
     .summary-section,
-    .forms-section {
+    .widgets-section {
         padding-left: 16px;
         padding-right: 16px;
     }
 }
 
-/* Form Editor Modal Styles */
-.form-editor-content {
+/* Widget Editor Modal Styles */
+.widget-editor-content {
     max-width: 900px;
 }
 
-.form-editor-section {
+.widget-editor-section {
     margin-bottom: 24px;
 }
 
-.form-editor-section h3 {
+.widget-editor-section h3 {
     margin: 0 0 12px 0;
     font-size: 1.1rem;
     font-weight: 600;
     color: #333;
 }
 
-.form-info-grid {
+.widget-info-grid {
     display: grid;
     grid-template-columns: 1fr 200px 120px;
     gap: 16px;
     align-items: end;
 }
 
-.form-group {
+.widget-group {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.form-group label {
+.widget-group label {
     font-weight: 500;
     color: #333;
     font-size: 0.9rem;
 }
 
-.form-group input,
-.form-group select,
-.form-group textarea {
+.widget-group input,
+.widget-group select,
+.widget-group textarea {
     padding: 8px 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -897,9 +905,9 @@ body {
     transition: border-color 0.2s;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
+.widget-group input:focus,
+.widget-group select:focus,
+.widget-group textarea:focus {
     outline: none;
     border-color: #4CAF50;
 }
@@ -912,18 +920,19 @@ body {
 }
 
 .checkbox-group input[type="checkbox"] {
-    margin: 0;
+    margin: 0 0 6px 0;
+    width: auto;
 }
 
-/* Form Fields Container */
-.form-fields-header {
+/* Widget Fields Container */
+.widget-fields-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 16px;
 }
 
-.form-fields-container {
+.widget-fields-container {
     border: 1px solid #eee;
     border-radius: 6px;
     background: #fafafa;
@@ -932,7 +941,7 @@ body {
     overflow-y: auto;
 }
 
-.form-fields-container:empty::before {
+.widget-fields-container:empty::before {
     content: "No fields added yet. Click 'Add Field' to get started.";
     display: block;
     text-align: center;
@@ -941,7 +950,7 @@ body {
     font-style: italic;
 }
 
-.form-field-item {
+.widget-field-item {
     background: white;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -949,7 +958,7 @@ body {
     overflow: hidden;
 }
 
-.form-field-header {
+.widget-field-header {
     padding: 12px 16px;
     background: #f8f9fa;
     border-bottom: 1px solid #eee;
@@ -959,8 +968,8 @@ body {
     align-items: center;
 }
 
-.form-field-header input,
-.form-field-header select {
+.widget-field-header input,
+.widget-field-header select {
     padding: 6px 8px;
     border: 1px solid #ddd;
     border-radius: 3px;
@@ -972,26 +981,29 @@ body {
     align-items: center;
     gap: 6px;
     font-size: 13px;
-    color: #666;
     white-space: nowrap;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
 }
 
-.form-field-details {
+.widget-field-details {
     padding: 12px 16px;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
 }
 
-.form-field-details input,
-.form-field-details textarea {
+.widget-field-details input,
+.widget-field-details textarea {
     padding: 6px 8px;
     border: 1px solid #ddd;
     border-radius: 3px;
     font-size: 13px;
 }
 
-.form-field-details textarea {
+.widget-field-details textarea {
     resize: vertical;
     min-height: 60px;
 }
@@ -1016,7 +1028,7 @@ body {
 }
 
 .btn-icon.btn-danger {
-    background: #f44336;
+    /* background: #f44336; */
     color: white;
 }
 
@@ -1035,7 +1047,7 @@ body {
     color: #666;
 }
 
-.delete-form-name {
+.delete-widget-name {
     font-weight: 600;
     color: #333;
 }
@@ -1078,17 +1090,17 @@ body {
 
 /* Extended Modal Responsive Design */
 @media (max-width: 768px) {
-    .form-info-grid {
+    .widget-info-grid {
         grid-template-columns: 1fr;
         gap: 12px;
     }
     
-    .form-field-header {
+    .widget-field-header {
         grid-template-columns: 1fr;
         gap: 8px;
     }
     
-    .form-field-details {
+    .widget-field-details {
         grid-template-columns: 1fr;
     }
     
@@ -1098,7 +1110,230 @@ body {
         max-width: calc(100% - 40px);
     }
     
-    .form-editor-content {
+    .widget-editor-content {
         max-width: 100%;
     }
+}
+
+/* Widget Testing Styles */
+.widget-testing-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.testing-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+}
+
+.testing-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #007bff, #0056b3);
+    border-radius: 8px 8px 0 0;
+}
+
+.testing-section h5 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.event-buttons {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.test-widget {
+    margin-top: 12px;
+}
+
+.test-widget .widget-group {
+    margin-bottom: 16px;
+}
+
+.test-widget label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+    color: #495057;
+    font-size: 13px;
+}
+
+.test-widget input,
+.test-widget textarea,
+.test-widget select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.test-widget input:focus,
+.test-widget textarea:focus,
+.test-widget select:focus {
+    border-color: #007bff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.radio-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.radio-item input[type="radio"] {
+    width: auto;
+    margin: 0;
+}
+
+.test-widget-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e9ecef;
+}
+
+/* Widget Details Styles */
+.fields-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.field-item {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.field-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.field-name {
+    font-weight: 600;
+    color: #495057;
+}
+
+.field-type {
+    /* background: #007bff; */
+    /* color: white; */
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.field-description {
+    margin-top: 8px;
+    font-size: 13px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Recent Submissions Styles */
+.submissions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.submission-item {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.submission-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.submission-date {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.submission-id {
+    background: #6c757d;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.submission-data {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+}
+
+.data-item {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #e9ecef;
+}
+
+.data-key {
+    font-size: 11px;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.data-value {
+    font-size: 13px;
+    color: #212529;
+    word-break: break-word;
 }

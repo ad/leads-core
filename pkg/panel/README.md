@@ -67,11 +67,11 @@
 ### API Endpoints
 Панель использует следующие endpoints:
 
-- `GET /api/v1/forms/summary` - общая статистика
-- `GET /api/v1/forms` - список форм с пагинацией
-- `GET /api/v1/forms/{id}` - детали формы
-- `GET /api/v1/forms/{id}/stats` - статистика формы
-- `PUT /api/v1/forms/{id}` - обновление формы
+- `GET /api/v1/widgets/summary` - общая статистика
+- `GET /api/v1/widgets` - список форм с пагинацией
+- `GET /api/v1/widgets/{id}` - детали формы
+- `GET /api/v1/widgets/{id}/stats` - статистика формы
+- `PUT /api/v1/widgets/{id}` - обновление формы
 
 ### Структура файлов
 ```

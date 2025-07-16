@@ -54,7 +54,7 @@ func TestJWTValidator_ValidateToken(t *testing.T) {
 			expectedID:  "",
 		},
 		{
-			name:        "malformed token",
+			name:        "malwidgeted token",
 			tokenString: "not-a-token",
 			expectError: true,
 			expectedID:  "",

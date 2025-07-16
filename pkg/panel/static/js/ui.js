@@ -109,10 +109,10 @@ class UIManager {
             modal.style.display = 'none';
         });
         
-        // Reset form managers state
-        if (window.FormsManager) {
-            window.FormsManager.currentFormId = null;
-            window.FormsManager.formToDelete = null;
+        // Reset widget managers state
+        if (window.WidgetsManager) {
+            window.WidgetsManager.currentWidgetId = null;
+            window.WidgetsManager.widgetToDelete = null;
         }
     }
 
@@ -153,53 +153,62 @@ class UIManager {
     }
 
     /**
-     * Show form details modal
+     * Show widget details modal
      */
-    async showFormDetails(formId) {
+    async showWidgetDetails(widgetId) {
         try {
             this.showLoading();
             
-            const form = await window.APIClient.getForm(formId);
-            const formStats = await window.APIClient.getFormStats(formId);
+            const widget = await window.APIClient.getWidget(widgetId);
+            const widgetStats = await window.APIClient.getWidgetStats(widgetId);
             
-            const modal = document.getElementById('form-modal');
+            // Try to get recent submissions
+            let recentSubmissions = null;
+            try {
+                const submissionsResponse = await window.APIClient.getRecentSubmissions(widgetId, 3);
+                recentSubmissions = submissionsResponse.data || [];
+            } catch (error) {
+                console.log('Could not load recent submissions:', error.message);
+            }
+            
+            const modal = document.getElementById('widget-modal');
             const title = document.getElementById('modal-title');
             const contentData = document.getElementById('modal-content-data');
             const contentLoading = document.getElementById('modal-content-loading');
             
             if (modal && title && contentData && contentLoading) {
-                title.textContent = `${form.name || 'Untitled Form'} - Details`;
+                title.textContent = `${widget.name || 'Untitled Widget'} - Details`;
                 
                 contentData.innerHTML = `
-                    <div class="form-details">
+                    <div class="widget-details">
                         <div class="detail-section">
                             <h4>📋 Basic Information</h4>
                             <div class="detail-grid">
                                 <div class="detail-item">
                                     <label>ID:</label>
-                                    <span>${form.id}</span>
+                                    <span>${widget.id}</span>
                                 </div>
                                 <div class="detail-item">
                                     <label>Name:</label>
-                                    <span>${form.name || 'N/A'}</span>
+                                    <span>${widget.name || 'N/A'}</span>
                                 </div>
                                 <div class="detail-item">
                                     <label>Type:</label>
-                                    <span>${form.type || 'N/A'}</span>
+                                    <span>${widget.type || 'N/A'}</span>
                                 </div>
                                 <div class="detail-item">
                                     <label>Status:</label>
-                                    <span class="status ${form.enabled ? 'enabled' : 'disabled'}">
-                                        ${form.enabled ? '✅ Active' : '❌ Disabled'}
+                                    <span class="status ${widget.enabled ? 'enabled' : 'disabled'}">
+                                        ${widget.enabled ? '✅ Active' : '❌ Disabled'}
                                     </span>
                                 </div>
                                 <div class="detail-item">
                                     <label>Created:</label>
-                                    <span>${this.formatDate(form.created_at)}</span>
+                                    <span>${this.formatDate(widget.created_at)}</span>
                                 </div>
                                 <div class="detail-item">
                                     <label>Updated:</label>
-                                    <span>${this.formatDate(form.updated_at)}</span>
+                                    <span>${this.formatDate(widget.updated_at)}</span>
                                 </div>
                             </div>
                         </div>
@@ -208,25 +217,106 @@ class UIManager {
                             <h4>📊 Statistics</h4>
                             <div class="stats-grid">
                                 <div class="stat-card">
-                                    <div class="stat-value">${this.formatNumber(formStats.views || 0)}</div>
+                                    <div class="stat-value">${this.formatNumber(widgetStats.views || 0)}</div>
                                     <div class="stat-label">Total Views</div>
                                 </div>
                                 <div class="stat-card">
-                                    <div class="stat-value">${this.formatNumber(formStats.submissions || 0)}</div>
-                                    <div class="stat-label">Submissions</div>
+                                    <div class="stat-value">${this.formatNumber(widgetStats.submits || 0)}</div>
+                                    <div class="stat-label">Submits</div>
                                 </div>
                                 <div class="stat-card">
-                                    <div class="stat-value">${formStats.conversion_rate || '0'}%</div>
+                                    <div class="stat-value">${widgetStats.conversion_rate || '0'}%</div>
                                     <div class="stat-label">Conversion Rate</div>
                                 </div>
                             </div>
                         </div>
                         
-                        ${form.fields && form.fields.length > 0 ? `
                         <div class="detail-section">
-                            <h4>📝 Form Fields</h4>
+                            <h4>🧪 Widget Testing</h4>
+                            <div class="widget-testing-container">
+                                <div class="testing-section">
+                                    <h5>📡 Send Events</h5>
+                                    <div class="event-buttons">
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="window.UI.sendWidgetEvent('${widget.id}', 'view', this)">
+                                            👀 Send View Event
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="window.UI.sendWidgetEvent('${widget.id}', 'close', this)">
+                                            ❌ Send Close Event
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                ${widget.fields && Object.keys(widget.fields).length > 0 ? `
+                                <div class="testing-section">
+                                    <h5>📝 Test Widget Submission</h5>
+                                    <form id="test-widget-${widget.id}" class="test-widget">
+                                        ${Object.entries(widget.fields).map(([key, field]) => this.generateTestField({name: key, ...field})).join('')}
+                                        <div class="test-widget-actions">
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                🚀 Submit Test Data
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline" onclick="window.UI.fillRandomTestData('${widget.id}')">
+                                                🎲 Fill Random Data
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                                ` : `
+                                <div class="testing-section">
+                                    <h5>📝 Test Widget Submission</h5>
+                                    <p class="no-fields-message">This widget has no fields configured.</p>
+                                    <form id="test-widget-${widget.id}" class="test-widget">
+                                        <div class="widget-group">
+                                            <label for="test-field-name">Test Name</label>
+                                            <input type="text" id="test-field-name" name="name" placeholder="Enter test name">
+                                        </div>
+                                        <div class="widget-group">
+                                            <label for="test-field-email">Test Email</label>
+                                            <input type="email" id="test-field-email" name="email" placeholder="Enter test email">
+                                        </div>
+                                        <div class="test-widget-actions">
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                🚀 Submit Test Data
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline" onclick="window.UI.fillRandomTestData('${widget.id}')">
+                                                🎲 Fill Random Data
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                                `}
+                            </div>
+                        </div>
+                        
+                        ${recentSubmissions && recentSubmissions.length > 0 ? `
+                        <div class="detail-section">
+                            <h4>📬 Recent Submits</h4>
+                            <div class="submissions-list">
+                                ${recentSubmissions.map(submission => `
+                                    <div class="submission-item">
+                                        <div class="submission-header">
+                                            <span class="submission-date">${this.formatDate(submission.created_at)}</span>
+                                            <span class="submission-id">#${submission.id}</span>
+                                        </div>
+                                        <div class="submission-data">
+                                            ${Object.entries(submission.data || {}).map(([key, value]) => `
+                                                <div class="data-item">
+                                                    <span class="data-key">${key}:</span>
+                                                    <span class="data-value">${this.escapeHtml(String(value))}</span>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${widget.fields && widget.fields.length > 0 ? `
+                        <div class="detail-section">
+                            <h4>📝 Widget Fields</h4>
                             <div class="fields-list">
-                                ${form.fields.map(field => `
+                                ${widget.fields.map(field => `
                                     <div class="field-item">
                                         <div class="field-header">
                                             <span class="field-name">${field.name}</span>
@@ -255,37 +345,268 @@ class UIManager {
                         contentLoading.style.display = 'block';
                     };
                 }
+
+                // Setup test widget submission
+                const testWidget = document.getElementById(`test-widget-${widgetId}`);
+                if (testWidget) {
+                    testWidget.onsubmit = (e) => {
+                        e.preventDefault();
+                        this.submitTestWidget(widgetId);
+                    };
+                }
             }
             
         } catch (error) {
-            console.error('Error loading form details:', error);
-            this.showToast('Failed to load form details', 'error');
+            console.error('Error loading widget details:', error);
+            this.showToast('Failed to load widget details', 'error');
         } finally {
             this.hideLoading();
         }
     }
 
     /**
-     * Set button loading state
+     * Generate test field HTML based on field configuration
      */
-    setButtonLoading(button, loading = true) {
-        if (!button) return;
-        
-        const btnText = button.querySelector('.btn-text');
-        const btnLoading = button.querySelector('.btn-loading');
-        
-        if (btnText && btnLoading) {
-            if (loading) {
-                btnText.style.display = 'none';
-                btnLoading.style.display = 'inline';
-                button.disabled = true;
-            } else {
-                btnText.style.display = 'inline';
-                btnLoading.style.display = 'none';
-                button.disabled = false;
+    generateTestField(field) {
+        const fieldId = `test-field-${field.name}`;
+        const required = field.required ? 'required' : '';
+        const placeholder = field.placeholder || `Enter ${field.name}`;
+
+        switch (field.type) {
+            case 'email':
+                return `
+                    <div class="widget-group">
+                        <label for="${fieldId}">${field.name}${field.required ? ' *' : ''}</label>
+                        <input type="email" id="${fieldId}" name="${field.name}" placeholder="${placeholder}" ${required}>
+                    </div>
+                `;
+            case 'tel':
+                return `
+                    <div class="widget-group">
+                        <label for="${fieldId}">${field.name}${field.required ? ' *' : ''}</label>
+                        <input type="tel" id="${fieldId}" name="${field.name}" placeholder="${placeholder}" ${required}>
+                    </div>
+                `;
+            case 'textarea':
+                return `
+                    <div class="widget-group">
+                        <label for="${fieldId}">${field.name}${field.required ? ' *' : ''}</label>
+                        <textarea id="${fieldId}" name="${field.name}" placeholder="${placeholder}" rows="3" ${required}></textarea>
+                    </div>
+                `;
+            case 'select':
+                const options = field.options || [];
+                return `
+                    <div class="widget-group">
+                        <label for="${fieldId}">${field.name}${field.required ? ' *' : ''}</label>
+                        <select id="${fieldId}" name="${field.name}" ${required}>
+                            <option value="">Choose option</option>
+                            ${options.map(option => `<option value="${option}">${option}</option>`).join('')}
+                        </select>
+                    </div>
+                `;
+            case 'checkbox':
+                return `
+                    <div class="widget-group">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="${fieldId}" name="${field.name}" value="1">
+                            <label for="${fieldId}">${field.name}</label>
+                        </div>
+                    </div>
+                `;
+            case 'radio':
+                const radioOptions = field.options || [];
+                return `
+                    <div class="widget-group">
+                        <label>${field.name}${field.required ? ' *' : ''}</label>
+                        <div class="radio-group">
+                            ${radioOptions.map((option, index) => `
+                                <div class="radio-item">
+                                    <input type="radio" id="${fieldId}-${index}" name="${field.name}" value="${option}" ${required}>
+                                    <label for="${fieldId}-${index}">${option}</label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            default:
+                return `
+                    <div class="widget-group">
+                        <label for="${fieldId}">${field.name}${field.required ? ' *' : ''}</label>
+                        <input type="text" id="${fieldId}" name="${field.name}" placeholder="${placeholder}" ${required}>
+                    </div>
+                `;
+        }
+    }
+
+    /**
+     * Send widget event (view or close)
+     */
+    async sendWidgetEvent(widgetId, eventType, buttonElement = null) {
+        try {
+            if (buttonElement) {
+                this.setButtonLoading(buttonElement, true);
             }
-        } else {
-            button.disabled = loading;
+            await window.APIClient.sendWidgetEvent(widgetId, eventType);
+            this.showToast(`${eventType.charAt(0).toUpperCase() + eventType.slice(1)} event sent successfully!`, 'success');
+            
+            // Refresh statistics in the background
+            setTimeout(() => {
+                const currentModal = document.getElementById('widget-modal');
+                if (currentModal && currentModal.style.display === 'flex') {
+                    this.refreshWidgetStats(widgetId);
+                }
+            }, 500);
+        } catch (error) {
+            console.error('Error sending widget event:', error);
+            this.showToast(`Failed to send ${eventType} event: ${error.message}`, 'error');
+        } finally {
+            if (buttonElement) {
+                this.setButtonLoading(buttonElement, false);
+            }
+        }
+    }
+
+    /**
+     * Submit test widget data
+     */
+    async submitTestWidget(widgetId) {
+        try {
+            const widget = document.getElementById(`test-widget-${widgetId}`);
+            if (!widget) return;
+
+            const widgetData = new FormData(widget);
+            const testData = {};
+            
+            // Convert WidgetData to plain object
+            for (let [key, value] of widgetData.entries()) {
+                testData[key] = value;
+            }
+
+            // Wrap data in the expected format
+            const submissionData = {
+                data: testData
+            };
+
+            const submitBtn = widget.querySelector('button[type="submit"]');
+            this.setButtonLoading(submitBtn, true);
+
+            await window.APIClient.submitTestWidgetData(widgetId, submissionData);
+            this.showToast('Test widget data submitted successfully!', 'success');
+            
+            // Reset widget after successful submission
+            widget.reset();
+            
+            // Refresh the modal with updated statistics
+            setTimeout(() => {
+                this.showWidgetDetails(widgetId);
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Error submitting test widget:', error);
+            this.showToast(`Failed to submit test widget: ${error.message}`, 'error');
+        } finally {
+            const widget = document.getElementById(`test-widget-${widgetId}`);
+            const submitBtn = widget?.querySelector('button[type="submit"]');
+            this.setButtonLoading(submitBtn, false);
+        }
+    }
+
+    /**
+     * Fill widget with random test data
+     */
+    fillRandomTestData(widgetId) {
+        const widget = document.getElementById(`test-widget-${widgetId}`);
+        if (!widget) return;
+
+        const inputs = widget.querySelectorAll('input, textarea, select');
+        
+        inputs.forEach(input => {
+            if (input.type === 'checkbox') {
+                input.checked = Math.random() > 0.5;
+            } else if (input.type === 'radio') {
+                // For radio buttons, randomly select one option per group
+                const radioGroup = widget.querySelectorAll(`input[name="${input.name}"]`);
+                const randomIndex = Math.floor(Math.random() * radioGroup.length);
+                radioGroup.forEach((radio, index) => {
+                    radio.checked = index === randomIndex;
+                });
+            } else if (input.tagName === 'SELECT') {
+                const options = input.querySelectorAll('option');
+                if (options.length > 1) {
+                    const randomIndex = Math.floor(Math.random() * (options.length - 1)) + 1;
+                    input.selectedIndex = randomIndex;
+                }
+            } else {
+                // Generate random data based on field type and name
+                input.value = this.generateRandomValue(input);
+            }
+        });
+
+        this.showToast('Random test data filled!', 'info');
+    }
+
+    /**
+     * Generate random value based on input type and name
+     */
+    generateRandomValue(input) {
+        const fieldName = input.name.toLowerCase();
+        
+        if (input.type === 'email' || fieldName.includes('email')) {
+            const domains = ['example.com', 'test.com', 'demo.org'];
+            const randomDomain = domains[Math.floor(Math.random() * domains.length)];
+            return `test${Math.floor(Math.random() * 1000)}@${randomDomain}`;
+        }
+        
+        if (input.type === 'tel' || fieldName.includes('phone') || fieldName.includes('tel')) {
+            return `+1${Math.floor(Math.random() * 9000000000) + 1000000000}`;
+        }
+        
+        if (fieldName.includes('name')) {
+            const names = ['John Doe', 'Jane Smith', 'Bob Johnson', 'Alice Brown', 'Charlie Wilson'];
+            return names[Math.floor(Math.random() * names.length)];
+        }
+        
+        if (fieldName.includes('company') || fieldName.includes('organization')) {
+            const companies = ['Acme Corp', 'TechCorp Inc', 'Global Solutions', 'Innovation Labs', 'Future Systems'];
+            return companies[Math.floor(Math.random() * companies.length)];
+        }
+        
+        if (input.tagName === 'TEXTAREA' || fieldName.includes('message') || fieldName.includes('comment')) {
+            const messages = [
+                'This is a test message for widget validation.',
+                'Great product! I would like to know more information.',
+                'Please contact me regarding your services.',
+                'I have some questions about your offerings.',
+                'Looking forward to hearing from you soon.'
+            ];
+            return messages[Math.floor(Math.random() * messages.length)];
+        }
+        
+        // Default random text
+        const randomWords = ['test', 'sample', 'demo', 'example', 'placeholder'];
+        const randomWord = randomWords[Math.floor(Math.random() * randomWords.length)];
+        return `${randomWord} ${Math.floor(Math.random() * 1000)}`;
+    }
+
+    /**
+     * Refresh widget statistics without reopening the modal
+     */
+    async refreshWidgetStats(widgetId) {
+        try {
+            const widgetStats = await window.APIClient.getWidgetStats(widgetId);
+            
+            // Update the statistics in the current modal
+            const viewsElement = document.querySelector('.stats-grid .stat-card:nth-child(1) .stat-value');
+            const submissionsElement = document.querySelector('.stats-grid .stat-card:nth-child(2) .stat-value');
+            const conversionElement = document.querySelector('.stats-grid .stat-card:nth-child(3) .stat-value');
+            
+            if (viewsElement) viewsElement.textContent = this.formatNumber(widgetStats.views || 0);
+            if (submissionsElement) submissionsElement.textContent = this.formatNumber(widgetStats.submits || 0);
+            if (conversionElement) conversionElement.textContent = `${widgetStats.conversion_rate || '0'}%`;
+            
+        } catch (error) {
+            console.error('Error refreshing widget stats:', error);
         }
     }
 
@@ -293,33 +614,31 @@ class UIManager {
      * Update page title
      */
     updatePageTitle(title) {
-        document.title = title ? `${title} - Leads Core Admin` : 'Leads Core Admin Panel';
+        document.title = `${title} - Leads Core Admin Panel`;
     }
 
     /**
-     * Animate element
+     * Set button loading state
      */
-    animate(element, animation = 'fadeIn', duration = 300) {
-        if (!element) return;
+    setButtonLoading(button, loading) {
+        if (!button) return;
         
-        element.style.animation = `${animation} ${duration}ms ease-out`;
+        const btnText = button.querySelector('.btn-text');
+        const btnLoading = button.querySelector('.btn-loading');
         
-        setTimeout(() => {
-            element.style.animation = '';
-        }, duration);
-    }
-
-    /**
-     * Confirm action with user
-     */
-    confirm(message, callback) {
-        if (window.confirm(message)) {
-            callback();
+        if (loading) {
+            button.disabled = true;
+            if (btnText) btnText.style.display = 'none';
+            if (btnLoading) btnLoading.style.display = 'inline';
+        } else {
+            button.disabled = false;
+            if (btnText) btnText.style.display = 'inline';
+            if (btnLoading) btnLoading.style.display = 'none';
         }
     }
 
     /**
-     * Debounce function
+     * Debounce function to limit function calls
      */
     debounce(func, wait) {
         let timeout;

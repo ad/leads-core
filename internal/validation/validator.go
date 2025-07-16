@@ -27,8 +27,8 @@ func NewSchemaValidator() (*SchemaValidator, error) {
 
 	// Load all schemas
 	schemaNames := []string{
-		"form-create.json",
-		"form-update.json",
+		"widget-create.json",
+		"widget-update.json",
 		"submission.json",
 		"event.json",
 	}

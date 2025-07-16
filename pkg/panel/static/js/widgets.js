@@ -1,136 +1,136 @@
 /**
- * Forms management module for Leads Core Admin Panel
+ * Widgets management module for Leads Core Admin Panel
  */
 
-class FormsManager {
+class WidgetsManager {
     constructor() {
-        this.currentFormId = null;
-        this.formToDelete = null;
-        this.formFields = [];
+        this.currentWidgetId = null;
+        this.widgetToDelete = null;
+        this.widgetFields = [];
     }
 
     /**
-     * Show create form modal
+     * Show create widget modal
      */
-    showCreateForm() {
-        const modal = document.getElementById('form-editor-modal');
-        const title = document.getElementById('form-editor-title');
-        const form = document.getElementById('form-editor-form');
+    showCreateWidget() {
+        const modal = document.getElementById('widget-editor-modal');
+        const title = document.getElementById('widget-editor-title');
+        const widget = document.getElementById('widget-editor-widget');
         
-        if (modal && title && form) {
+        if (modal && title && widget) {
             modal.style.display = 'flex';
-            title.textContent = 'Create New Form';
-            form.reset();
-            this.currentFormId = null;
-            this.clearFormFields();
-            this.setupFormEditorEvents();
+            title.textContent = 'Create New Widget';
+            widget.reset();
+            this.currentWidgetId = null;
+            this.clearWidgetFields();
+            this.setupWidgetEditorEvents();
         }
     }
 
     /**
-     * Show edit form modal
+     * Show edit widget modal
      */
-    async editForm(formId) {
+    async editWidget(widgetId) {
         try {
             window.UI.showLoading();
-            const form = await window.APIClient.getForm(formId);
+            const widget = await window.APIClient.getWidget(widgetId);
             
 
             
-            const modal = document.getElementById('form-editor-modal');
-            const title = document.getElementById('form-editor-title');
+            const modal = document.getElementById('widget-editor-modal');
+            const title = document.getElementById('widget-editor-title');
             
             if (modal && title) {
                 modal.style.display = 'flex';
-                title.textContent = 'Edit Form';
+                title.textContent = 'Edit Widget';
                 
-                // Populate form data
-                const nameInput = document.getElementById('form-name');
-                const typeSelect = document.getElementById('form-type');
-                const enabledCheckbox = document.getElementById('form-enabled');
+                // Populate widget data
+                const nameInput = document.getElementById('widget-name');
+                const typeSelect = document.getElementById('widget-type');
+                const enabledCheckbox = document.getElementById('widget-enabled');
                 
-                if (nameInput) nameInput.value = form.name || '';
-                if (typeSelect) typeSelect.value = form.type || '';
-                if (enabledCheckbox) enabledCheckbox.checked = form.enabled || false;
+                if (nameInput) nameInput.value = widget.name || '';
+                if (typeSelect) typeSelect.value = widget.type || '';
+                if (enabledCheckbox) enabledCheckbox.checked = widget.enabled || false;
                 
-                console.log('Form basic data populated:', {
-                    name: form.name,
-                    type: form.type,
-                    enabled: form.enabled
+                console.log('Widget basic data populated:', {
+                    name: widget.name,
+                    type: widget.type,
+                    enabled: widget.enabled
                 });
                 
-                this.currentFormId = formId;
-                this.loadFormFields(form.fields || {});
-                this.setupFormEditorEvents();
+                this.currentWidgetId = widgetId;
+                this.loadWidgetFields(widget.fields || {});
+                this.setupWidgetEditorEvents();
             }
             
         } catch (error) {
-            console.error('Error loading form:', error);
-            window.UI.showToast('Failed to load form', 'error');
+            console.error('Error loading widget:', error);
+            window.UI.showToast('Failed to load widget', 'error');
         } finally {
             window.UI.hideLoading();
         }
     }
 
     /**
-     * Setup form editor event listeners
+     * Setup widget editor event listeners
      */
-    setupFormEditorEvents() {
+    setupWidgetEditorEvents() {
         // Add field button
         const addFieldBtn = document.getElementById('add-field-btn');
         if (addFieldBtn) {
-            addFieldBtn.onclick = () => this.addFormField();
+            addFieldBtn.onclick = () => this.addWidgetField();
         }
 
-        // Save form button
-        const saveFormBtn = document.getElementById('form-editor-save');
-        if (saveFormBtn) {
-            saveFormBtn.onclick = (e) => {
+        // Save widget button
+        const saveWidgetBtn = document.getElementById('widget-editor-save');
+        if (saveWidgetBtn) {
+            saveWidgetBtn.onclick = (e) => {
                 e.preventDefault();
-                this.saveForm();
+                this.saveWidget();
             };
         }
 
-        // Cancel form button
-        const cancelFormBtn = document.getElementById('form-editor-cancel');
-        if (cancelFormBtn) {
-            cancelFormBtn.onclick = () => this.closeFormEditor();
+        // Cancel widget button
+        const cancelWidgetBtn = document.getElementById('widget-editor-cancel');
+        if (cancelWidgetBtn) {
+            cancelWidgetBtn.onclick = () => this.closeWidgetEditor();
         }
 
         // Close modal button
-        const closeBtn = document.getElementById('form-editor-close');
+        const closeBtn = document.getElementById('widget-editor-close');
         if (closeBtn) {
-            closeBtn.onclick = () => this.closeFormEditor();
+            closeBtn.onclick = () => this.closeWidgetEditor();
         }
 
-        // Form submission
-        const form = document.getElementById('form-editor-form');
-        if (form) {
-            form.onsubmit = (e) => {
+        // Widget submission
+        const widget = document.getElementById('widget-editor-widget');
+        if (widget) {
+            widget.onsubmit = (e) => {
                 e.preventDefault();
-                this.saveForm();
+                this.saveWidget();
             };
         }
     }
 
     /**
-     * Clear form fields container
+     * Clear widget fields container
      */
-    clearFormFields() {
-        const container = document.getElementById('form-fields-container');
+    clearWidgetFields() {
+        const container = document.getElementById('widget-fields-container');
         if (container) {
             container.innerHTML = '';
         }
-        this.formFields = [];
+        this.widgetFields = [];
     }
 
     /**
-     * Load form fields into editor
+     * Load widget fields into editor
      */
-    loadFormFields(fields) {
+    loadWidgetFields(fields) {
 
-        this.clearFormFields();
-        this.formFields = [];
+        this.clearWidgetFields();
+        this.widgetFields = [];
         
         // Convert object fields to array format for the UI
         if (fields && typeof fields === 'object') {
@@ -145,27 +145,27 @@ class FormsManager {
                     description: fieldData.description || ''
                 };
                 console.log('Adding field:', field);
-                this.formFields.push(field);
-                this.addFormField(field);
+                this.widgetFields.push(field);
+                this.addWidgetField(field);
             });
         } else {
             console.log('No fields to load or invalid fields format');
         }
-        console.log('Final formFields array:', this.formFields);
+        console.log('Final widgetFields array:', this.widgetFields);
     }
 
     /**
-     * Add form field to editor
+     * Add widget field to editor
      */
-    addFormField(field = null) {
-        const container = document.getElementById('form-fields-container');
+    addWidgetField(field = null) {
+        const container = document.getElementById('widget-fields-container');
         if (!container) return;
         
         const fieldId = field ? field.id : `field_${Date.now()}`;
         
         const fieldHtml = `
-            <div class="form-field-item" data-field-id="${fieldId}">
-                <div class="form-field-header">
+            <div class="widget-field-item" data-field-id="${fieldId}">
+                <div class="widget-field-header">
                     <input type="text" class="field-name" placeholder="Field Name" value="${field ? field.name || '' : ''}" />
                     <select class="field-type">
                         <option value="text" ${field && field.type === 'text' ? 'selected' : ''}>Text</option>
@@ -182,9 +182,9 @@ class FormsManager {
                         <input type="checkbox" ${field && field.required ? 'checked' : ''} />
                         Required
                     </label>
-                    <button type="button" class="btn-icon btn-danger" onclick="window.FormsManager.removeFormField('${fieldId}')">🗑️</button>
+                    <button type="button" class="btn-icon btn-danger" onclick="window.WidgetsManager.removeWidgetField('${fieldId}')">🗑️</button>
                 </div>
-                <div class="form-field-details">
+                <div class="widget-field-details">
                     <input type="text" class="field-placeholder" placeholder="Placeholder text" value="${field ? field.placeholder || '' : ''}" />
                     <textarea class="field-description" placeholder="Field description" rows="2">${field ? field.description || '' : ''}</textarea>
                 </div>
@@ -195,9 +195,9 @@ class FormsManager {
     }
 
     /**
-     * Remove form field
+     * Remove widget field
      */
-    removeFormField(fieldId) {
+    removeWidgetField(fieldId) {
         const fieldElement = document.querySelector(`[data-field-id="${fieldId}"]`);
         if (fieldElement) {
             fieldElement.remove();
@@ -205,64 +205,64 @@ class FormsManager {
     }
 
     /**
-     * Save form (create or update)
+     * Save widget (create or update)
      */
-    async saveForm() {
+    async saveWidget() {
         try {
-            const formData = this.getFormData();
-            if (!formData) return;
+            const widgetData = this.getWidgetData();
+            if (!widgetData) return;
 
             window.UI.showLoading();
             
-            if (this.currentFormId) {
-                // Update existing form
-                await window.APIClient.updateForm(this.currentFormId, formData);
-                window.UI.showToast('Form updated successfully', 'success');
+            if (this.currentWidgetId) {
+                // Update existing widget
+                await window.APIClient.updateWidget(this.currentWidgetId, widgetData);
+                window.UI.showToast('Widget updated successfully', 'success');
             } else {
-                // Create new form
-                await window.APIClient.createForm(formData);
-                window.UI.showToast('Form created successfully', 'success');
+                // Create new widget
+                await window.APIClient.createWidget(widgetData);
+                window.UI.showToast('Widget created successfully', 'success');
             }
             
-            this.closeFormEditor();
+            this.closeWidgetEditor();
             
-            // Refresh forms list
+            // Refresh widgets list
             if (window.Dashboard) {
-                window.Dashboard.loadForms();
+                window.Dashboard.loadWidgets();
             }
             
         } catch (error) {
-            console.error('Error saving form:', error);
-            window.UI.showToast('Failed to save form: ' + error.message, 'error');
+            console.error('Error saving widget:', error);
+            window.UI.showToast('Failed to save widget: ' + error.message, 'error');
         } finally {
             window.UI.hideLoading();
         }
     }
 
     /**
-     * Get form data from editor
+     * Get widget data from editor
      */
-    getFormData() {
-        const nameInput = document.getElementById('form-name');
-        const typeSelect = document.getElementById('form-type');
-        const enabledCheckbox = document.getElementById('form-enabled');
+    getWidgetData() {
+        const nameInput = document.getElementById('widget-name');
+        const typeSelect = document.getElementById('widget-type');
+        const enabledCheckbox = document.getElementById('widget-enabled');
         
         const name = nameInput?.value?.trim();
         const type = typeSelect?.value;
         const enabled = enabledCheckbox?.checked || false;
         
         if (!name) {
-            window.UI.showToast('Form name is required', 'error');
+            window.UI.showToast('Widget name is required', 'error');
             return null;
         }
         
         if (!type) {
-            window.UI.showToast('Form type is required', 'error');
+            window.UI.showToast('Widget type is required', 'error');
             return null;
         }
         
         const fields = {};
-        const fieldElements = document.querySelectorAll('.form-field-item');
+        const fieldElements = document.querySelectorAll('.widget-field-item');
         
         fieldElements.forEach(element => {
             const fieldName = element.querySelector('.field-name').value.trim();
@@ -291,26 +291,26 @@ class FormsManager {
     }
 
     /**
-     * Close form editor modal
+     * Close widget editor modal
      */
-    closeFormEditor() {
-        const modal = document.getElementById('form-editor-modal');
+    closeWidgetEditor() {
+        const modal = document.getElementById('widget-editor-modal');
         if (modal) {
             modal.style.display = 'none';
         }
-        this.currentFormId = null;
-        this.formFields = [];
+        this.currentWidgetId = null;
+        this.widgetFields = [];
     }
 
     /**
      * Show delete confirmation
      */
-    deleteForm(formId, formName) {
-        this.formToDelete = formId;
+    deleteWidget(widgetId, widgetName) {
+        this.widgetToDelete = widgetId;
         
-        const deleteFormNameElement = document.getElementById('delete-form-name');
-        if (deleteFormNameElement) {
-            deleteFormNameElement.textContent = formName;
+        const deleteWidgetNameElement = document.getElementById('delete-widget-name');
+        if (deleteWidgetNameElement) {
+            deleteWidgetNameElement.textContent = widgetName;
         }
         
         const modal = document.getElementById('delete-confirm-modal');
@@ -346,24 +346,24 @@ class FormsManager {
     }
 
     /**
-     * Confirm form deletion
+     * Confirm widget deletion
      */
     async confirmDelete() {
-        if (!this.formToDelete) return;
+        if (!this.widgetToDelete) return;
         
         try {
             window.UI.showLoading();
-            await window.APIClient.deleteForm(this.formToDelete);
-            window.UI.showToast('Form deleted successfully', 'success');
+            await window.APIClient.deleteWidget(this.widgetToDelete);
+            window.UI.showToast('Widget deleted successfully', 'success');
             this.closeDeleteConfirm();
             
-            // Refresh forms list
+            // Refresh widgets list
             if (window.Dashboard) {
-                window.Dashboard.loadForms();
+                window.Dashboard.loadWidgets();
             }
         } catch (error) {
-            console.error('Error deleting form:', error);
-            window.UI.showToast('Failed to delete form: ' + error.message, 'error');
+            console.error('Error deleting widget:', error);
+            window.UI.showToast('Failed to delete widget: ' + error.message, 'error');
         } finally {
             window.UI.hideLoading();
         }
@@ -377,35 +377,35 @@ class FormsManager {
         if (modal) {
             modal.style.display = 'none';
         }
-        this.formToDelete = null;
+        this.widgetToDelete = null;
     }
 
     /**
-     * Toggle form status (enable/disable)
+     * Toggle widget status (enable/disable)
      */
-    async toggleFormStatus(formId, enabled) {
+    async toggleWidgetStatus(widgetId, enabled) {
         try {
             window.UI.showLoading();
             
-            // Get current form data
-            const form = await window.APIClient.getForm(formId);
+            // Get current widget data
+            const widget = await window.APIClient.getWidget(widgetId);
             
             // Update only the enabled status
             const updateData = {
-                ...form,
+                ...widget,
                 enabled: enabled
             };
             
-            await window.APIClient.updateForm(formId, updateData);
-            window.UI.showToast(`Form ${enabled ? 'enabled' : 'disabled'} successfully`, 'success');
+            await window.APIClient.updateWidget(widgetId, updateData);
+            window.UI.showToast(`Widget ${enabled ? 'enabled' : 'disabled'} successfully`, 'success');
             
-            // Refresh forms list
+            // Refresh widgets list
             if (window.Dashboard) {
-                window.Dashboard.loadForms();
+                window.Dashboard.loadWidgets();
             }
         } catch (error) {
-            console.error('Error updating form status:', error);
-            window.UI.showToast('Failed to update form status: ' + error.message, 'error');
+            console.error('Error updating widget status:', error);
+            window.UI.showToast('Failed to update widget status: ' + error.message, 'error');
         } finally {
             window.UI.hideLoading();
         }
@@ -413,4 +413,4 @@ class FormsManager {
 }
 
 // Create global instance
-window.FormsManager = new FormsManager();
+window.WidgetsManager = new WidgetsManager();

@@ -7,90 +7,90 @@ import (
 	"time"
 )
 
-func TestFormToRedisHash(t *testing.T) {
-	form := &Form{
-		ID:        "test-form-1",
+func TestWidgetToRedisHash(t *testing.T) {
+	widget := &Widget{
+		ID:        "test-widget-1",
 		OwnerID:   "user-123",
 		Type:      "contact",
-		Name:      "Test Form",
+		Name:      "Test Widget",
 		Enabled:   true,
 		Fields:    map[string]interface{}{"name": "text", "email": "email"},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
 
-	hash := form.ToRedisHash()
+	hash := widget.ToRedisHash()
 
-	if hash["id"] != form.ID {
-		t.Errorf("Expected id %s, got %v", form.ID, hash["id"])
+	if hash["id"] != widget.ID {
+		t.Errorf("Expected id %s, got %v", widget.ID, hash["id"])
 	}
 
-	if hash["owner_id"] != form.OwnerID {
-		t.Errorf("Expected owner_id %s, got %v", form.OwnerID, hash["owner_id"])
+	if hash["owner_id"] != widget.OwnerID {
+		t.Errorf("Expected owner_id %s, got %v", widget.OwnerID, hash["owner_id"])
 	}
 
-	if hash["type"] != form.Type {
-		t.Errorf("Expected type %s, got %v", form.Type, hash["type"])
+	if hash["type"] != widget.Type {
+		t.Errorf("Expected type %s, got %v", widget.Type, hash["type"])
 	}
 
-	if hash["name"] != form.Name {
-		t.Errorf("Expected name %s, got %v", form.Name, hash["name"])
+	if hash["name"] != widget.Name {
+		t.Errorf("Expected name %s, got %v", widget.Name, hash["name"])
 	}
 
-	if hash["enabled"] != fmt.Sprintf("%v", form.Enabled) {
-		t.Errorf("Expected enabled %v, got %v", form.Enabled, hash["enabled"])
+	if hash["enabled"] != fmt.Sprintf("%v", widget.Enabled) {
+		t.Errorf("Expected enabled %v, got %v", widget.Enabled, hash["enabled"])
 	}
 }
 
-func TestFormFromRedisHash(t *testing.T) {
+func TestWidgetFromRedisHash(t *testing.T) {
 	hash := map[string]string{
-		"id":         "test-form-1",
+		"id":         "test-widget-1",
 		"owner_id":   "user-123",
 		"type":       "contact",
-		"name":       "Test Form",
+		"name":       "Test Widget",
 		"enabled":    "true",
 		"fields":     `{"name":"text","email":"email"}`,
 		"created_at": "1640995200", // 2022-01-01 00:00:00 UTC
 		"updated_at": "1640995200",
 	}
 
-	form := &Form{}
-	err := form.FromRedisHash(hash)
+	widget := &Widget{}
+	err := widget.FromRedisHash(hash)
 	if err != nil {
-		t.Fatalf("Failed to parse form from hash: %v", err)
+		t.Fatalf("Failed to parse widget from hash: %v", err)
 	}
 
-	if form.ID != hash["id"] {
-		t.Errorf("Expected id %s, got %s", hash["id"], form.ID)
+	if widget.ID != hash["id"] {
+		t.Errorf("Expected id %s, got %s", hash["id"], widget.ID)
 	}
 
-	if form.OwnerID != hash["owner_id"] {
-		t.Errorf("Expected owner_id %s, got %s", hash["owner_id"], form.OwnerID)
+	if widget.OwnerID != hash["owner_id"] {
+		t.Errorf("Expected owner_id %s, got %s", hash["owner_id"], widget.OwnerID)
 	}
 
-	if form.Type != hash["type"] {
-		t.Errorf("Expected type %s, got %s", hash["type"], form.Type)
+	if widget.Type != hash["type"] {
+		t.Errorf("Expected type %s, got %s", hash["type"], widget.Type)
 	}
 
-	if form.Name != hash["name"] {
-		t.Errorf("Expected name %s, got %s", hash["name"], form.Name)
+	if widget.Name != hash["name"] {
+		t.Errorf("Expected name %s, got %s", hash["name"], widget.Name)
 	}
 
-	if !form.Enabled {
+	if !widget.Enabled {
 		t.Errorf("Expected enabled to be true")
 	}
 
-	if form.Fields["name"] != "text" {
-		t.Errorf("Expected fields.name to be 'text', got %v", form.Fields["name"])
+	if widget.Fields["name"] != "text" {
+		t.Errorf("Expected fields.name to be 'text', got %v", widget.Fields["name"])
 	}
 }
 
-func TestForm_JSONSerialization(t *testing.T) {
-	original := &Form{
-		ID:        "test-form-1",
+func TestWidget_JSONSerialization(t *testing.T) {
+	original := &Widget{
+		ID:        "test-widget-1",
 		OwnerID:   "user-123",
 		Type:      "contact",
-		Name:      "Contact Form",
+		Name:      "Contact Widget",
 		Enabled:   true,
 		Fields:    map[string]interface{}{"name": "required", "email": "required"},
 		CreatedAt: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
@@ -100,13 +100,13 @@ func TestForm_JSONSerialization(t *testing.T) {
 	// Test JSON marshaling
 	data, err := json.Marshal(original)
 	if err != nil {
-		t.Fatalf("Failed to marshal form: %v", err)
+		t.Fatalf("Failed to marshal widget: %v", err)
 	}
 
 	// Test JSON unmarshaling
-	var restored Form
+	var restored Widget
 	if err := json.Unmarshal(data, &restored); err != nil {
-		t.Fatalf("Failed to unmarshal form: %v", err)
+		t.Fatalf("Failed to unmarshal widget: %v", err)
 	}
 
 	// Compare fields
@@ -137,7 +137,7 @@ func TestSubmission_Validation(t *testing.T) {
 			name: "valid submission",
 			submission: Submission{
 				ID:        "sub-123",
-				FormID:    "form-456",
+				WidgetID:  "widget-456",
 				Data:      map[string]interface{}{"name": "John", "email": "john@test.com"},
 				CreatedAt: time.Now(),
 				TTL:       24 * time.Hour,
@@ -148,17 +148,17 @@ func TestSubmission_Validation(t *testing.T) {
 			name: "empty ID",
 			submission: Submission{
 				ID:        "",
-				FormID:    "form-456",
+				WidgetID:  "widget-456",
 				Data:      map[string]interface{}{"name": "John"},
 				CreatedAt: time.Now(),
 			},
 			valid: false,
 		},
 		{
-			name: "empty FormID",
+			name: "empty WidgetID",
 			submission: Submission{
 				ID:        "sub-123",
-				FormID:    "",
+				WidgetID:  "",
 				Data:      map[string]interface{}{"name": "John"},
 				CreatedAt: time.Now(),
 			},
@@ -168,7 +168,7 @@ func TestSubmission_Validation(t *testing.T) {
 			name: "nil data",
 			submission: Submission{
 				ID:        "sub-123",
-				FormID:    "form-456",
+				WidgetID:  "widget-456",
 				Data:      nil,
 				CreatedAt: time.Now(),
 			},
@@ -179,7 +179,7 @@ func TestSubmission_Validation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			isValid := tt.submission.ID != "" &&
-				tt.submission.FormID != "" &&
+				tt.submission.WidgetID != "" &&
 				tt.submission.Data != nil &&
 				!tt.submission.CreatedAt.IsZero()
 

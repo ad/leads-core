@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/ad/leads-core/internal/config"
 	"github.com/ad/leads-core/internal/storage"
+	"github.com/ad/leads-core/pkg/logger"
 )
 
 // RateLimiter provides rate limiting functionality
@@ -34,18 +34,29 @@ func (rl *RateLimiter) RateLimit(next http.Handler) http.Handler {
 		// Extract IP address
 		ip := getClientIP(r)
 		if ip == "" {
-			log.Printf("action=rate_limit error=%q", "failed to extract client IP")
+			logger.Error("Failed to extract client IP for rate limiting", map[string]interface{}{
+				"action": "rate_limit",
+				"error":  "failed to extract client IP",
+			})
 			writeErrorResponse(w, http.StatusInternalServerError, "Internal server error")
 			return
 		}
 
 		// Check rate limits
 		if exceeded, err := rl.checkRateLimit(ctx, ip); err != nil {
-			log.Printf("action=rate_limit ip=%s error=%q", ip, err.Error())
+			logger.Error("Rate limit check failed", map[string]interface{}{
+				"action": "rate_limit",
+				"ip":     ip,
+				"error":  err.Error(),
+			})
 			writeErrorResponse(w, http.StatusInternalServerError, "Internal server error")
 			return
 		} else if exceeded {
-			log.Printf("action=rate_limit ip=%s status=exceeded", ip)
+			logger.Warn("Rate limit exceeded", map[string]interface{}{
+				"action": "rate_limit",
+				"ip":     ip,
+				"status": "exceeded",
+			})
 			writeErrorResponse(w, http.StatusTooManyRequests, "Rate limit exceeded")
 			return
 		}

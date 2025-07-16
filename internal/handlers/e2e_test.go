@@ -95,33 +95,33 @@ func setupE2EServer(t *testing.T) *E2ETestServer {
 		})
 	})
 
-	// Public form submission endpoint (no auth required)
-	mux.HandleFunc("/api/forms/", func(w http.ResponseWriter, r *http.Request) {
-		// Extract form ID from path
+	// Public widget submission endpoint (no auth required)
+	mux.HandleFunc("/api/widgets/", func(w http.ResponseWriter, r *http.Request) {
+		// Extract widget ID from path
 		path := r.URL.Path
-		if len(path) <= len("/api/forms/") {
-			http.Error(w, "Form ID is required", http.StatusBadRequest)
+		if len(path) <= len("/api/widgets/") {
+			http.Error(w, "Widget ID is required", http.StatusBadRequest)
 			return
 		}
 
-		// Remove /api/forms/ prefix and parse the rest
-		remaining := path[len("/api/forms/"):]
+		// Remove /api/widgets/ prefix and parse the rest
+		remaining := path[len("/api/widgets/"):]
 
 		// Check if it's a submission request
 		if r.Method == "POST" && len(remaining) > 7 && remaining[len(remaining)-7:] == "/submit" {
-			formID := remaining[:len(remaining)-7]
-			handlePublicSubmission(w, r, formID, redisClient)
+			widgetID := remaining[:len(remaining)-7]
+			handlePublicSubmission(w, r, widgetID, redisClient)
 			return
 		}
 
-		// Get form for viewing (public endpoint)
+		// Get widget for viewing (public endpoint)
 		if r.Method == "GET" {
-			formID := remaining
+			widgetID := remaining
 			// Remove trailing slash if present
-			if len(formID) > 0 && formID[len(formID)-1] == '/' {
-				formID = formID[:len(formID)-1]
+			if len(widgetID) > 0 && widgetID[len(widgetID)-1] == '/' {
+				widgetID = widgetID[:len(widgetID)-1]
 			}
-			handleGetForm(w, formID, redisClient)
+			handleGetWidget(w, widgetID, redisClient)
 			return
 		}
 
@@ -135,30 +135,30 @@ func setupE2EServer(t *testing.T) *E2ETestServer {
 			path := r.URL.Path[len("/api/private/"):]
 
 			switch {
-			case path == "forms" && r.Method == "POST":
-				handleCreateForm(w, r, redisClient)
-			case path == "forms" && r.Method == "GET":
-				handleListForms(w, r, redisClient)
-			case len(path) > 6 && path[:6] == "forms/":
-				formID := path[6:]
+			case path == "widgets" && r.Method == "POST":
+				handleCreateWidget(w, r, redisClient)
+			case path == "widgets" && r.Method == "GET":
+				handleListWidgets(w, r, redisClient)
+			case len(path) > 6 && path[:6] == "widgets/":
+				widgetID := path[6:]
 				// Remove potential trailing slash or path suffixes
-				if idx := strings.Index(formID, "/"); idx > 0 {
-					suffix := formID[idx:]
-					formID = formID[:idx]
+				if idx := strings.Index(widgetID, "/"); idx > 0 {
+					suffix := widgetID[idx:]
+					widgetID = widgetID[:idx]
 
 					if suffix == "/stats" && r.Method == "GET" {
-						handleGetStats(w, r, formID, redisClient)
+						handleGetStats(w, r, widgetID, redisClient)
 						return
 					}
 				}
 
 				switch r.Method {
 				case "GET":
-					handleGetPrivateForm(w, r, formID, redisClient)
+					handleGetPrivateWidget(w, r, widgetID, redisClient)
 				case "PUT":
-					handleUpdateForm(w, r, formID, redisClient)
+					handleUpdateWidget(w, r, widgetID, redisClient)
 				case "DELETE":
-					handleDeleteForm(w, r, formID, redisClient)
+					handleDeleteWidget(w, r, widgetID, redisClient)
 				default:
 					http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 				}
@@ -229,7 +229,7 @@ func (e2e *E2ETestServer) makeRequest(method, path string, body []byte, headers 
 
 // Test handlers implementation (simplified versions for E2E testing)
 
-func handlePublicSubmission(w http.ResponseWriter, r *http.Request, formID string, client redis.UniversalClient) {
+func handlePublicSubmission(w http.ResponseWriter, r *http.Request, widgetID string, client redis.UniversalClient) {
 	// Parse request body first
 	var submission struct {
 		Data map[string]interface{} `json:"data"`
@@ -245,26 +245,26 @@ func handlePublicSubmission(w http.ResponseWriter, r *http.Request, formID strin
 		return
 	}
 
-	// Check if form exists and is enabled
+	// Check if widget exists and is enabled
 	ctx := context.Background()
-	formData, err := client.HGetAll(ctx, "form:"+formID).Result()
-	if err != nil || len(formData) == 0 {
-		http.Error(w, "Form not found", http.StatusNotFound)
+	widgetData, err := client.HGetAll(ctx, "widget:"+widgetID).Result()
+	if err != nil || len(widgetData) == 0 {
+		http.Error(w, "Widget not found", http.StatusNotFound)
 		return
 	}
 
-	if formData["enabled"] != "true" {
-		http.Error(w, "Form is disabled", http.StatusBadRequest)
+	if widgetData["enabled"] != "true" {
+		http.Error(w, "Widget is disabled", http.StatusBadRequest)
 		return
 	}
 
 	// Create submission
 	submissionID := fmt.Sprintf("sub_%d", time.Now().UnixNano())
-	submissionKey := fmt.Sprintf("submission:%s:%s", formID, submissionID)
+	submissionKey := fmt.Sprintf("submission:%s:%s", widgetID, submissionID)
 
 	submissionObj := map[string]interface{}{
 		"id":         submissionID,
-		"form_id":    formID,
+		"widget_id":  widgetID,
 		"data":       submission.Data,
 		"created_at": time.Now().Format(time.RFC3339),
 	}
@@ -277,8 +277,8 @@ func handlePublicSubmission(w http.ResponseWriter, r *http.Request, formID strin
 		return
 	}
 
-	// Update form stats
-	client.HIncrBy(ctx, "form:"+formID+":stats", "submits", 1)
+	// Update widget stats
+	client.HIncrBy(ctx, "widget:"+widgetID+":stats", "submits", 1)
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{
@@ -287,37 +287,37 @@ func handlePublicSubmission(w http.ResponseWriter, r *http.Request, formID strin
 	})
 }
 
-func handleGetForm(w http.ResponseWriter, formID string, client redis.UniversalClient) {
+func handleGetWidget(w http.ResponseWriter, widgetID string, client redis.UniversalClient) {
 	ctx := context.Background()
-	formData, err := client.HGetAll(ctx, "form:"+formID).Result()
-	if err != nil || len(formData) == 0 {
-		http.Error(w, "Form not found", http.StatusNotFound)
+	widgetData, err := client.HGetAll(ctx, "widget:"+widgetID).Result()
+	if err != nil || len(widgetData) == 0 {
+		http.Error(w, "Widget not found", http.StatusNotFound)
 		return
 	}
 
 	// Increment views
-	client.HIncrBy(ctx, "form:"+formID+":stats", "views", 1)
+	client.HIncrBy(ctx, "widget:"+widgetID+":stats", "views", 1)
 
 	// Parse fields JSON
 	var fields map[string]interface{}
-	if fieldsStr, ok := formData["fields"]; ok {
+	if fieldsStr, ok := widgetData["fields"]; ok {
 		json.Unmarshal([]byte(fieldsStr), &fields)
 	}
 
-	// Return only public form data
-	publicForm := map[string]interface{}{
-		"id":      formID,
-		"name":    formData["name"],
-		"type":    formData["type"],
-		"enabled": formData["enabled"] == "true",
+	// Return only public widget data
+	publicWidget := map[string]interface{}{
+		"id":      widgetID,
+		"name":    widgetData["name"],
+		"type":    widgetData["type"],
+		"enabled": widgetData["enabled"] == "true",
 		"fields":  fields,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(publicForm)
+	json.NewEncoder(w).Encode(publicWidget)
 }
 
-func handleCreateForm(w http.ResponseWriter, r *http.Request, client redis.UniversalClient) {
+func handleCreateWidget(w http.ResponseWriter, r *http.Request, client redis.UniversalClient) {
 	// Get user from context
 	user, exists := auth.GetUserFromContext(r.Context())
 	if !exists {
@@ -326,66 +326,66 @@ func handleCreateForm(w http.ResponseWriter, r *http.Request, client redis.Unive
 	}
 
 	// Parse request first
-	var form models.Form
-	if err := json.NewDecoder(r.Body).Decode(&form); err != nil {
+	var widget models.Widget
+	if err := json.NewDecoder(r.Body).Decode(&widget); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
 	// Basic validation - check required fields
-	if form.Name == "" {
-		http.Error(w, "Form name is required", http.StatusBadRequest)
+	if widget.Name == "" {
+		http.Error(w, "Widget name is required", http.StatusBadRequest)
 		return
 	}
-	if form.Type == "" {
-		http.Error(w, "Form type is required", http.StatusBadRequest)
+	if widget.Type == "" {
+		http.Error(w, "Widget type is required", http.StatusBadRequest)
 		return
 	}
 
-	// Set form metadata
-	form.ID = fmt.Sprintf("form_%d", time.Now().UnixNano())
-	form.OwnerID = user.ID
-	form.CreatedAt = time.Now()
-	form.UpdatedAt = time.Now()
+	// Set widget metadata
+	widget.ID = fmt.Sprintf("widget_%d", time.Now().UnixNano())
+	widget.OwnerID = user.ID
+	widget.CreatedAt = time.Now()
+	widget.UpdatedAt = time.Now()
 
-	// Store form in Redis
+	// Store widget in Redis
 	ctx := context.Background()
-	formKey := "form:" + form.ID
+	widgetKey := "widget:" + widget.ID
 
-	fieldsJSON, _ := json.Marshal(form.Fields)
+	fieldsJSON, _ := json.Marshal(widget.Fields)
 
-	formData := map[string]interface{}{
-		"id":         form.ID,
-		"owner_id":   form.OwnerID,
-		"name":       form.Name,
-		"type":       form.Type,
-		"enabled":    fmt.Sprintf("%v", form.Enabled),
+	widgetData := map[string]interface{}{
+		"id":         widget.ID,
+		"owner_id":   widget.OwnerID,
+		"name":       widget.Name,
+		"type":       widget.Type,
+		"enabled":    fmt.Sprintf("%v", widget.Enabled),
 		"fields":     string(fieldsJSON),
-		"created_at": form.CreatedAt.Format(time.RFC3339),
-		"updated_at": form.UpdatedAt.Format(time.RFC3339),
+		"created_at": widget.CreatedAt.Format(time.RFC3339),
+		"updated_at": widget.UpdatedAt.Format(time.RFC3339),
 	}
 
-	if err := client.HMSet(ctx, formKey, formData).Err(); err != nil {
-		http.Error(w, "Failed to create form", http.StatusInternalServerError)
+	if err := client.HMSet(ctx, widgetKey, widgetData).Err(); err != nil {
+		http.Error(w, "Failed to create widget", http.StatusInternalServerError)
 		return
 	}
 
-	// Add to user's forms set
-	client.SAdd(ctx, "forms:"+user.ID, form.ID)
+	// Add to user's widgets set
+	client.SAdd(ctx, "widgets:"+user.ID, widget.ID)
 
 	// Initialize stats
-	client.HMSet(ctx, "form:"+form.ID+":stats", map[string]interface{}{
-		"form_id": form.ID,
-		"views":   0,
-		"submits": 0,
-		"closes":  0,
+	client.HMSet(ctx, "widget:"+widget.ID+":stats", map[string]interface{}{
+		"widget_id": widget.ID,
+		"views":     0,
+		"submits":   0,
+		"closes":    0,
 	})
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(form)
+	json.NewEncoder(w).Encode(widget)
 }
 
-func handleListForms(w http.ResponseWriter, r *http.Request, client redis.UniversalClient) {
+func handleListWidgets(w http.ResponseWriter, r *http.Request, client redis.UniversalClient) {
 	user, exists := auth.GetUserFromContext(r.Context())
 	if !exists {
 		http.Error(w, "User not found in context", http.StatusInternalServerError)
@@ -393,37 +393,37 @@ func handleListForms(w http.ResponseWriter, r *http.Request, client redis.Univer
 	}
 
 	ctx := context.Background()
-	formIDs, err := client.SMembers(ctx, "forms:"+user.ID).Result()
+	widgetIDs, err := client.SMembers(ctx, "widgets:"+user.ID).Result()
 	if err != nil {
-		http.Error(w, "Failed to get forms", http.StatusInternalServerError)
+		http.Error(w, "Failed to get widgets", http.StatusInternalServerError)
 		return
 	}
 
-	var forms []map[string]interface{}
-	for _, formID := range formIDs {
-		formData, err := client.HGetAll(ctx, "form:"+formID).Result()
-		if err != nil || len(formData) == 0 {
+	var widgets []map[string]interface{}
+	for _, widgetID := range widgetIDs {
+		widgetData, err := client.HGetAll(ctx, "widget:"+widgetID).Result()
+		if err != nil || len(widgetData) == 0 {
 			continue
 		}
 
-		forms = append(forms, map[string]interface{}{
-			"id":      formData["id"],
-			"name":    formData["name"],
-			"type":    formData["type"],
-			"enabled": formData["enabled"] == "true",
+		widgets = append(widgets, map[string]interface{}{
+			"id":      widgetData["id"],
+			"name":    widgetData["name"],
+			"type":    widgetData["type"],
+			"enabled": widgetData["enabled"] == "true",
 		})
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"data": forms,
+		"data": widgets,
 		"meta": map[string]interface{}{
-			"total": len(forms),
+			"total": len(widgets),
 		},
 	})
 }
 
-func handleGetPrivateForm(w http.ResponseWriter, r *http.Request, formID string, client redis.UniversalClient) {
+func handleGetPrivateWidget(w http.ResponseWriter, r *http.Request, widgetID string, client redis.UniversalClient) {
 	user, exists := auth.GetUserFromContext(r.Context())
 	if !exists {
 		http.Error(w, "User not found in context", http.StatusInternalServerError)
@@ -431,21 +431,21 @@ func handleGetPrivateForm(w http.ResponseWriter, r *http.Request, formID string,
 	}
 
 	ctx := context.Background()
-	formData, err := client.HGetAll(ctx, "form:"+formID).Result()
-	if err != nil || len(formData) == 0 {
-		http.Error(w, "Form not found", http.StatusNotFound)
+	widgetData, err := client.HGetAll(ctx, "widget:"+widgetID).Result()
+	if err != nil || len(widgetData) == 0 {
+		http.Error(w, "Widget not found", http.StatusNotFound)
 		return
 	}
 
 	// Check ownership
-	if formData["owner_id"] != user.ID {
+	if widgetData["owner_id"] != user.ID {
 		http.Error(w, "Access denied", http.StatusForbidden)
 		return
 	}
 
 	// Parse fields from JSON string
 	var fields []map[string]interface{}
-	if fieldsStr, ok := formData["fields"]; ok && fieldsStr != "" {
+	if fieldsStr, ok := widgetData["fields"]; ok && fieldsStr != "" {
 		if err := json.Unmarshal([]byte(fieldsStr), &fields); err != nil {
 			fields = []map[string]interface{}{}
 		}
@@ -453,38 +453,38 @@ func handleGetPrivateForm(w http.ResponseWriter, r *http.Request, formID string,
 
 	// Parse enabled field
 	enabled := false
-	if enabledStr, ok := formData["enabled"]; ok {
+	if enabledStr, ok := widgetData["enabled"]; ok {
 		enabled = enabledStr == "true"
 	}
 
 	// Create response with properly typed fields
 	response := map[string]interface{}{
-		"id":         formData["id"],
-		"name":       formData["name"],
-		"type":       formData["type"],
+		"id":         widgetData["id"],
+		"name":       widgetData["name"],
+		"type":       widgetData["type"],
 		"fields":     fields,
 		"enabled":    enabled,
-		"owner_id":   formData["owner_id"],
-		"created_at": formData["created_at"],
-		"updated_at": formData["updated_at"],
+		"owner_id":   widgetData["owner_id"],
+		"created_at": widgetData["created_at"],
+		"updated_at": widgetData["updated_at"],
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{"data": response})
 }
 
-func handleUpdateForm(w http.ResponseWriter, r *http.Request, formID string, client redis.UniversalClient) {
+func handleUpdateWidget(w http.ResponseWriter, r *http.Request, widgetID string, client redis.UniversalClient) {
 	user, exists := auth.GetUserFromContext(r.Context())
 	if !exists {
 		http.Error(w, "User not found in context", http.StatusInternalServerError)
 		return
 	}
 
-	// Check form ownership
+	// Check widget ownership
 	ctx := context.Background()
-	ownerID, err := client.HGet(ctx, "form:"+formID, "owner_id").Result()
+	ownerID, err := client.HGet(ctx, "widget:"+widgetID, "owner_id").Result()
 	if err != nil {
-		http.Error(w, "Form not found", http.StatusNotFound)
+		http.Error(w, "Widget not found", http.StatusNotFound)
 		return
 	}
 
@@ -503,7 +503,7 @@ func handleUpdateForm(w http.ResponseWriter, r *http.Request, formID string, cli
 	// Basic validation - don't allow empty name if it's being updated
 	if name, exists := updateData["name"]; exists {
 		if nameStr, ok := name.(string); ok && nameStr == "" {
-			http.Error(w, "Form name cannot be empty", http.StatusBadRequest)
+			http.Error(w, "Widget name cannot be empty", http.StatusBadRequest)
 			return
 		}
 	}
@@ -513,32 +513,32 @@ func handleUpdateForm(w http.ResponseWriter, r *http.Request, formID string, cli
 		updateData["enabled"] = fmt.Sprintf("%v", enabled)
 	}
 
-	// Update form
+	// Update widget
 	updateData["updated_at"] = time.Now().Format(time.RFC3339)
-	if err := client.HMSet(ctx, "form:"+formID, updateData).Err(); err != nil {
-		http.Error(w, "Failed to update form", http.StatusInternalServerError)
+	if err := client.HMSet(ctx, "widget:"+widgetID, updateData).Err(); err != nil {
+		http.Error(w, "Failed to update widget", http.StatusInternalServerError)
 		return
 	}
 
-	// Get updated form
-	formData, _ := client.HGetAll(ctx, "form:"+formID).Result()
+	// Get updated widget
+	widgetData, _ := client.HGetAll(ctx, "widget:"+widgetID).Result()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(formData)
+	json.NewEncoder(w).Encode(widgetData)
 }
 
-func handleDeleteForm(w http.ResponseWriter, r *http.Request, formID string, client redis.UniversalClient) {
+func handleDeleteWidget(w http.ResponseWriter, r *http.Request, widgetID string, client redis.UniversalClient) {
 	user, exists := auth.GetUserFromContext(r.Context())
 	if !exists {
 		http.Error(w, "User not found in context", http.StatusInternalServerError)
 		return
 	}
 
-	// Check form ownership
+	// Check widget ownership
 	ctx := context.Background()
-	ownerID, err := client.HGet(ctx, "form:"+formID, "owner_id").Result()
+	ownerID, err := client.HGet(ctx, "widget:"+widgetID, "owner_id").Result()
 	if err != nil {
-		http.Error(w, "Form not found", http.StatusNotFound)
+		http.Error(w, "Widget not found", http.StatusNotFound)
 		return
 	}
 
@@ -547,26 +547,26 @@ func handleDeleteForm(w http.ResponseWriter, r *http.Request, formID string, cli
 		return
 	}
 
-	// Delete form and related data
-	client.Del(ctx, "form:"+formID)
-	client.Del(ctx, "form:"+formID+":stats")
-	client.SRem(ctx, "forms:"+user.ID, formID)
+	// Delete widget and related data
+	client.Del(ctx, "widget:"+widgetID)
+	client.Del(ctx, "widget:"+widgetID+":stats")
+	client.SRem(ctx, "widgets:"+user.ID, widgetID)
 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func handleGetStats(w http.ResponseWriter, r *http.Request, formID string, client redis.UniversalClient) {
+func handleGetStats(w http.ResponseWriter, r *http.Request, widgetID string, client redis.UniversalClient) {
 	user, exists := auth.GetUserFromContext(r.Context())
 	if !exists {
 		http.Error(w, "User not found in context", http.StatusInternalServerError)
 		return
 	}
 
-	// Check form ownership
+	// Check widget ownership
 	ctx := context.Background()
-	ownerID, err := client.HGet(ctx, "form:"+formID, "owner_id").Result()
+	ownerID, err := client.HGet(ctx, "widget:"+widgetID, "owner_id").Result()
 	if err != nil {
-		http.Error(w, "Form not found", http.StatusNotFound)
+		http.Error(w, "Widget not found", http.StatusNotFound)
 		return
 	}
 
@@ -576,7 +576,7 @@ func handleGetStats(w http.ResponseWriter, r *http.Request, formID string, clien
 	}
 
 	// Get stats
-	stats, err := client.HGetAll(ctx, "form:"+formID+":stats").Result()
+	stats, err := client.HGetAll(ctx, "widget:"+widgetID+":stats").Result()
 	if err != nil {
 		http.Error(w, "Failed to get stats", http.StatusInternalServerError)
 		return
@@ -611,7 +611,7 @@ func TestE2E_HealthCheck(t *testing.T) {
 	}
 }
 
-func TestE2E_FormLifecycle(t *testing.T) {
+func TestE2E_WidgetLifecycle(t *testing.T) {
 	e2e := setupE2EServer(t)
 	userID := "test-user-e2e"
 	token := e2e.createTestToken(userID)
@@ -619,9 +619,9 @@ func TestE2E_FormLifecycle(t *testing.T) {
 		"Authorization": "Bearer " + token,
 	}
 
-	// Step 1: Create a form
-	createFormData := []byte(`{
-		"name": "E2E Test Form",
+	// Step 1: Create a widget
+	createWidgetData := []byte(`{
+		"name": "E2E Test Widget",
 		"type": "contact",
 		"enabled": true,
 		"fields": {
@@ -630,9 +630,9 @@ func TestE2E_FormLifecycle(t *testing.T) {
 		}
 	}`)
 
-	resp, err := e2e.makeRequest("POST", "/api/private/forms", createFormData, headers)
+	resp, err := e2e.makeRequest("POST", "/api/private/widgets", createWidgetData, headers)
 	if err != nil {
-		t.Fatalf("Failed to create form: %v", err)
+		t.Fatalf("Failed to create widget: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -645,20 +645,20 @@ func TestE2E_FormLifecycle(t *testing.T) {
 		return
 	}
 
-	var createdForm models.Form
-	if err := json.NewDecoder(resp.Body).Decode(&createdForm); err != nil {
-		t.Fatalf("Failed to decode form: %v", err)
+	var createdWidget models.Widget
+	if err := json.NewDecoder(resp.Body).Decode(&createdWidget); err != nil {
+		t.Fatalf("Failed to decode widget: %v", err)
 	}
 
-	formID := createdForm.ID
-	if formID == "" {
-		t.Fatal("Form ID is empty")
+	widgetID := createdWidget.ID
+	if widgetID == "" {
+		t.Fatal("Widget ID is empty")
 	}
 
-	// Step 2: List forms
-	resp, err = e2e.makeRequest("GET", "/api/private/forms", nil, headers)
+	// Step 2: List widgets
+	resp, err = e2e.makeRequest("GET", "/api/private/widgets", nil, headers)
 	if err != nil {
-		t.Fatalf("Failed to list forms: %v", err)
+		t.Fatalf("Failed to list widgets: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -671,15 +671,15 @@ func TestE2E_FormLifecycle(t *testing.T) {
 		t.Fatalf("Failed to decode list response: %v", err)
 	}
 
-	forms, ok := listResponse["data"].([]interface{})
-	if !ok || len(forms) == 0 {
-		t.Error("Expected at least one form in list")
+	widgets, ok := listResponse["data"].([]interface{})
+	if !ok || len(widgets) == 0 {
+		t.Error("Expected at least one widget in list")
 	}
 
-	// Step 3: Get form details
-	resp, err = e2e.makeRequest("GET", "/api/private/forms/"+formID, nil, headers)
+	// Step 3: Get widget details
+	resp, err = e2e.makeRequest("GET", "/api/private/widgets/"+widgetID, nil, headers)
 	if err != nil {
-		t.Fatalf("Failed to get form: %v", err)
+		t.Fatalf("Failed to get widget: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -687,15 +687,15 @@ func TestE2E_FormLifecycle(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
 
-	// Step 4: Update form
+	// Step 4: Update widget
 	updateData := []byte(`{
-		"name": "Updated E2E Test Form",
+		"name": "Updated E2E Test Widget",
 		"enabled": false
 	}`)
 
-	resp, err = e2e.makeRequest("PUT", "/api/private/forms/"+formID, updateData, headers)
+	resp, err = e2e.makeRequest("PUT", "/api/private/widgets/"+widgetID, updateData, headers)
 	if err != nil {
-		t.Fatalf("Failed to update form: %v", err)
+		t.Fatalf("Failed to update widget: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -703,10 +703,10 @@ func TestE2E_FormLifecycle(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
 
-	// Step 5: Delete form
-	resp, err = e2e.makeRequest("DELETE", "/api/private/forms/"+formID, nil, headers)
+	// Step 5: Delete widget
+	resp, err = e2e.makeRequest("DELETE", "/api/private/widgets/"+widgetID, nil, headers)
 	if err != nil {
-		t.Fatalf("Failed to delete form: %v", err)
+		t.Fatalf("Failed to delete widget: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -714,15 +714,15 @@ func TestE2E_FormLifecycle(t *testing.T) {
 		t.Errorf("Expected status 204, got %d", resp.StatusCode)
 	}
 
-	// Step 6: Verify form is deleted
-	resp, err = e2e.makeRequest("GET", "/api/private/forms/"+formID, nil, headers)
+	// Step 6: Verify widget is deleted
+	resp, err = e2e.makeRequest("GET", "/api/private/widgets/"+widgetID, nil, headers)
 	if err != nil {
-		t.Fatalf("Failed to check deleted form: %v", err)
+		t.Fatalf("Failed to check deleted widget: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNotFound {
-		t.Errorf("Expected status 404 for deleted form, got %d", resp.StatusCode)
+		t.Errorf("Expected status 404 for deleted widget, got %d", resp.StatusCode)
 	}
 }
 
@@ -734,9 +734,9 @@ func TestE2E_PublicSubmission(t *testing.T) {
 		"Authorization": "Bearer " + token,
 	}
 
-	// Create a form first
-	createFormData := []byte(`{
-		"name": "Public Submission Form",
+	// Create a widget first
+	createWidgetData := []byte(`{
+		"name": "Public Submission Widget",
 		"type": "contact",
 		"enabled": true,
 		"fields": {
@@ -745,23 +745,23 @@ func TestE2E_PublicSubmission(t *testing.T) {
 		}
 	}`)
 
-	resp, err := e2e.makeRequest("POST", "/api/private/forms", createFormData, headers)
+	resp, err := e2e.makeRequest("POST", "/api/private/widgets", createWidgetData, headers)
 	if err != nil {
-		t.Fatalf("Failed to create form: %v", err)
+		t.Fatalf("Failed to create widget: %v", err)
 	}
 	defer resp.Body.Close()
 
-	var form models.Form
-	if err := json.NewDecoder(resp.Body).Decode(&form); err != nil {
-		t.Fatalf("Failed to decode form: %v", err)
+	var widget models.Widget
+	if err := json.NewDecoder(resp.Body).Decode(&widget); err != nil {
+		t.Fatalf("Failed to decode widget: %v", err)
 	}
 
-	formID := form.ID
+	widgetID := widget.ID
 
-	// Test public form view
-	resp, err = e2e.makeRequest("GET", "/api/forms/"+formID, nil, nil)
+	// Test public widget view
+	resp, err = e2e.makeRequest("GET", "/api/widgets/"+widgetID, nil, nil)
 	if err != nil {
-		t.Fatalf("Failed to get public form: %v", err)
+		t.Fatalf("Failed to get public widget: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -777,9 +777,9 @@ func TestE2E_PublicSubmission(t *testing.T) {
 		}
 	}`)
 
-	resp, err = e2e.makeRequest("POST", "/api/forms/"+formID+"/submit", submissionData, nil)
+	resp, err = e2e.makeRequest("POST", "/api/widgets/"+widgetID+"/submit", submissionData, nil)
 	if err != nil {
-		t.Fatalf("Failed to submit form: %v", err)
+		t.Fatalf("Failed to submit widget: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -797,7 +797,7 @@ func TestE2E_PublicSubmission(t *testing.T) {
 	}
 
 	// Check stats
-	resp, err = e2e.makeRequest("GET", "/api/private/forms/"+formID+"/stats", nil, headers)
+	resp, err = e2e.makeRequest("GET", "/api/private/widgets/"+widgetID+"/stats", nil, headers)
 	if err != nil {
 		t.Fatalf("Failed to get stats: %v", err)
 	}
@@ -831,28 +831,28 @@ func TestE2E_Authorization(t *testing.T) {
 	headers1 := map[string]string{"Authorization": "Bearer " + token1}
 	headers2 := map[string]string{"Authorization": "Bearer " + token2}
 
-	// User 1 creates a form
-	createFormData := []byte(`{
-		"name": "User 1 Form",
+	// User 1 creates a widget
+	createWidgetData := []byte(`{
+		"name": "User 1 Widget",
 		"type": "contact",
 		"enabled": true,
 		"fields": {"name": {"type": "text"}}
 	}`)
 
-	resp, err := e2e.makeRequest("POST", "/api/private/forms", createFormData, headers1)
+	resp, err := e2e.makeRequest("POST", "/api/private/widgets", createWidgetData, headers1)
 	if err != nil {
-		t.Fatalf("Failed to create form: %v", err)
+		t.Fatalf("Failed to create widget: %v", err)
 	}
 	defer resp.Body.Close()
 
-	var form models.Form
-	json.NewDecoder(resp.Body).Decode(&form)
-	formID := form.ID
+	var widget models.Widget
+	json.NewDecoder(resp.Body).Decode(&widget)
+	widgetID := widget.ID
 
-	// User 2 tries to access User 1's form (should fail)
-	resp, err = e2e.makeRequest("GET", "/api/private/forms/"+formID, nil, headers2)
+	// User 2 tries to access User 1's widget (should fail)
+	resp, err = e2e.makeRequest("GET", "/api/private/widgets/"+widgetID, nil, headers2)
 	if err != nil {
-		t.Fatalf("Failed to request form: %v", err)
+		t.Fatalf("Failed to request widget: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -860,9 +860,9 @@ func TestE2E_Authorization(t *testing.T) {
 		t.Errorf("Expected status 403, got %d", resp.StatusCode)
 	}
 
-	// User 2 tries to update User 1's form (should fail)
-	updateData := []byte(`{"name": "Hacked Form"}`)
-	resp, err = e2e.makeRequest("PUT", "/api/private/forms/"+formID, updateData, headers2)
+	// User 2 tries to update User 1's widget (should fail)
+	updateData := []byte(`{"name": "Hacked Widget"}`)
+	resp, err = e2e.makeRequest("PUT", "/api/private/widgets/"+widgetID, updateData, headers2)
 	if err != nil {
 		t.Fatalf("Failed to request update: %v", err)
 	}
@@ -872,8 +872,8 @@ func TestE2E_Authorization(t *testing.T) {
 		t.Errorf("Expected status 403, got %d", resp.StatusCode)
 	}
 
-	// User 2 tries to delete User 1's form (should fail)
-	resp, err = e2e.makeRequest("DELETE", "/api/private/forms/"+formID, nil, headers2)
+	// User 2 tries to delete User 1's widget (should fail)
+	resp, err = e2e.makeRequest("DELETE", "/api/private/widgets/"+widgetID, nil, headers2)
 	if err != nil {
 		t.Fatalf("Failed to request delete: %v", err)
 	}
@@ -901,7 +901,7 @@ func TestE2E_InvalidRequests(t *testing.T) {
 		{
 			name:           "invalid JSON",
 			method:         "POST",
-			path:           "/api/private/forms",
+			path:           "/api/private/widgets",
 			body:           []byte(`{invalid json`),
 			headers:        headers,
 			expectedStatus: http.StatusBadRequest,
@@ -909,7 +909,7 @@ func TestE2E_InvalidRequests(t *testing.T) {
 		{
 			name:           "missing required fields",
 			method:         "POST",
-			path:           "/api/private/forms",
+			path:           "/api/private/widgets",
 			body:           []byte(`{"type": "contact"}`),
 			headers:        headers,
 			expectedStatus: http.StatusBadRequest,
@@ -917,15 +917,15 @@ func TestE2E_InvalidRequests(t *testing.T) {
 		{
 			name:           "unauthorized request",
 			method:         "POST",
-			path:           "/api/private/forms",
+			path:           "/api/private/widgets",
 			body:           []byte(`{"name": "Test", "type": "contact"}`),
 			headers:        nil,
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
-			name:           "nonexistent form",
+			name:           "nonexistent widget",
 			method:         "GET",
-			path:           "/api/private/forms/nonexistent",
+			path:           "/api/private/widgets/nonexistent",
 			body:           nil,
 			headers:        headers,
 			expectedStatus: http.StatusNotFound,
@@ -933,7 +933,7 @@ func TestE2E_InvalidRequests(t *testing.T) {
 		{
 			name:           "invalid submission - missing data",
 			method:         "POST",
-			path:           "/api/forms/nonexistent/submit",
+			path:           "/api/widgets/nonexistent/submit",
 			body:           []byte(`{"invalid": "data"}`),
 			headers:        nil,
 			expectedStatus: http.StatusBadRequest,

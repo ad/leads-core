@@ -1,11 +1,11 @@
 package middleware
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/ad/leads-core/internal/auth"
+	"github.com/ad/leads-core/pkg/logger"
 )
 
 // AuthMiddleware provides JWT authentication middleware
@@ -33,7 +33,10 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 		// Validate token
 		user, err := m.validator.ValidateToken(authHeader)
 		if err != nil {
-			log.Printf("action=authenticate error=%q", err.Error())
+			logger.Debug("Authentication failed", map[string]interface{}{
+				"action": "authenticate",
+				"error":  err.Error(),
+			})
 			writeErrorResponse(w, http.StatusUnauthorized, "Invalid or expired token")
 			return
 		}

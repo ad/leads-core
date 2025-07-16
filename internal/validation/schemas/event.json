@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "title": "Form Event Request",
-  "description": "Schema for form events",
+  "title": "Widget Event Request",
+  "description": "Schema for widget events",
   "required": ["type"],
   "properties": {
     "type": {

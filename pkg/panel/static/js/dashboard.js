@@ -6,7 +6,7 @@ class DashboardManager {
     constructor() {
         this.currentPage = 1;
         this.perPage = 20;
-        this.totalForms = 0;
+        this.totalWidgets = 0;
         this.currentFilters = {
             search: '',
             status: '',
@@ -69,10 +69,10 @@ class DashboardManager {
      */
     async loadData() {
         try {
-            // Load summary data and forms in parallel
+            // Load summary data and widgets in parallel
             await Promise.all([
                 this.loadSummary(),
-                this.loadForms()
+                this.loadWidgets()
             ]);
         } catch (error) {
             console.error('Error loading data:', error);
@@ -85,19 +85,19 @@ class DashboardManager {
      */
     async loadSummary() {
         try {
-            const summary = await window.APIClient.getFormsSummary();
+            const summary = await window.APIClient.getWidgetsSummary();
             
             // Update summary cards
-            this.updateSummaryCard('total-forms', summary.total_forms || 0);
-            this.updateSummaryCard('active-forms', summary.active_forms || 0);
+            this.updateSummaryCard('total-widgets', summary.total_widgets || 0);
+            this.updateSummaryCard('active-widgets', summary.active_widgets || 0);
             this.updateSummaryCard('total-views', summary.total_views || 0);
             this.updateSummaryCard('total-submissions', summary.total_submissions || 0);
             
         } catch (error) {
             console.error('Error loading summary:', error);
             // Set default values on error
-            this.updateSummaryCard('total-forms', 0);
-            this.updateSummaryCard('active-forms', 0);
+            this.updateSummaryCard('total-widgets', 0);
+            this.updateSummaryCard('active-widgets', 0);
             this.updateSummaryCard('total-views', 0);
             this.updateSummaryCard('total-submissions', 0);
         }
@@ -114,9 +114,9 @@ class DashboardManager {
     }
 
     /**
-     * Load forms list
+     * Load widgets list
      */
-    async loadForms() {
+    async loadWidgets() {
         try {
             const options = {
                 page: this.currentPage,
@@ -124,38 +124,38 @@ class DashboardManager {
                 ...this.currentFilters
             };
             
-            const response = await window.APIClient.getForms(options);
-            this.totalForms = response.meta?.total || 0;
+            const response = await window.APIClient.getWidgets(options);
+            this.totalWidgets = response.meta?.total || 0;
             
-            this.renderFormsTable(response.data || []);
+            this.renderWidgetsTable(response.data || []);
             this.updatePagination();
             this.populateFilterOptions(response.data || []);
             
         } catch (error) {
-            console.error('Error loading forms:', error);
-            this.renderFormsTable([]);
+            console.error('Error loading widgets:', error);
+            this.renderWidgetsTable([]);
             this.updatePagination();
         }
     }
 
     /**
-     * Render forms table
+     * Render widgets table
      */
-    renderFormsTable(forms) {
-        const tbody = document.getElementById('forms-tbody');
+    renderWidgetsTable(widgets) {
+        const tbody = document.getElementById('widgets-tbody');
         if (!tbody) return;
         
-        if (forms.length === 0) {
+        if (widgets.length === 0) {
             tbody.innerHTML = `
                 <tr class="no-data-row">
                     <td colspan="8">
                         <div class="no-data">
                             <div class="no-data-icon">📝</div>
-                            <div class="no-data-text">No forms found</div>
+                            <div class="no-data-text">No widgets found</div>
                             <div class="no-data-subtext">
                                 ${this.currentFilters.search || this.currentFilters.status || this.currentFilters.type 
                                     ? 'Try adjusting your search filters' 
-                                    : 'Create your first form to get started'}
+                                    : 'Create your first widget to get started'}
                             </div>
                         </div>
                     </td>
@@ -164,38 +164,38 @@ class DashboardManager {
             return;
         }
         
-        tbody.innerHTML = forms.map(form => `
-            <tr class="form-row" data-form-id="${form.id}">
-                <td class="form-id">${form.id}</td>
-                <td class="form-name">
-                    <div class="form-name-container">
-                        <span class="name">${window.UI.escapeHtml(form.name || 'Untitled')}</span>
-                        ${form.description ? `<span class="description">${window.UI.escapeHtml(form.description)}</span>` : ''}
+        tbody.innerHTML = widgets.map(widget => `
+            <tr class="widget-row" data-widget-id="${widget.id}">
+                <td class="widget-id">${widget.id}</td>
+                <td class="widget-name">
+                    <div class="widget-name-container">
+                        <span class="name">${window.UI.escapeHtml(widget.name || 'Untitled')}</span>
+                        ${widget.description ? `<span class="description">${window.UI.escapeHtml(widget.description)}</span>` : ''}
                     </div>
                 </td>
-                <td class="form-type">
-                    <span class="type-badge type-${form.type || 'other'}">${form.type || 'other'}</span>
+                <td class="widget-type">
+                    <span class="type-badge type-${widget.type || 'other'}">${widget.type || 'other'}</span>
                 </td>
-                <td class="form-status">
-                    <span class="status-badge ${form.enabled ? 'enabled' : 'disabled'}">
-                        ${form.enabled ? '✅ Active' : '❌ Disabled'}
+                <td class="widget-status">
+                    <span class="status-badge ${widget.enabled ? 'enabled' : 'disabled'}">
+                        ${widget.enabled ? '✅ Active' : '❌ Disabled'}
                     </span>
                 </td>
-                <td class="form-created">${window.UI.formatDate(form.created_at)}</td>
-                <td class="form-views">${window.UI.formatNumber(form.views || 0)}</td>
-                <td class="form-submissions">${window.UI.formatNumber(form.submissions || 0)}</td>
-                <td class="form-actions">
+                <td class="widget-created">${window.UI.formatDate(widget.created_at)}</td>
+                <td class="widget-views">${window.UI.formatNumber(widget.stats.views || 0)}</td>
+                <td class="widget-submissions">${window.UI.formatNumber(widget.stats.submits || 0)}</td>
+                <td class="widget-actions">
                     <div class="table-actions">
-                        <button class="btn-icon" onclick="window.UI.showFormDetails('${form.id}')" title="View Details">
+                        <button class="btn-icon" onclick="window.UI.showWidgetDetails('${widget.id}')" title="View Details">
                             👁️
                         </button>
-                        <button class="btn-icon" onclick="window.FormsManager.editForm('${form.id}')" title="Edit Form">
+                        <button class="btn-icon" onclick="window.WidgetsManager.editWidget('${widget.id}')" title="Edit Widget">
                             ✏️
                         </button>
-                        <button class="btn-icon" onclick="window.FormsManager.toggleFormStatus('${form.id}', ${!form.enabled})" title="${form.enabled ? 'Disable' : 'Enable'}">
-                            ${form.enabled ? '⏸️' : '▶️'}
+                        <button class="btn-icon" onclick="window.WidgetsManager.toggleWidgetStatus('${widget.id}', ${!widget.enabled})" title="${widget.enabled ? 'Disable' : 'Enable'}">
+                            ${widget.enabled ? '⏸️' : '▶️'}
                         </button>
-                        <button class="btn-icon btn-danger" onclick="window.FormsManager.deleteForm('${form.id}', '${window.UI.escapeHtml(form.name || 'Untitled')}')" title="Delete Form">
+                        <button class="btn-icon btn-danger" onclick="window.WidgetsManager.deleteWidget('${widget.id}', '${window.UI.escapeHtml(widget.name || 'Untitled')}')" title="Delete Widget">
                             🗑️
                         </button>
                     </div>
@@ -208,7 +208,7 @@ class DashboardManager {
      * Update pagination controls
      */
     updatePagination() {
-        const totalPages = Math.ceil(this.totalForms / this.perPage) || 1;
+        const totalPages = Math.ceil(this.totalWidgets / this.perPage) || 1;
         
         // Update pagination info
         const paginationInfo = document.getElementById('pagination-info');
@@ -217,7 +217,7 @@ class DashboardManager {
         const nextBtn = document.getElementById('next-page');
         const paginationContainer = document.querySelector('.pagination-container');
         
-        if (this.totalForms === 0) {
+        if (this.totalWidgets === 0) {
             if (paginationContainer) {
                 paginationContainer.style.display = 'none';
             }
@@ -229,10 +229,10 @@ class DashboardManager {
         }
         
         const startItem = ((this.currentPage - 1) * this.perPage) + 1;
-        const endItem = Math.min(this.currentPage * this.perPage, this.totalForms);
+        const endItem = Math.min(this.currentPage * this.perPage, this.totalWidgets);
         
         if (paginationInfo) {
-            paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${this.totalForms} forms`;
+            paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${this.totalWidgets} widgets`;
         }
         
         if (pageInfo) {
@@ -251,12 +251,12 @@ class DashboardManager {
     /**
      * Populate filter options
      */
-    populateFilterOptions(forms) {
+    populateFilterOptions(widgets) {
         const typeFilter = document.getElementById('filter-type');
         if (!typeFilter) return;
         
         // Get unique types
-        const types = [...new Set(forms.map(form => form.type).filter(Boolean))];
+        const types = [...new Set(widgets.map(widget => widget.type).filter(Boolean))];
         
         // Clear current options (except "All Types")
         typeFilter.innerHTML = '<option value="">All Types</option>';
@@ -276,7 +276,7 @@ class DashboardManager {
     handleSearch(query) {
         this.currentFilters.search = query;
         this.currentPage = 1;
-        this.loadForms();
+        this.loadWidgets();
     }
 
     /**
@@ -285,7 +285,7 @@ class DashboardManager {
     handleFilter(filterType, value) {
         this.currentFilters[filterType] = value;
         this.currentPage = 1;
-        this.loadForms();
+        this.loadWidgets();
     }
 
     /**
@@ -294,7 +294,7 @@ class DashboardManager {
     previousPage() {
         if (this.currentPage > 1) {
             this.currentPage--;
-            this.loadForms();
+            this.loadWidgets();
         }
     }
 
@@ -302,10 +302,10 @@ class DashboardManager {
      * Go to next page
      */
     nextPage() {
-        const totalPages = Math.ceil(this.totalForms / this.perPage);
+        const totalPages = Math.ceil(this.totalWidgets / this.perPage);
         if (this.currentPage < totalPages) {
             this.currentPage++;
-            this.loadForms();
+            this.loadWidgets();
         }
     }
 
@@ -374,7 +374,7 @@ class DashboardManager {
         if (statusFilter) statusFilter.value = '';
         if (typeFilter) typeFilter.value = '';
         
-        this.loadForms();
+        this.loadWidgets();
     }
 }
 

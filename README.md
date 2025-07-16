@@ -1,15 +1,18 @@
 # Nethouse Leads Service
 
-A Go-based leads management service that handles forms, submissions, and real-time statistics using Redis Cluster as the primary storage.
+A Go-based leads management service that handles widgets, submissions, and real-time statistics using Redis Cluster as the primary storage.
 
 ## Features
 
-- **Form Management**: Create, update, delete, and manage forms
-- **Submission Handling**: Accept and store form submissions with TTL
+- **Widget Management**: Create, update, delete, and manage widgets
+- **Submission Handling**: Accept and store widget submissions with TTL
 - **Real-time Statistics**: Track views, submissions, and closes
 - **JWT Authentication**: Secure API endpoints with JWT tokens
 - **Rate Limiting**: IP-based and global rate limiting
-- **Redis Cluster**: Scalable storage with Redis Cluster
+- **Redis Storage**: Flexible Redis configuration with three options:
+  - External Redis instance
+  - Redis Cluster for high availability
+  - **Embedded Redis server** (Redka) for simplified deployment
 - **Docker Support**: Full containerization with docker-compose
 
 ## Quick Start
@@ -43,6 +46,17 @@ docker-compose up -d
 docker-compose -f docker-compose.cluster.yml up --build -d
 ```
 
+**Option C: Embedded Redis (no external dependencies):**
+```bash
+# Set REDIS_ADDRESSES=redka in .env file
+echo "REDIS_ADDRESSES=redka" >> .env
+
+# Run the application
+go run ./cmd/server/
+# or with Docker
+docker-compose up -d leads-server
+```
+
 3. Check service health:
 ```bash
 curl http://localhost:8080/health
@@ -74,13 +88,13 @@ For Redis cluster deployments, use the provided management script:
 
 ### API Examples
 
-#### Create a form (Private endpoint - requires JWT):
+#### Create a widget (Private endpoint - requires JWT):
 ```bash
-curl -X POST http://localhost:8080/forms \
+curl -X POST http://localhost:8080/widgets \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Contact Form",
+    "name": "Contact Widget",
     "type": "contact",
     "enabled": true,
     "fields": {
@@ -91,28 +105,28 @@ curl -X POST http://localhost:8080/forms \
   }'
 ```
 
-#### Submit to a form (Public endpoint):
+#### Submit to a widget (Public endpoint):
 ```bash
-curl -X POST http://localhost:8080/forms/FORM_ID/submit \
+curl -X POST http://localhost:8080/widgets/WIDGET_ID/submit \
   -H "Content-Type: application/json" \
   -d '{
     "data": {
       "name": "John Doe",
       "email": "john@example.com",
-      "message": "Hello from the contact form!"
+      "message": "Hello from the contact widget!"
     }
   }'
 ```
 
-#### Register form events (Public endpoint):
+#### Register widget events (Public endpoint):
 ```bash
 # Register a view event
-curl -X POST http://localhost:8080/forms/FORM_ID/events \
+curl -X POST http://localhost:8080/widgets/WIDGET_ID/events \
   -H "Content-Type: application/json" \
   -d '{"type": "view"}'
 
 # Register a close event
-curl -X POST http://localhost:8080/forms/FORM_ID/events \
+curl -X POST http://localhost:8080/widgets/WIDGET_ID/events \
   -H "Content-Type: application/json" \
   -d '{"type": "close"}'
 ```
@@ -121,18 +135,18 @@ curl -X POST http://localhost:8080/forms/FORM_ID/events \
 
 ### Private Endpoints (Require JWT Authentication)
 
-- `GET /forms` - List user's forms with pagination
-- `POST /forms` - Create a new form
-- `GET /forms/{id}` - Get form by ID
-- `PUT /forms/{id}` - Update form
-- `DELETE /forms/{id}` - Delete form
-- `GET /forms/{id}/stats` - Get form statistics
-- `GET /forms/{id}/submissions` - Get form submissions with pagination
+- `GET /widgets` - List user's widgets with pagination
+- `POST /widgets` - Create a new widget
+- `GET /widgets/{id}` - Get widget by ID
+- `PUT /widgets/{id}` - Update widget
+- `DELETE /widgets/{id}` - Delete widget
+- `GET /widgets/{id}/stats` - Get widget statistics
+- `GET /widgets/{id}/submissions` - Get widget submissions with pagination
 
 ### Public Endpoints
 
-- `POST /forms/{id}/submit` - Submit data to a form
-- `POST /forms/{id}/events` - Register form events (view, close)
+- `POST /widgets/{id}/submit` - Submit data to a widget
+- `POST /widgets/{id}/events` - Register widget events (view, close)
 
 ### System Endpoints
 
@@ -149,12 +163,18 @@ SERVER_READ_TIMEOUT=30s
 SERVER_WRITE_TIMEOUT=30s
 
 # Redis Configuration  
-# Single Redis instance
+# External Redis instance
 REDIS_ADDRESSES=redis:6379
-# Redis cluster (comma-separated addresses)
+# External Redis cluster (comma-separated addresses)
 REDIS_ADDRESSES=redis-node-1:6379,redis-node-2:6379,redis-node-3:6379,redis-node-4:6379,redis-node-5:6379,redis-node-6:6379
+# Embedded Redis server (Redka)
+REDIS_ADDRESSES=redka
 REDIS_PASSWORD=
 REDIS_DB=0
+
+# Embedded Redis Configuration (only used when REDIS_ADDRESSES=redka)
+REDKA_PORT=6379          # Port for embedded Redis server
+REDKA_DB_PATH=file:redka.db  # Database file path (:memory: for in-memory)
 
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key
@@ -238,10 +258,10 @@ internal/
 
 The service uses Redis Cluster with the following key patterns:
 
-- Forms: `form:{form_id}`
-- Submissions: `submission:{form_id}:{submission_id}`
-- User forms: `forms:{user_id}`
-- Statistics: `form:{form_id}:stats`
+- Widgets: `widget:{widget_id}`
+- Submissions: `submission:{widget_id}:{submission_id}`
+- User widgets: `widgets:{user_id}`
+- Statistics: `widget:{widget_id}:stats`
 - Rate limiting: `rate_limit:ip:{ip}:{window}`
 
 ## Security
@@ -254,3 +274,34 @@ The service uses Redis Cluster with the following key patterns:
 ## License
 
 See LICENSE file for details.
+
+## Redis Configuration Options
+
+The service supports three Redis deployment modes:
+
+### 1. External Redis Instance
+For development and small deployments:
+```bash
+REDIS_ADDRESSES=localhost:6379
+```
+
+### 2. Redis Cluster
+For production and high-availability setups:
+```bash
+REDIS_ADDRESSES=node1:6379,node2:6379,node3:6379,node4:6379,node5:6379,node6:6379
+```
+
+### 3. Embedded Redis (Redka)
+For simplified deployment without external Redis dependencies:
+```bash
+REDIS_ADDRESSES=redka
+REDKA_PORT=6379
+REDKA_DB_PATH=file:redka.db    # or :memory: for in-memory storage
+```
+
+**Benefits of Embedded Redis:**
+- ✅ No external Redis server required
+- ✅ Simplified deployment and testing
+- ✅ Full Redis API compatibility
+- ✅ Persistent or in-memory storage options
+- ✅ Perfect for development, testing, and small deployments

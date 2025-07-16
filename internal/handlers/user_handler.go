@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
 
@@ -10,19 +9,20 @@ import (
 	"github.com/ad/leads-core/internal/models"
 	"github.com/ad/leads-core/internal/services"
 	"github.com/ad/leads-core/internal/validation"
+	"github.com/ad/leads-core/pkg/logger"
 )
 
 // UserHandler handles user-related HTTP requests
 type UserHandler struct {
-	formService *services.FormService
-	validator   *validation.SchemaValidator
+	widgetService *services.WidgetService
+	validator     *validation.SchemaValidator
 }
 
 // NewUserHandler creates a new user handler
-func NewUserHandler(formService *services.FormService, validator *validation.SchemaValidator) *UserHandler {
+func NewUserHandler(widgetService *services.WidgetService, validator *validation.SchemaValidator) *UserHandler {
 	return &UserHandler{
-		formService: formService,
-		validator:   validator,
+		widgetService: widgetService,
+		validator:     validator,
 	}
 }
 
@@ -67,14 +67,23 @@ func (h *UserHandler) UpdateUserTTL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update TTL for user's submissions
-	err := h.formService.UpdateUserSubmissionsTTL(r.Context(), userID, req.TTLDays)
+	err := h.widgetService.UpdateUserSubmissionsTTL(r.Context(), userID, req.TTLDays)
 	if err != nil {
-		log.Printf("action=update_user_ttl user_id=%s ttl_days=%d error=%q", userID, req.TTLDays, err.Error())
+		logger.Error("Failed to update user TTL", map[string]interface{}{
+			"action":   "update_user_ttl",
+			"user_id":  userID,
+			"ttl_days": req.TTLDays,
+			"error":    err.Error(),
+		})
 		writeErrorResponse(w, http.StatusInternalServerError, "Failed to update TTL")
 		return
 	}
 
-	log.Printf("action=update_user_ttl user_id=%s ttl_days=%d", userID, req.TTLDays)
+	logger.Debug("Updated user TTL successfully", map[string]interface{}{
+		"action":   "update_user_ttl",
+		"user_id":  userID,
+		"ttl_days": req.TTLDays,
+	})
 	writeJSONResponse(w, http.StatusOK, models.Response{
 		Data: map[string]interface{}{
 			"message":  "TTL updated successfully",
