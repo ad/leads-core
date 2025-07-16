@@ -13,8 +13,8 @@ type User struct {
 	Plan     string `json:"plan,omitempty"` // "free", "pro", etc.
 }
 
-// Form represents a form created by a user
-type Form struct {
+// Widget represents a widget created by a user
+type Widget struct {
 	ID        string                 `json:"id"`
 	OwnerID   string                 `json:"owner_id"`
 	Type      string                 `json:"type"`
@@ -23,37 +23,37 @@ type Form struct {
 	Fields    map[string]interface{} `json:"fields"`
 	CreatedAt time.Time              `json:"created_at"`
 	UpdatedAt time.Time              `json:"updated_at"`
-	Stats     *FormStats             `json:"stats,omitempty"`
+	Stats     *WidgetStats           `json:"stats,omitempty"`
 }
 
-// Submission represents a submission to a form
+// Submission represents a submission to a widget
 type Submission struct {
 	ID        string                 `json:"id"`
-	FormID    string                 `json:"form_id"`
+	WidgetID  string                 `json:"widget_id"`
 	Data      map[string]interface{} `json:"data"`
 	CreatedAt time.Time              `json:"created_at"`
 	TTL       time.Duration          `json:"ttl,omitempty"`
 }
 
-// FormStats represents statistics for a form
-type FormStats struct {
-	FormID   string    `json:"form_id"`
+// WidgetStats represents statistics for a widget
+type WidgetStats struct {
+	WidgetID string    `json:"widget_id"`
 	Views    int64     `json:"views"`
 	Submits  int64     `json:"submits"`
 	Closes   int64     `json:"closes"`
 	LastView time.Time `json:"last_view,omitempty"`
 }
 
-// CreateFormRequest represents request data for creating a form
-type CreateFormRequest struct {
+// CreateWidgetRequest represents request data for creating a widget
+type CreateWidgetRequest struct {
 	Type    string                 `json:"type"`
 	Name    string                 `json:"name"`
 	Enabled bool                   `json:"enabled"`
 	Fields  map[string]interface{} `json:"fields"`
 }
 
-// UpdateFormRequest represents request data for updating a form
-type UpdateFormRequest struct {
+// UpdateWidgetRequest represents request data for updating a widget
+type UpdateWidgetRequest struct {
 	Type    *string                `json:"type,omitempty"`
 	Name    *string                `json:"name,omitempty"`
 	Enabled *bool                  `json:"enabled,omitempty"`
@@ -65,7 +65,7 @@ type SubmissionRequest struct {
 	Data map[string]interface{} `json:"data"`
 }
 
-// EventRequest represents request data for form events
+// EventRequest represents request data for widget events
 type EventRequest struct {
 	Type string `json:"type"` // "view", "close"
 }
@@ -102,17 +102,17 @@ type ErrorResponse struct {
 	Details interface{} `json:"details,omitempty"`
 }
 
-// FormsSummary represents a summary of user's forms
-type FormsSummary struct {
-	TotalForms       int `json:"total_forms"`
-	ActiveForms      int `json:"active_forms"`
-	DisabledForms    int `json:"disabled_forms"`
+// WidgetsSummary represents a summary of user's widgets
+type WidgetsSummary struct {
+	TotalWidgets     int `json:"total_widgets"`
+	ActiveWidgets    int `json:"active_widgets"`
+	DisabledWidgets  int `json:"disabled_widgets"`
 	TotalViews       int `json:"total_views"`
 	TotalSubmissions int `json:"total_submissions"`
 }
 
-// ToRedisHash converts Form to map for Redis HSET
-func (f *Form) ToRedisHash() map[string]interface{} {
+// ToRedisHash converts Widget to map for Redis HSET
+func (f *Widget) ToRedisHash() map[string]interface{} {
 	fieldsJSON, _ := json.Marshal(f.Fields)
 	return map[string]interface{}{
 		"id":         f.ID,
@@ -126,8 +126,8 @@ func (f *Form) ToRedisHash() map[string]interface{} {
 	}
 }
 
-// FromRedisHash converts Redis hash to Form
-func (f *Form) FromRedisHash(hash map[string]string) error {
+// FromRedisHash converts Redis hash to Widget
+func (f *Widget) FromRedisHash(hash map[string]string) error {
 	f.ID = hash["id"]
 	f.OwnerID = hash["owner_id"]
 	f.Type = hash["type"]
@@ -160,7 +160,7 @@ func (s *Submission) ToRedisHash() map[string]interface{} {
 	dataJSON, _ := json.Marshal(s.Data)
 	return map[string]interface{}{
 		"id":         s.ID,
-		"form_id":    s.FormID,
+		"widget_id":  s.WidgetID,
 		"data":       string(dataJSON),
 		"created_at": s.CreatedAt.Unix(),
 	}
@@ -169,7 +169,7 @@ func (s *Submission) ToRedisHash() map[string]interface{} {
 // FromRedisHash converts Redis hash to Submission
 func (s *Submission) FromRedisHash(hash map[string]string) error {
 	s.ID = hash["id"]
-	s.FormID = hash["form_id"]
+	s.WidgetID = hash["widget_id"]
 
 	if dataStr, ok := hash["data"]; ok && dataStr != "" {
 		if err := json.Unmarshal([]byte(dataStr), &s.Data); err != nil {

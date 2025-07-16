@@ -1,29 +1,29 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "title": "Create Form Request",
-  "description": "Schema for creating a new form",
+  "title": "Create Widget Request",
+  "description": "Schema for creating a new widget",
   "required": ["name", "type"],
   "properties": {
     "name": {
       "type": "string",
       "minLength": 1,
       "maxLength": 255,
-      "description": "The name of the form"
+      "description": "The name of the widget"
     },
     "type": {
       "type": "string",
       "enum": ["contact", "lead", "survey", "feedback", "newsletter"],
-      "description": "The type of the form"
+      "description": "The type of the widget"
     },
     "enabled": {
       "type": "boolean",
       "default": true,
-      "description": "Whether the form is enabled"
+      "description": "Whether the widget is enabled"
     },
     "fields": {
       "type": "object",
-      "description": "Form field definitions",
+      "description": "Widget field definitions",
       "patternProperties": {
         "^[a-zA-Z_][a-zA-Z0-9_]*$": {
           "type": "object",

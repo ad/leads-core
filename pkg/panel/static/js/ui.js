@@ -108,10 +108,10 @@ class UIManager {
             modal.style.display = 'none';
         });
         
-        // Reset form managers state
-        if (window.FormsManager) {
-            window.FormsManager.currentFormId = null;
-            window.FormsManager.formToDelete = null;
+        // Reset widget managers state
+        if (window.WidgetsManager) {
+            window.WidgetsManager.currentWidgetId = null;
+            window.WidgetsManager.widgetToDelete = null;
         }
     }
 
@@ -152,62 +152,62 @@ class UIManager {
     }
 
     /**
-     * Show form details modal
+     * Show widget details modal
      */
-    async showFormDetails(formId) {
+    async showWidgetDetails(widgetId) {
         try {
             this.showLoading();
             
-            const form = await window.APIClient.getForm(formId);
-            const formStats = await window.APIClient.getFormStats(formId);
+            const widget = await window.APIClient.getWidget(widgetId);
+            const widgetStats = await window.APIClient.getWidgetStats(widgetId);
             
             // Try to get recent submissions
             let recentSubmissions = null;
             try {
-                const submissionsResponse = await window.APIClient.getRecentSubmissions(formId, 3);
+                const submissionsResponse = await window.APIClient.getRecentSubmissions(widgetId, 3);
                 recentSubmissions = submissionsResponse.data || [];
             } catch (error) {
                 console.log('Could not load recent submissions:', error.message);
             }
             
-            const modal = document.getElementById('form-modal');
+            const modal = document.getElementById('widget-modal');
             const title = document.getElementById('modal-title');
             const contentData = document.getElementById('modal-content-data');
             const contentLoading = document.getElementById('modal-content-loading');
             
             if (modal && title && contentData && contentLoading) {
-                title.textContent = `${form.name || 'Untitled Form'} - Details`;
+                title.textContent = `${widget.name || 'Untitled Widget'} - Details`;
                 
                 contentData.innerHTML = `
-                    <div class="form-details">
+                    <div class="widget-details">
                         <div class="detail-section">
                             <h4>📋 Basic Information</h4>
                             <div class="detail-grid">
                                 <div class="detail-item">
                                     <label>ID:</label>
-                                    <span>${form.id}</span>
+                                    <span>${widget.id}</span>
                                 </div>
                                 <div class="detail-item">
                                     <label>Name:</label>
-                                    <span>${form.name || 'N/A'}</span>
+                                    <span>${widget.name || 'N/A'}</span>
                                 </div>
                                 <div class="detail-item">
                                     <label>Type:</label>
-                                    <span>${form.type || 'N/A'}</span>
+                                    <span>${widget.type || 'N/A'}</span>
                                 </div>
                                 <div class="detail-item">
                                     <label>Status:</label>
-                                    <span class="status ${form.enabled ? 'enabled' : 'disabled'}">
-                                        ${form.enabled ? '✅ Active' : '❌ Disabled'}
+                                    <span class="status ${widget.enabled ? 'enabled' : 'disabled'}">
+                                        ${widget.enabled ? '✅ Active' : '❌ Disabled'}
                                     </span>
                                 </div>
                                 <div class="detail-item">
                                     <label>Created:</label>
-                                    <span>${this.formatDate(form.created_at)}</span>
+                                    <span>${this.formatDate(widget.created_at)}</span>
                                 </div>
                                 <div class="detail-item">
                                     <label>Updated:</label>
-                                    <span>${this.formatDate(form.updated_at)}</span>
+                                    <span>${this.formatDate(widget.updated_at)}</span>
                                 </div>
                             </div>
                         </div>
@@ -216,45 +216,45 @@ class UIManager {
                             <h4>📊 Statistics</h4>
                             <div class="stats-grid">
                                 <div class="stat-card">
-                                    <div class="stat-value">${this.formatNumber(formStats.views || 0)}</div>
+                                    <div class="stat-value">${this.formatNumber(widgetStats.views || 0)}</div>
                                     <div class="stat-label">Total Views</div>
                                 </div>
                                 <div class="stat-card">
-                                    <div class="stat-value">${this.formatNumber(formStats.submits || 0)}</div>
+                                    <div class="stat-value">${this.formatNumber(widgetStats.submits || 0)}</div>
                                     <div class="stat-label">Submits</div>
                                 </div>
                                 <div class="stat-card">
-                                    <div class="stat-value">${formStats.conversion_rate || '0'}%</div>
+                                    <div class="stat-value">${widgetStats.conversion_rate || '0'}%</div>
                                     <div class="stat-label">Conversion Rate</div>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="detail-section">
-                            <h4>🧪 Form Testing</h4>
-                            <div class="form-testing-container">
+                            <h4>🧪 Widget Testing</h4>
+                            <div class="widget-testing-container">
                                 <div class="testing-section">
                                     <h5>📡 Send Events</h5>
                                     <div class="event-buttons">
-                                        <button type="button" class="btn btn-sm btn-secondary" onclick="window.UI.sendFormEvent('${form.id}', 'view', this)">
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="window.UI.sendWidgetEvent('${widget.id}', 'view', this)">
                                             👀 Send View Event
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-secondary" onclick="window.UI.sendFormEvent('${form.id}', 'close', this)">
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="window.UI.sendWidgetEvent('${widget.id}', 'close', this)">
                                             ❌ Send Close Event
                                         </button>
                                     </div>
                                 </div>
                                 
-                                ${form.fields && Object.keys(form.fields).length > 0 ? `
+                                ${widget.fields && Object.keys(widget.fields).length > 0 ? `
                                 <div class="testing-section">
-                                    <h5>📝 Test Form Submission</h5>
-                                    <form id="test-form-${form.id}" class="test-form">
-                                        ${Object.entries(form.fields).map(([key, field]) => this.generateTestField({name: key, ...field})).join('')}
-                                        <div class="test-form-actions">
+                                    <h5>📝 Test Widget Submission</h5>
+                                    <form id="test-widget-${widget.id}" class="test-widget">
+                                        ${Object.entries(widget.fields).map(([key, field]) => this.generateTestField({name: key, ...field})).join('')}
+                                        <div class="test-widget-actions">
                                             <button type="submit" class="btn btn-sm btn-primary">
                                                 🚀 Submit Test Data
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-outline" onclick="window.UI.fillRandomTestData('${form.id}')">
+                                            <button type="button" class="btn btn-sm btn-outline" onclick="window.UI.fillRandomTestData('${widget.id}')">
                                                 🎲 Fill Random Data
                                             </button>
                                         </div>
@@ -262,22 +262,22 @@ class UIManager {
                                 </div>
                                 ` : `
                                 <div class="testing-section">
-                                    <h5>📝 Test Form Submission</h5>
-                                    <p class="no-fields-message">This form has no fields configured.</p>
-                                    <form id="test-form-${form.id}" class="test-form">
-                                        <div class="form-group">
+                                    <h5>📝 Test Widget Submission</h5>
+                                    <p class="no-fields-message">This widget has no fields configured.</p>
+                                    <form id="test-widget-${widget.id}" class="test-widget">
+                                        <div class="widget-group">
                                             <label for="test-field-name">Test Name</label>
                                             <input type="text" id="test-field-name" name="name" placeholder="Enter test name">
                                         </div>
-                                        <div class="form-group">
+                                        <div class="widget-group">
                                             <label for="test-field-email">Test Email</label>
                                             <input type="email" id="test-field-email" name="email" placeholder="Enter test email">
                                         </div>
-                                        <div class="test-form-actions">
+                                        <div class="test-widget-actions">
                                             <button type="submit" class="btn btn-sm btn-primary">
                                                 🚀 Submit Test Data
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-outline" onclick="window.UI.fillRandomTestData('${form.id}')">
+                                            <button type="button" class="btn btn-sm btn-outline" onclick="window.UI.fillRandomTestData('${widget.id}')">
                                                 🎲 Fill Random Data
                                             </button>
                                         </div>
@@ -311,11 +311,11 @@ class UIManager {
                         </div>
                         ` : ''}
                         
-                        ${form.fields && form.fields.length > 0 ? `
+                        ${widget.fields && widget.fields.length > 0 ? `
                         <div class="detail-section">
-                            <h4>📝 Form Fields</h4>
+                            <h4>📝 Widget Fields</h4>
                             <div class="fields-list">
-                                ${form.fields.map(field => `
+                                ${widget.fields.map(field => `
                                     <div class="field-item">
                                         <div class="field-header">
                                             <span class="field-name">${field.name}</span>
@@ -345,19 +345,19 @@ class UIManager {
                     };
                 }
 
-                // Setup test form submission
-                const testForm = document.getElementById(`test-form-${formId}`);
-                if (testForm) {
-                    testForm.onsubmit = (e) => {
+                // Setup test widget submission
+                const testWidget = document.getElementById(`test-widget-${widgetId}`);
+                if (testWidget) {
+                    testWidget.onsubmit = (e) => {
                         e.preventDefault();
-                        this.submitTestForm(formId);
+                        this.submitTestWidget(widgetId);
                     };
                 }
             }
             
         } catch (error) {
-            console.error('Error loading form details:', error);
-            this.showToast('Failed to load form details', 'error');
+            console.error('Error loading widget details:', error);
+            this.showToast('Failed to load widget details', 'error');
         } finally {
             this.hideLoading();
         }
@@ -374,21 +374,21 @@ class UIManager {
         switch (field.type) {
             case 'email':
                 return `
-                    <div class="form-group">
+                    <div class="widget-group">
                         <label for="${fieldId}">${field.name}${field.required ? ' *' : ''}</label>
                         <input type="email" id="${fieldId}" name="${field.name}" placeholder="${placeholder}" ${required}>
                     </div>
                 `;
             case 'tel':
                 return `
-                    <div class="form-group">
+                    <div class="widget-group">
                         <label for="${fieldId}">${field.name}${field.required ? ' *' : ''}</label>
                         <input type="tel" id="${fieldId}" name="${field.name}" placeholder="${placeholder}" ${required}>
                     </div>
                 `;
             case 'textarea':
                 return `
-                    <div class="form-group">
+                    <div class="widget-group">
                         <label for="${fieldId}">${field.name}${field.required ? ' *' : ''}</label>
                         <textarea id="${fieldId}" name="${field.name}" placeholder="${placeholder}" rows="3" ${required}></textarea>
                     </div>
@@ -396,7 +396,7 @@ class UIManager {
             case 'select':
                 const options = field.options || [];
                 return `
-                    <div class="form-group">
+                    <div class="widget-group">
                         <label for="${fieldId}">${field.name}${field.required ? ' *' : ''}</label>
                         <select id="${fieldId}" name="${field.name}" ${required}>
                             <option value="">Choose option</option>
@@ -406,7 +406,7 @@ class UIManager {
                 `;
             case 'checkbox':
                 return `
-                    <div class="form-group">
+                    <div class="widget-group">
                         <div class="checkbox-group">
                             <input type="checkbox" id="${fieldId}" name="${field.name}" value="1">
                             <label for="${fieldId}">${field.name}</label>
@@ -416,7 +416,7 @@ class UIManager {
             case 'radio':
                 const radioOptions = field.options || [];
                 return `
-                    <div class="form-group">
+                    <div class="widget-group">
                         <label>${field.name}${field.required ? ' *' : ''}</label>
                         <div class="radio-group">
                             ${radioOptions.map((option, index) => `
@@ -430,7 +430,7 @@ class UIManager {
                 `;
             default:
                 return `
-                    <div class="form-group">
+                    <div class="widget-group">
                         <label for="${fieldId}">${field.name}${field.required ? ' *' : ''}</label>
                         <input type="text" id="${fieldId}" name="${field.name}" placeholder="${placeholder}" ${required}>
                     </div>
@@ -439,25 +439,25 @@ class UIManager {
     }
 
     /**
-     * Send form event (view or close)
+     * Send widget event (view or close)
      */
-    async sendFormEvent(formId, eventType, buttonElement = null) {
+    async sendWidgetEvent(widgetId, eventType, buttonElement = null) {
         try {
             if (buttonElement) {
                 this.setButtonLoading(buttonElement, true);
             }
-            await window.APIClient.sendFormEvent(formId, eventType);
+            await window.APIClient.sendWidgetEvent(widgetId, eventType);
             this.showToast(`${eventType.charAt(0).toUpperCase() + eventType.slice(1)} event sent successfully!`, 'success');
             
             // Refresh statistics in the background
             setTimeout(() => {
-                const currentModal = document.getElementById('form-modal');
+                const currentModal = document.getElementById('widget-modal');
                 if (currentModal && currentModal.style.display === 'flex') {
-                    this.refreshFormStats(formId);
+                    this.refreshWidgetStats(widgetId);
                 }
             }, 500);
         } catch (error) {
-            console.error('Error sending form event:', error);
+            console.error('Error sending widget event:', error);
             this.showToast(`Failed to send ${eventType} event: ${error.message}`, 'error');
         } finally {
             if (buttonElement) {
@@ -467,18 +467,18 @@ class UIManager {
     }
 
     /**
-     * Submit test form data
+     * Submit test widget data
      */
-    async submitTestForm(formId) {
+    async submitTestWidget(widgetId) {
         try {
-            const form = document.getElementById(`test-form-${formId}`);
-            if (!form) return;
+            const widget = document.getElementById(`test-widget-${widgetId}`);
+            if (!widget) return;
 
-            const formData = new FormData(form);
+            const widgetData = new FormData(widget);
             const testData = {};
             
-            // Convert FormData to plain object
-            for (let [key, value] of formData.entries()) {
+            // Convert WidgetData to plain object
+            for (let [key, value] of widgetData.entries()) {
                 testData[key] = value;
             }
 
@@ -487,45 +487,45 @@ class UIManager {
                 data: testData
             };
 
-            const submitBtn = form.querySelector('button[type="submit"]');
+            const submitBtn = widget.querySelector('button[type="submit"]');
             this.setButtonLoading(submitBtn, true);
 
-            await window.APIClient.submitTestFormData(formId, submissionData);
-            this.showToast('Test form data submitted successfully!', 'success');
+            await window.APIClient.submitTestWidgetData(widgetId, submissionData);
+            this.showToast('Test widget data submitted successfully!', 'success');
             
-            // Reset form after successful submission
-            form.reset();
+            // Reset widget after successful submission
+            widget.reset();
             
             // Refresh the modal with updated statistics
             setTimeout(() => {
-                this.showFormDetails(formId);
+                this.showWidgetDetails(widgetId);
             }, 1000);
             
         } catch (error) {
-            console.error('Error submitting test form:', error);
-            this.showToast(`Failed to submit test form: ${error.message}`, 'error');
+            console.error('Error submitting test widget:', error);
+            this.showToast(`Failed to submit test widget: ${error.message}`, 'error');
         } finally {
-            const form = document.getElementById(`test-form-${formId}`);
-            const submitBtn = form?.querySelector('button[type="submit"]');
+            const widget = document.getElementById(`test-widget-${widgetId}`);
+            const submitBtn = widget?.querySelector('button[type="submit"]');
             this.setButtonLoading(submitBtn, false);
         }
     }
 
     /**
-     * Fill form with random test data
+     * Fill widget with random test data
      */
-    fillRandomTestData(formId) {
-        const form = document.getElementById(`test-form-${formId}`);
-        if (!form) return;
+    fillRandomTestData(widgetId) {
+        const widget = document.getElementById(`test-widget-${widgetId}`);
+        if (!widget) return;
 
-        const inputs = form.querySelectorAll('input, textarea, select');
+        const inputs = widget.querySelectorAll('input, textarea, select');
         
         inputs.forEach(input => {
             if (input.type === 'checkbox') {
                 input.checked = Math.random() > 0.5;
             } else if (input.type === 'radio') {
                 // For radio buttons, randomly select one option per group
-                const radioGroup = form.querySelectorAll(`input[name="${input.name}"]`);
+                const radioGroup = widget.querySelectorAll(`input[name="${input.name}"]`);
                 const randomIndex = Math.floor(Math.random() * radioGroup.length);
                 radioGroup.forEach((radio, index) => {
                     radio.checked = index === randomIndex;
@@ -573,7 +573,7 @@ class UIManager {
         
         if (input.tagName === 'TEXTAREA' || fieldName.includes('message') || fieldName.includes('comment')) {
             const messages = [
-                'This is a test message for form validation.',
+                'This is a test message for widget validation.',
                 'Great product! I would like to know more information.',
                 'Please contact me regarding your services.',
                 'I have some questions about your offerings.',
@@ -589,23 +589,23 @@ class UIManager {
     }
 
     /**
-     * Refresh form statistics without reopening the modal
+     * Refresh widget statistics without reopening the modal
      */
-    async refreshFormStats(formId) {
+    async refreshWidgetStats(widgetId) {
         try {
-            const formStats = await window.APIClient.getFormStats(formId);
+            const widgetStats = await window.APIClient.getWidgetStats(widgetId);
             
             // Update the statistics in the current modal
             const viewsElement = document.querySelector('.stats-grid .stat-card:nth-child(1) .stat-value');
             const submissionsElement = document.querySelector('.stats-grid .stat-card:nth-child(2) .stat-value');
             const conversionElement = document.querySelector('.stats-grid .stat-card:nth-child(3) .stat-value');
             
-            if (viewsElement) viewsElement.textContent = this.formatNumber(formStats.views || 0);
-            if (submissionsElement) submissionsElement.textContent = this.formatNumber(formStats.submits || 0);
-            if (conversionElement) conversionElement.textContent = `${formStats.conversion_rate || '0'}%`;
+            if (viewsElement) viewsElement.textContent = this.formatNumber(widgetStats.views || 0);
+            if (submissionsElement) submissionsElement.textContent = this.formatNumber(widgetStats.submits || 0);
+            if (conversionElement) conversionElement.textContent = `${widgetStats.conversion_rate || '0'}%`;
             
         } catch (error) {
-            console.error('Error refreshing form stats:', error);
+            console.error('Error refreshing widget stats:', error);
         }
     }
 

@@ -107,68 +107,68 @@ func (r *RedisClient) GetClient() redis.UniversalClient {
 
 // Redis key patterns with hash tags for cluster compatibility
 const (
-	// Forms - use {formID} hash tag to ensure related keys are in same slot
-	FormKey          = "{%s}:form"        // HASH - form data
-	FormsByTimeKey   = "forms:by_time"    // ZSET - all forms by timestamp (global)
-	UserFormsKey     = "{%s}:user:forms"  // SET - user's forms
-	FormsByTypeKey   = "forms:type:%s"    // SET - forms by type (global)
-	FormsByStatusKey = "forms:enabled:%s" // SET - forms by status (0|1) (global)
+	// Widgets - use {widgetID} hash tag to ensure related keys are in same slot
+	WidgetKey          = "{%s}:widget"        // HASH - widget data
+	WidgetsByTimeKey   = "widgets:by_time"    // ZSET - all widgets by timestamp (global)
+	UserWidgetsKey     = "{%s}:user:widgets"  // SET - user's widgets
+	WidgetsByTypeKey   = "widgets:type:%s"    // SET - widgets by type (global)
+	WidgetsByStatusKey = "widgets:enabled:%s" // SET - widgets by status (0|1) (global)
 
-	// Submissions - use {formID} hash tag to group with form data
-	SubmissionKey      = "{%s}:submission:%s" // HASH - submission data
-	FormSubmissionsKey = "{%s}:submissions"   // ZSET - form submissions by timestamp
+	// Submissions - use {widgetID} hash tag to group with widget data
+	SubmissionKey        = "{%s}:submission:%s" // HASH - submission data
+	WidgetSubmissionsKey = "{%s}:submissions"   // ZSET - widget submissions by timestamp
 
-	// Statistics - use {formID} hash tag to group with form data
-	FormStatsKey  = "{%s}:stats"    // HASH - form statistics
-	DailyViewsKey = "{%s}:views:%s" // INCR - daily views (YYYY-MM-DD)
+	// Statistics - use {widgetID} hash tag to group with widget data
+	WidgetStatsKey = "{%s}:stats"    // HASH - widget statistics
+	DailyViewsKey  = "{%s}:views:%s" // INCR - daily views (YYYY-MM-DD)
 
 	// Rate limiting with hash tags for cluster compatibility
 	RateLimitIPKey     = "rate_limit:{%s}:ip:%s"  // INCR - IP rate limit with hash tag
 	RateLimitGlobalKey = "rate_limit:{%s}:global" // INCR - global rate limit with hash tag
 )
 
-// GenerateFormKey generates a form key with hash tag
-func GenerateFormKey(formID string) string {
-	return fmt.Sprintf(FormKey, formID)
+// GenerateWidgetKey generates a widget key with hash tag
+func GenerateWidgetKey(widgetID string) string {
+	return fmt.Sprintf(WidgetKey, widgetID)
 }
 
-// GenerateUserFormsKey generates a user forms key with hash tag
-func GenerateUserFormsKey(userID string) string {
-	return fmt.Sprintf(UserFormsKey, userID)
+// GenerateUserWidgetsKey generates a user widgets key with hash tag
+func GenerateUserWidgetsKey(userID string) string {
+	return fmt.Sprintf(UserWidgetsKey, userID)
 }
 
-// GenerateFormsByTypeKey generates a forms by type key
-func GenerateFormsByTypeKey(formType string) string {
-	return fmt.Sprintf(FormsByTypeKey, formType)
+// GenerateWidgetsByTypeKey generates a widgets by type key
+func GenerateWidgetsByTypeKey(widgetType string) string {
+	return fmt.Sprintf(WidgetsByTypeKey, widgetType)
 }
 
-// GenerateFormsByStatusKey generates a forms by status key
-func GenerateFormsByStatusKey(enabled bool) string {
+// GenerateWidgetsByStatusKey generates a widgets by status key
+func GenerateWidgetsByStatusKey(enabled bool) string {
 	status := "0"
 	if enabled {
 		status = "1"
 	}
-	return fmt.Sprintf(FormsByStatusKey, status)
+	return fmt.Sprintf(WidgetsByStatusKey, status)
 }
 
 // GenerateSubmissionKey generates a submission key with hash tag
-func GenerateSubmissionKey(formID, submissionID string) string {
-	return fmt.Sprintf(SubmissionKey, formID, submissionID)
+func GenerateSubmissionKey(widgetID, submissionID string) string {
+	return fmt.Sprintf(SubmissionKey, widgetID, submissionID)
 }
 
-// GenerateFormSubmissionsKey generates a form submissions key with hash tag
-func GenerateFormSubmissionsKey(formID string) string {
-	return fmt.Sprintf(FormSubmissionsKey, formID)
+// GenerateWidgetSubmissionsKey generates a widget submissions key with hash tag
+func GenerateWidgetSubmissionsKey(widgetID string) string {
+	return fmt.Sprintf(WidgetSubmissionsKey, widgetID)
 }
 
-// GenerateFormStatsKey generates a form stats key with hash tag
-func GenerateFormStatsKey(formID string) string {
-	return fmt.Sprintf(FormStatsKey, formID)
+// GenerateWidgetStatsKey generates a widget stats key with hash tag
+func GenerateWidgetStatsKey(widgetID string) string {
+	return fmt.Sprintf(WidgetStatsKey, widgetID)
 }
 
 // GenerateDailyViewsKey generates a daily views key with hash tag
-func GenerateDailyViewsKey(formID, date string) string {
-	return fmt.Sprintf(DailyViewsKey, formID, date)
+func GenerateDailyViewsKey(widgetID, date string) string {
+	return fmt.Sprintf(DailyViewsKey, widgetID, date)
 }
 
 // GenerateRateLimitIPKey generates a rate limit IP key

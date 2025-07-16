@@ -14,15 +14,15 @@ import (
 
 // UserHandler handles user-related HTTP requests
 type UserHandler struct {
-	formService *services.FormService
-	validator   *validation.SchemaValidator
+	widgetService *services.WidgetService
+	validator     *validation.SchemaValidator
 }
 
 // NewUserHandler creates a new user handler
-func NewUserHandler(formService *services.FormService, validator *validation.SchemaValidator) *UserHandler {
+func NewUserHandler(widgetService *services.WidgetService, validator *validation.SchemaValidator) *UserHandler {
 	return &UserHandler{
-		formService: formService,
-		validator:   validator,
+		widgetService: widgetService,
+		validator:     validator,
 	}
 }
 
@@ -67,7 +67,7 @@ func (h *UserHandler) UpdateUserTTL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update TTL for user's submissions
-	err := h.formService.UpdateUserSubmissionsTTL(r.Context(), userID, req.TTLDays)
+	err := h.widgetService.UpdateUserSubmissionsTTL(r.Context(), userID, req.TTLDays)
 	if err != nil {
 		log.Printf("action=update_user_ttl user_id=%s ttl_days=%d error=%q", userID, req.TTLDays, err.Error())
 		writeErrorResponse(w, http.StatusInternalServerError, "Failed to update TTL")

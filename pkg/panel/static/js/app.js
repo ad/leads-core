@@ -31,10 +31,10 @@ class AdminPanel {
      * Bind event listeners
      */
     bindEvents() {
-        // Login form
-        const loginForm = document.getElementById('login-form');
-        if (loginForm) {
-            loginForm.addEventListener('submit', (e) => this.handleLogin(e));
+        // Login widget
+        const loginWidget = document.getElementById('login-widget');
+        if (loginWidget) {
+            loginWidget.addEventListener('submit', (e) => this.handleLogin(e));
         }
 
         // Logout button
@@ -49,10 +49,10 @@ class AdminPanel {
             refreshBtn.addEventListener('click', () => window.Dashboard.refreshData());
         }
 
-        // Create Form button
-        const createFormBtn = document.getElementById('create-form-btn');
-        if (createFormBtn) {
-            createFormBtn.addEventListener('click', () => window.FormsManager.showCreateForm());
+        // Create Widget button
+        const createWidgetBtn = document.getElementById('create-widget-btn');
+        if (createWidgetBtn) {
+            createWidgetBtn.addEventListener('click', () => window.WidgetsManager.showCreateWidget());
         }
 
         // Search and filters
@@ -112,15 +112,15 @@ class AdminPanel {
     }
 
     /**
-     * Handle login form submission
+     * Handle login widget submission
      */
     async handleLogin(event) {
         event.preventDefault();
         
-        const form = event.target;
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const secretInput = form.querySelector('#secret');
-        const userIdInput = form.querySelector('#userId');
+        const widget = event.target;
+        const submitBtn = widget.querySelector('button[type="submit"]');
+        const secretInput = widget.querySelector('#secret');
+        const userIdInput = widget.querySelector('#userId');
         
         const secret = secretInput.value.trim();
         const userId = userIdInput.value.trim();

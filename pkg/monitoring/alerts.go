@@ -225,7 +225,7 @@ func (sm *SystemMonitor) StartMonitoring(ctx context.Context, interval time.Dura
 	}
 }
 
-// checkSystemHealth performs system health checks
+// checkSystemHealth perwidgets system health checks
 func (sm *SystemMonitor) checkSystemHealth() {
 	// Check Redis connectivity (from metrics)
 	allMetrics := metrics.GetMetrics()

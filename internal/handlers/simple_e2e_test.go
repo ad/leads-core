@@ -9,7 +9,7 @@ import (
 	"github.com/ad/leads-core/internal/models"
 )
 
-func TestE2E_SimpleFormCreation(t *testing.T) {
+func TestE2E_SimpleWidgetCreation(t *testing.T) {
 	e2e := setupE2EServer(t)
 	userID := "test-user-simple"
 	token := e2e.createTestToken(userID)
@@ -17,9 +17,9 @@ func TestE2E_SimpleFormCreation(t *testing.T) {
 		"Authorization": "Bearer " + token,
 	}
 
-	// Create a simple form
-	createFormData := []byte(`{
-		"name": "Simple Test Form",
+	// Create a simple widget
+	createWidgetData := []byte(`{
+		"name": "Simple Test Widget",
 		"type": "contact",
 		"enabled": true,
 		"fields": {
@@ -27,9 +27,9 @@ func TestE2E_SimpleFormCreation(t *testing.T) {
 		}
 	}`)
 
-	resp, err := e2e.makeRequest("POST", "/api/private/forms", createFormData, headers)
+	resp, err := e2e.makeRequest("POST", "/api/private/widgets", createWidgetData, headers)
 	if err != nil {
-		t.Fatalf("Failed to create form: %v", err)
+		t.Fatalf("Failed to create widget: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -42,22 +42,22 @@ func TestE2E_SimpleFormCreation(t *testing.T) {
 		return
 	}
 
-	var createdForm models.Form
-	if err := json.NewDecoder(resp.Body).Decode(&createdForm); err != nil {
-		t.Fatalf("Failed to decode form: %v", err)
+	var createdWidget models.Widget
+	if err := json.NewDecoder(resp.Body).Decode(&createdWidget); err != nil {
+		t.Fatalf("Failed to decode widget: %v", err)
 	}
 
-	if createdForm.ID == "" {
-		t.Error("Form ID is empty")
+	if createdWidget.ID == "" {
+		t.Error("Widget ID is empty")
 	}
-	if createdForm.Name != "Simple Test Form" {
-		t.Errorf("Expected form name 'Simple Test Form', got %s", createdForm.Name)
+	if createdWidget.Name != "Simple Test Widget" {
+		t.Errorf("Expected widget name 'Simple Test Widget', got %s", createdWidget.Name)
 	}
-	if createdForm.OwnerID != userID {
-		t.Errorf("Expected owner ID %s, got %s", userID, createdForm.OwnerID)
+	if createdWidget.OwnerID != userID {
+		t.Errorf("Expected owner ID %s, got %s", userID, createdWidget.OwnerID)
 	}
 
-	t.Logf("Successfully created form with ID: %s", createdForm.ID)
+	t.Logf("Successfully created widget with ID: %s", createdWidget.ID)
 }
 
 func TestE2E_SimpleHealthCheck(t *testing.T) {
@@ -93,9 +93,9 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 		"Authorization": "Bearer " + token,
 	}
 
-	// Step 1: Create multiple forms
-	formData1 := []byte(`{
-		"name": "Contact Form",
+	// Step 1: Create multiple widgets
+	widgetData1 := []byte(`{
+		"name": "Contact Widget",
 		"type": "contact",
 		"enabled": true,
 		"fields": {
@@ -104,8 +104,8 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 		}
 	}`)
 
-	formData2 := []byte(`{
-		"name": "Newsletter Form",
+	widgetData2 := []byte(`{
+		"name": "Newsletter Widget",
 		"type": "newsletter",
 		"enabled": false,
 		"fields": {
@@ -113,42 +113,42 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 		}
 	}`)
 
-	// Create first form
-	resp1, err := e2e.makeRequest("POST", "/api/private/forms", formData1, headers)
+	// Create first widget
+	resp1, err := e2e.makeRequest("POST", "/api/private/widgets", widgetData1, headers)
 	if err != nil {
-		t.Fatalf("Failed to create first form: %v", err)
+		t.Fatalf("Failed to create first widget: %v", err)
 	}
 	defer resp1.Body.Close()
 
-	var form1 models.Form
-	json.NewDecoder(resp1.Body).Decode(&form1)
+	var widget1 models.Widget
+	json.NewDecoder(resp1.Body).Decode(&widget1)
 
-	// Create second form
-	resp2, err := e2e.makeRequest("POST", "/api/private/forms", formData2, headers)
+	// Create second widget
+	resp2, err := e2e.makeRequest("POST", "/api/private/widgets", widgetData2, headers)
 	if err != nil {
-		t.Fatalf("Failed to create second form: %v", err)
+		t.Fatalf("Failed to create second widget: %v", err)
 	}
 	defer resp2.Body.Close()
 
-	var form2 models.Form
-	json.NewDecoder(resp2.Body).Decode(&form2)
+	var widget2 models.Widget
+	json.NewDecoder(resp2.Body).Decode(&widget2)
 
-	// Step 2: List forms - should return 2 forms
-	listResp, err := e2e.makeRequest("GET", "/api/private/forms", nil, headers)
+	// Step 2: List widgets - should return 2 widgets
+	listResp, err := e2e.makeRequest("GET", "/api/private/widgets", nil, headers)
 	if err != nil {
-		t.Fatalf("Failed to list forms: %v", err)
+		t.Fatalf("Failed to list widgets: %v", err)
 	}
 	defer listResp.Body.Close()
 
 	var listResponse map[string]interface{}
 	json.NewDecoder(listResp.Body).Decode(&listResponse)
 
-	forms := listResponse["data"].([]interface{})
-	if len(forms) != 2 {
-		t.Errorf("Expected 2 forms, got %d", len(forms))
+	widgets := listResponse["data"].([]interface{})
+	if len(widgets) != 2 {
+		t.Errorf("Expected 2 widgets, got %d", len(widgets))
 	}
 
-	// Step 3: Submit to enabled form (should work)
+	// Step 3: Submit to enabled widget (should work)
 	submissionData := []byte(`{
 		"data": {
 			"name": "Test User",
@@ -156,29 +156,29 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 		}
 	}`)
 
-	submitResp, err := e2e.makeRequest("POST", "/api/forms/"+form1.ID+"/submit", submissionData, nil)
+	submitResp, err := e2e.makeRequest("POST", "/api/widgets/"+widget1.ID+"/submit", submissionData, nil)
 	if err != nil {
-		t.Fatalf("Failed to submit to enabled form: %v", err)
+		t.Fatalf("Failed to submit to enabled widget: %v", err)
 	}
 	defer submitResp.Body.Close()
 
 	if submitResp.StatusCode != http.StatusCreated {
-		t.Errorf("Expected 201 for enabled form submission, got %d", submitResp.StatusCode)
+		t.Errorf("Expected 201 for enabled widget submission, got %d", submitResp.StatusCode)
 	}
 
-	// Step 4: Try to submit to disabled form (should fail)
-	submitResp2, err := e2e.makeRequest("POST", "/api/forms/"+form2.ID+"/submit", submissionData, nil)
+	// Step 4: Try to submit to disabled widget (should fail)
+	submitResp2, err := e2e.makeRequest("POST", "/api/widgets/"+widget2.ID+"/submit", submissionData, nil)
 	if err != nil {
-		t.Fatalf("Failed to make request to disabled form: %v", err)
+		t.Fatalf("Failed to make request to disabled widget: %v", err)
 	}
 	defer submitResp2.Body.Close()
 
 	if submitResp2.StatusCode != http.StatusBadRequest {
-		t.Errorf("Expected 400 for disabled form submission, got %d", submitResp2.StatusCode)
+		t.Errorf("Expected 400 for disabled widget submission, got %d", submitResp2.StatusCode)
 	}
 
-	// Step 5: Check stats for first form
-	statsResp, err := e2e.makeRequest("GET", "/api/private/forms/"+form1.ID+"/stats", nil, headers)
+	// Step 5: Check stats for first widget
+	statsResp, err := e2e.makeRequest("GET", "/api/private/widgets/"+widget1.ID+"/stats", nil, headers)
 	if err != nil {
 		t.Fatalf("Failed to get stats: %v", err)
 	}
@@ -196,40 +196,40 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 		t.Error("Expected at least 1 submission in stats")
 	}
 
-	// Step 6: Update form
+	// Step 6: Update widget
 	updateData := []byte(`{
-		"name": "Updated Contact Form",
+		"name": "Updated Contact Widget",
 		"enabled": false
 	}`)
 
-	updateResp, err := e2e.makeRequest("PUT", "/api/private/forms/"+form1.ID, updateData, headers)
+	updateResp, err := e2e.makeRequest("PUT", "/api/private/widgets/"+widget1.ID, updateData, headers)
 	if err != nil {
-		t.Fatalf("Failed to update form: %v", err)
+		t.Fatalf("Failed to update widget: %v", err)
 	}
 	defer updateResp.Body.Close()
 
 	if updateResp.StatusCode != http.StatusOK {
-		t.Errorf("Expected 200 for form update, got %d", updateResp.StatusCode)
+		t.Errorf("Expected 200 for widget update, got %d", updateResp.StatusCode)
 	}
 
 	// Step 7: Verify update worked
-	getResp, err := e2e.makeRequest("GET", "/api/private/forms/"+form1.ID, nil, headers)
+	getResp, err := e2e.makeRequest("GET", "/api/private/widgets/"+widget1.ID, nil, headers)
 	if err != nil {
-		t.Fatalf("Failed to get updated form: %v", err)
+		t.Fatalf("Failed to get updated widget: %v", err)
 	}
 	defer getResp.Body.Close()
 
-	var updatedForm struct {
+	var updatedWidget struct {
 		Data map[string]interface{} `json:"data"`
 	}
-	json.NewDecoder(getResp.Body).Decode(&updatedForm)
+	json.NewDecoder(getResp.Body).Decode(&updatedWidget)
 
-	formData := updatedForm.Data
-	if formData["name"] != "Updated Contact Form" {
-		t.Errorf("Form name not updated correctly: expected 'Updated Contact Form', got %v", formData["name"])
+	widgetData := updatedWidget.Data
+	if widgetData["name"] != "Updated Contact Widget" {
+		t.Errorf("Widget name not updated correctly: expected 'Updated Contact Widget', got %v", widgetData["name"])
 	}
-	if formData["enabled"] != false {
-		t.Errorf("Form enabled status not updated correctly: expected false, got %v", formData["enabled"])
+	if widgetData["enabled"] != false {
+		t.Errorf("Widget enabled status not updated correctly: expected false, got %v", widgetData["enabled"])
 	}
 
 	t.Logf("Comprehensive flow test completed successfully")

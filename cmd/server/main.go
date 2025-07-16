@@ -75,9 +75,9 @@ func main() { // Initialize logging
 	connectionMonitor := monitoring.NewConnectionMonitor(underlyingClient)
 	go connectionMonitor.StartHealthCheck(ctx, 30*time.Second)
 
-	// Start performance monitoring
-	performanceMonitor := monitoring.NewPerformanceMonitor()
-	go performanceMonitor.StartMetricsCollection(ctx, 15*time.Second)
+	// Start perwidgetance monitoring
+	perwidgetanceMonitor := monitoring.NewPerwidgetanceMonitor()
+	go perwidgetanceMonitor.StartMetricsCollection(ctx, 15*time.Second)
 
 	// Start system monitoring with alerts
 	go monitoring.StartSystemMonitoring(ctx, 30*time.Second)
@@ -101,7 +101,7 @@ func main() { // Initialize logging
 
 	// Initialize repositories
 	statsRepo := storage.NewRedisStatsRepository(monitoredRedisClient)
-	formRepo := storage.NewRedisFormRepository(monitoredRedisClient, statsRepo)
+	widgetRepo := storage.NewRedisWidgetRepository(monitoredRedisClient, statsRepo)
 	submissionRepo := storage.NewRedisSubmissionRepository(monitoredRedisClient)
 
 	// Initialize services
@@ -109,7 +109,7 @@ func main() { // Initialize logging
 		FreeDays: cfg.TTL.FreeDays,
 		ProDays:  cfg.TTL.ProDays,
 	}
-	formService := services.NewFormService(formRepo, submissionRepo, statsRepo, ttlConfig)
+	widgetService := services.NewWidgetService(widgetRepo, submissionRepo, statsRepo, ttlConfig)
 
 	// Initialize JWT validator
 	jwtValidator := auth.NewJWTValidator(cfg.JWT.Secret)
@@ -127,9 +127,9 @@ func main() { // Initialize logging
 	}
 
 	// Initialize handlers
-	formHandler := handlers.NewFormHandler(formService, validator)
-	publicHandler := handlers.NewPublicHandler(formService, validator)
-	userHandler := handlers.NewUserHandler(formService, validator)
+	widgetHandler := handlers.NewWidgetHandler(widgetService, validator)
+	publicHandler := handlers.NewPublicHandler(widgetService, validator)
+	userHandler := handlers.NewUserHandler(widgetService, validator)
 	healthHandler := handlers.NewHealthHandler(redisClient)
 
 	// Panel handler
@@ -147,17 +147,17 @@ func main() { // Initialize logging
 	mux.Handle("/panel", panelHandler)
 
 	// Public endpoints (with logging, metrics, and rate limiting)
-	// These handle /forms/{id}/submit and /forms/{id}/events
-	publicChain := middleware.LogRequests(metrics.HTTPMiddleware(rateLimiter.RateLimit(http.HandlerFunc(routePublicFormEndpoints(publicHandler)))))
-	mux.Handle("/forms/", publicChain)
+	// These handle /widgets/{id}/submit and /widgets/{id}/events
+	publicChain := middleware.LogRequests(metrics.HTTPMiddleware(rateLimiter.RateLimit(http.HandlerFunc(routePublicWidgetEndpoints(publicHandler)))))
+	mux.Handle("/widgets/", publicChain)
 
 	// Private API endpoints (with logging, metrics, and authentication only - no rate limiting)
 	// API v1 endpoints for authenticated users
-	privateFormsChain := middleware.LogRequests(metrics.HTTPMiddleware(authMiddleware.Authenticate(http.HandlerFunc(routePrivateFormEndpoints(formHandler)))))
+	privateWidgetsChain := middleware.LogRequests(metrics.HTTPMiddleware(authMiddleware.Authenticate(http.HandlerFunc(routePrivateWidgetEndpoints(widgetHandler)))))
 	privateUsersChain := middleware.LogRequests(metrics.HTTPMiddleware(authMiddleware.Authenticate(http.HandlerFunc(routeUserEndpoints(userHandler)))))
 
-	mux.Handle("/api/v1/forms/", privateFormsChain)
-	mux.Handle("/api/v1/forms", privateFormsChain)
+	mux.Handle("/api/v1/widgets/", privateWidgetsChain)
+	mux.Handle("/api/v1/widgets", privateWidgetsChain)
 	mux.Handle("/api/v1/users/", privateUsersChain)
 
 	// Create HTTP server
@@ -199,54 +199,54 @@ func main() { // Initialize logging
 	logger.Info("Server exited gracefully")
 }
 
-// routePrivateFormEndpoints routes private form endpoints for /api/v1/forms/*
-func routePrivateFormEndpoints(handler *handlers.FormHandler) http.HandlerFunc {
+// routePrivateWidgetEndpoints routes private widget endpoints for /api/v1/widgets/*
+func routePrivateWidgetEndpoints(handler *handlers.WidgetHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Remove /api/v1/forms prefix to get the actual path
-		path := strings.TrimPrefix(r.URL.Path, "/api/v1/forms")
+		// Remove /api/v1/widgets prefix to get the actual path
+		path := strings.TrimPrefix(r.URL.Path, "/api/v1/widgets")
 
 		switch {
 		case path == "" || path == "/":
-			// GET /api/v1/forms - list forms
-			// POST /api/v1/forms - create form
+			// GET /api/v1/widgets - list widgets
+			// POST /api/v1/widgets - create widget
 			switch r.Method {
 			case http.MethodGet:
-				handler.GetForms(w, r)
+				handler.GetWidgets(w, r)
 			case http.MethodPost:
-				handler.CreateForm(w, r)
+				handler.CreateWidget(w, r)
 			default:
 				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			}
 		case path == "/summary":
-			// GET /api/v1/forms/summary
+			// GET /api/v1/widgets/summary
 			if r.Method == http.MethodGet {
-				handler.GetFormsSummary(w, r)
+				handler.GetWidgetsSummary(w, r)
 			} else {
 				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			}
 		case strings.HasSuffix(path, "/stats"):
-			// GET /api/v1/forms/{id}/stats
-			// Reconstruct URL as /forms/{id}/stats for handler
-			r.URL.Path = "/forms" + path
-			handler.GetFormStats(w, r)
+			// GET /api/v1/widgets/{id}/stats
+			// Reconstruct URL as /widgets/{id}/stats for handler
+			r.URL.Path = "/widgets" + path
+			handler.GetWidgetStats(w, r)
 		case strings.HasSuffix(path, "/submissions"):
-			// GET /api/v1/forms/{id}/submissions
-			// Reconstruct URL as /forms/{id}/submissions for handler
-			r.URL.Path = "/forms" + path
-			handler.GetFormSubmissions(w, r)
+			// GET /api/v1/widgets/{id}/submissions
+			// Reconstruct URL as /widgets/{id}/submissions for handler
+			r.URL.Path = "/widgets" + path
+			handler.GetWidgetSubmissions(w, r)
 		default:
-			// GET /api/v1/forms/{id} - get form
-			// PUT /api/v1/forms/{id} - update form
-			// DELETE /api/v1/forms/{id} - delete form
-			// Reconstruct URL as /forms/{id} for handler
-			r.URL.Path = "/forms" + path
+			// GET /api/v1/widgets/{id} - get widget
+			// PUT /api/v1/widgets/{id} - update widget
+			// DELETE /api/v1/widgets/{id} - delete widget
+			// Reconstruct URL as /widgets/{id} for handler
+			r.URL.Path = "/widgets" + path
 			switch r.Method {
 			case http.MethodGet:
-				handler.GetForm(w, r)
+				handler.GetWidget(w, r)
 			case http.MethodPut:
-				handler.UpdateForm(w, r)
+				handler.UpdateWidget(w, r)
 			case http.MethodDelete:
-				handler.DeleteForm(w, r)
+				handler.DeleteWidget(w, r)
 			default:
 				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			}
@@ -254,17 +254,17 @@ func routePrivateFormEndpoints(handler *handlers.FormHandler) http.HandlerFunc {
 	}
 }
 
-// routePublicFormEndpoints routes public form endpoints
-func routePublicFormEndpoints(handler *handlers.PublicHandler) http.HandlerFunc {
+// routePublicWidgetEndpoints routes public widget endpoints
+func routePublicWidgetEndpoints(handler *handlers.PublicHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 
 		switch {
 		case strings.HasSuffix(path, "/submit"):
-			// POST /forms/{id}/submit
-			handler.SubmitForm(w, r)
+			// POST /widgets/{id}/submit
+			handler.SubmitWidget(w, r)
 		case strings.HasSuffix(path, "/events"):
-			// POST /forms/{id}/events
+			// POST /widgets/{id}/events
 			handler.RegisterEvent(w, r)
 		default:
 			http.Error(w, "Not found", http.StatusNotFound)

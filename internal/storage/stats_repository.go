@@ -11,11 +11,11 @@ import (
 
 // StatsRepository defines interface for statistics operations
 type StatsRepository interface {
-	IncrementViews(ctx context.Context, formID string) error
-	IncrementSubmits(ctx context.Context, formID string) error
-	IncrementCloses(ctx context.Context, formID string) error
-	GetFormStats(ctx context.Context, formID string) (*models.FormStats, error)
-	GetDailyViews(ctx context.Context, formID, date string) (int64, error)
+	IncrementViews(ctx context.Context, widgetID string) error
+	IncrementSubmits(ctx context.Context, widgetID string) error
+	IncrementCloses(ctx context.Context, widgetID string) error
+	GetWidgetStats(ctx context.Context, widgetID string) (*models.WidgetStats, error)
+	GetDailyViews(ctx context.Context, widgetID, date string) (int64, error)
 }
 
 // RedisStatsRepository implements StatsRepository for Redis
@@ -28,19 +28,19 @@ func NewRedisStatsRepository(client *RedisClient) *RedisStatsRepository {
 	return &RedisStatsRepository{client: client}
 }
 
-// IncrementViews increments view count for a form
-func (r *RedisStatsRepository) IncrementViews(ctx context.Context, formID string) error {
-	// All keys use {formID} hash tag, so they'll be in same slot
+// IncrementViews increments view count for a widget
+func (r *RedisStatsRepository) IncrementViews(ctx context.Context, widgetID string) error {
+	// All keys use {widgetID} hash tag, so they'll be in same slot
 	pipe := r.client.client.TxPipeline()
 
 	// Increment total views
-	statsKey := GenerateFormStatsKey(formID)
+	statsKey := GenerateWidgetStatsKey(widgetID)
 	pipe.HIncrBy(ctx, statsKey, "views", 1)
 	pipe.HSet(ctx, statsKey, "last_view", time.Now().Unix())
 
 	// Increment daily views (same slot due to hash tag)
 	today := time.Now().Format("2006-01-02")
-	dailyKey := GenerateDailyViewsKey(formID, today)
+	dailyKey := GenerateDailyViewsKey(widgetID, today)
 	pipe.Incr(ctx, dailyKey)
 	pipe.Expire(ctx, dailyKey, 30*24*time.Hour) // Keep daily stats for 30 days
 
@@ -48,21 +48,21 @@ func (r *RedisStatsRepository) IncrementViews(ctx context.Context, formID string
 	return err
 }
 
-// IncrementSubmits increments submit count for a form
-func (r *RedisStatsRepository) IncrementSubmits(ctx context.Context, formID string) error {
-	statsKey := GenerateFormStatsKey(formID)
+// IncrementSubmits increments submit count for a widget
+func (r *RedisStatsRepository) IncrementSubmits(ctx context.Context, widgetID string) error {
+	statsKey := GenerateWidgetStatsKey(widgetID)
 	return r.client.client.HIncrBy(ctx, statsKey, "submits", 1).Err()
 }
 
-// IncrementCloses increments close count for a form
-func (r *RedisStatsRepository) IncrementCloses(ctx context.Context, formID string) error {
-	statsKey := GenerateFormStatsKey(formID)
+// IncrementCloses increments close count for a widget
+func (r *RedisStatsRepository) IncrementCloses(ctx context.Context, widgetID string) error {
+	statsKey := GenerateWidgetStatsKey(widgetID)
 	return r.client.client.HIncrBy(ctx, statsKey, "closes", 1).Err()
 }
 
-// GetFormStats retrieves statistics for a form
-func (r *RedisStatsRepository) GetFormStats(ctx context.Context, formID string) (*models.FormStats, error) {
-	statsKey := GenerateFormStatsKey(formID)
+// GetWidgetStats retrieves statistics for a widget
+func (r *RedisStatsRepository) GetWidgetStats(ctx context.Context, widgetID string) (*models.WidgetStats, error) {
+	statsKey := GenerateWidgetStatsKey(widgetID)
 	hash, err := r.client.client.HGetAll(ctx, statsKey).Result()
 	if err != nil {
 		return nil, err
@@ -70,15 +70,15 @@ func (r *RedisStatsRepository) GetFormStats(ctx context.Context, formID string) 
 
 	if len(hash) == 0 {
 		// Return empty stats if not found
-		return &models.FormStats{
-			FormID:  formID,
-			Views:   0,
-			Submits: 0,
-			Closes:  0,
+		return &models.WidgetStats{
+			WidgetID: widgetID,
+			Views:    0,
+			Submits:  0,
+			Closes:   0,
 		}, nil
 	}
 
-	stats := &models.FormStats{FormID: formID}
+	stats := &models.WidgetStats{WidgetID: widgetID}
 
 	if viewsStr, ok := hash["views"]; ok {
 		if views, err := strconv.ParseInt(viewsStr, 10, 64); err == nil {
@@ -108,8 +108,8 @@ func (r *RedisStatsRepository) GetFormStats(ctx context.Context, formID string) 
 }
 
 // GetDailyViews retrieves daily view count for a specific date
-func (r *RedisStatsRepository) GetDailyViews(ctx context.Context, formID, date string) (int64, error) {
-	dailyKey := GenerateDailyViewsKey(formID, date)
+func (r *RedisStatsRepository) GetDailyViews(ctx context.Context, widgetID, date string) (int64, error) {
+	dailyKey := GenerateDailyViewsKey(widgetID, date)
 	count, err := r.client.client.Get(ctx, dailyKey).Int64()
 	if err == redis.Nil {
 		return 0, nil // No views for this date

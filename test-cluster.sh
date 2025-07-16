@@ -112,11 +112,11 @@ if [ -f "./bin/jwt-gen" ]; then
     JWT_TOKEN=$(./bin/jwt-gen -secret="$JWT_SECRET" -user="$JWT_USER")
     echo "Generated JWT: ${JWT_TOKEN:0:50}..."
     
-    # Test form creation (requires JWT)
+    # Test widget creation (requires JWT)
     echo ""
-    echo "📝 Testing form creation..."
-    form_data='{
-        "name": "Test Cluster Form",
+    echo "📝 Testing widget creation..."
+    widget_data='{
+        "name": "Test Cluster Widget",
         "type": "contact",
         "enabled": true,
         "fields": {
@@ -128,24 +128,24 @@ if [ -f "./bin/jwt-gen" ]; then
     create_response=$(curl -s -L -w "%{http_code}" -X POST \
         -H "Authorization: Bearer $JWT_TOKEN" \
         -H "Content-Type: application/json" \
-        -d "$form_data" \
-        "$APP_URL/api/v1/forms")
+        -d "$widget_data" \
+        "$APP_URL/api/v1/widgets")
     
     status_code="${create_response: -3}"
     response_body="${create_response%???}"
     
     if [ "$status_code" -eq 201 ]; then
-        echo "✅ Form creation - Status: $status_code"
+        echo "✅ Widget creation - Status: $status_code"
         
-        # Extract form ID from response
-        form_id=$(echo "$response_body" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 || echo "")
+        # Extract widget ID from response
+        widget_id=$(echo "$response_body" | grep -o '"id":"[^"]*"' | cut -d'"' -f4 || echo "")
         
-        if [ -n "$form_id" ]; then
-            echo "📋 Created form with ID: $form_id"
+        if [ -n "$widget_id" ]; then
+            echo "📋 Created widget with ID: $widget_id"
             
-            # Test form submission
+            # Test widget submission
             echo ""
-            echo "📤 Testing form submission..."
+            echo "📤 Testing widget submission..."
             submission_data='{
                 "data": {
                     "name": "Test User",
@@ -153,28 +153,28 @@ if [ -f "./bin/jwt-gen" ]; then
                 }
             }'
             
-            test_api "POST" "/forms/$form_id/submit" "$submission_data" 201
+            test_api "POST" "/widgets/$widget_id/submit" "$submission_data" 201
             
-            # Test form events
+            # Test widget events
             echo ""
-            echo "Testing form view event..."
+            echo "Testing widget view event..."
             view_event='{"type": "view"}'
-            test_api "POST" "/forms/$form_id/events" "$view_event" 204
+            test_api "POST" "/widgets/$widget_id/events" "$view_event" 204
             
             echo ""
-            echo "Testing form close event..."
+            echo "Testing widget close event..."
             close_event='{"type": "close"}'
-            test_api "POST" "/forms/$form_id/events" "$close_event" 204
+            test_api "POST" "/widgets/$widget_id/events" "$close_event" 204
             
-            # Test form stats
+            # Test widget stats
             echo ""
-            echo "Testing form statistics..."
-            test_api "GET" "/api/v1/forms/$form_id/stats" "" 200
+            echo "Testing widget statistics..."
+            test_api "GET" "/api/v1/widgets/$widget_id/stats" "" 200
         else
-            echo "⚠️ Could not extract form ID from response"
+            echo "⚠️ Could not extract widget ID from response"
         fi
     else
-        echo "❌ Form creation failed - Status: $status_code"
+        echo "❌ Widget creation failed - Status: $status_code"
         echo "Response: $response_body"
     fi
 else

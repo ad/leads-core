@@ -16,7 +16,7 @@
             <div class="loading-text">Loading...</div>
         </div>
 
-        <!-- Login Form -->
+        <!-- Login Widget -->
         <div id="login-section" class="login-section">
             <div class="login-container">
                 <div class="login-header">
@@ -24,13 +24,13 @@
                     <p>Admin Panel</p>
                 </div>
 
-                <form id="login-form" class="login-form">
-                    <div class="form-group">
+                <form id="login-widget" class="login-widget">
+                    <div class="widget-group">
                         <label for="secret">JWT Secret</label>
                         <input type="password" id="secret" name="secret" placeholder="Enter JWT secret" required autocomplete="current-password">
                     </div>
 
-                    <div class="form-group">
+                    <div class="widget-group">
                         <label for="userId">User ID</label>
                         <input type="text" id="userId" name="userId" placeholder="Enter user ID" required autocomplete="username">
                     </div>
@@ -55,8 +55,8 @@
                         <span id="user-info" class="user-info"></span>
                     </div>
                     <div class="header-right">
-                        <button id="create-form-btn" class="btn btn-primary btn-sm">
-                            <span>➕ Create Form</span>
+                        <button id="create-widget-btn" class="btn btn-primary btn-sm">
+                            <span>➕ Create Widget</span>
                         </button>
                         <button id="refresh-btn" class="btn btn-secondary btn-sm">
                             <span class="refresh-icon">🔄</span>
@@ -75,19 +75,19 @@
                     <div class="summary-card">
                         <div class="card-header">
                             <span class="card-icon">📝</span>
-                            <span class="card-title">Total Forms</span>
+                            <span class="card-title">Total Widgets</span>
                         </div>
-                        <div class="card-value" id="total-forms">-</div>
-                        <div class="card-change" id="total-forms-change"></div>
+                        <div class="card-value" id="total-widgets">-</div>
+                        <div class="card-change" id="total-widgets-change"></div>
                     </div>
 
                     <div class="summary-card">
                         <div class="card-header">
                             <span class="card-icon">✅</span>
-                            <span class="card-title">Active Forms</span>
+                            <span class="card-title">Active Widgets</span>
                         </div>
-                        <div class="card-value" id="active-forms">-</div>
-                        <div class="card-change" id="active-forms-change"></div>
+                        <div class="card-value" id="active-widgets">-</div>
+                        <div class="card-change" id="active-widgets-change"></div>
                     </div>
 
                     <div class="summary-card">
@@ -110,13 +110,13 @@
                 </div>
             </section>
 
-            <!-- Forms Table -->
-            <section class="forms-section">
+            <!-- Widgets Table -->
+            <section class="widgets-section">
                 <div class="section-header">
-                    <h2>📋 Recent Forms</h2>
+                    <h2>📋 Recent Widgets</h2>
                     <div class="section-controls">
                         <div class="search-box">
-                            <input type="search" id="search-input" placeholder="Search forms..." class="search-input">
+                            <input type="search" id="search-input" placeholder="Search widgets..." class="search-input">
                         </div>
                         <select id="filter-status" class="filter-select">
                             <option value="">All Status</option>
@@ -130,7 +130,7 @@
                 </div>
 
                 <div class="table-container">
-                    <table class="forms-table">
+                    <table class="widgets-table">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -143,12 +143,12 @@
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="forms-tbody">
+                        <tbody id="widgets-tbody">
                             <tr class="loading-row">
                                 <td colspan="8">
                                     <div class="table-loading">
                                         <div class="loading-spinner small"></div>
-                                        Loading forms...
+                                        Loading widgets...
                                     </div>
                                 </td>
                             </tr>
@@ -159,7 +159,7 @@
                 <!-- Pagination -->
                 <div class="pagination-container">
                     <div class="pagination-info">
-                        <span id="pagination-info">Showing 0 of 0 forms</span>
+                        <span id="pagination-info">Showing 0 of 0 widgets</span>
                     </div>
                     <div class="pagination-controls">
                         <button id="prev-page" class="btn btn-sm btn-outline" disabled>← Previous</button>
@@ -170,49 +170,49 @@
             </section>
         </div>
 
-        <!-- Form Details Modal -->
-        <div id="form-modal" class="modal" style="display: none;">
+        <!-- Widget Details Modal -->
+        <div id="widget-modal" class="modal" style="display: none;">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3 id="modal-title">Form Details</h3>
+                    <h3 id="modal-title">Widget Details</h3>
                     <button id="modal-close" class="modal-close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div id="modal-content-loading" class="modal-loading">
                         <div class="loading-spinner small"></div>
-                        Loading form details...
+                        Loading widget details...
                     </div>
                     <div id="modal-content-data" style="display: none;">
-                        <!-- Form details will be populated here -->
+                        <!-- Widget details will be populated here -->
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Create/Edit Form Modal -->
-        <div id="form-editor-modal" class="modal" style="display: none;">
-            <div class="modal-content form-editor-content">
+        <!-- Create/Edit Widget Modal -->
+        <div id="widget-editor-modal" class="modal" style="display: none;">
+            <div class="modal-content widget-editor-content">
                 <div class="modal-header">
-                    <h3 id="form-editor-title">Create New Form</h3>
-                    <button id="form-editor-close" class="modal-close">&times;</button>
+                    <h3 id="widget-editor-title">Create New Widget</h3>
+                    <button id="widget-editor-close" class="modal-close">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <form id="form-editor-form">
-                        <div class="form-editor-section">
+                    <form id="widget-editor-widget">
+                        <div class="widget-editor-section">
                             <h3>Basic Information</h3>
-                            <div class="form-info-grid">
-                                <div class="form-group">
-                                    <label for="form-name">Form Name *</label>
-                                    <input type="text" id="form-name" name="name" required placeholder="Enter form name">
+                            <div class="widget-info-grid">
+                                <div class="widget-group">
+                                    <label for="widget-name">Widget Name *</label>
+                                    <input type="text" id="widget-name" name="name" required placeholder="Enter widget name">
                                 </div>
 
-                                <div class="form-group">
-                                    <label for="form-type">Form Type *</label>
-                                    <select id="form-type" name="type" required>
+                                <div class="widget-group">
+                                    <label for="widget-type">Widget Type *</label>
+                                    <select id="widget-type" name="type" required>
                                         <option value="">Select type</option>
-                                        <option value="contact">Contact Form</option>
+                                        <option value="contact">Contact Widget</option>
                                         <option value="newsletter">Newsletter Signup</option>
-                                        <option value="feedback">Feedback Form</option>
+                                        <option value="feedback">Feedback Widget</option>
                                         <option value="survey">Survey</option>
                                         <option value="lead">Lead Generation</option>
                                         <option value="support">Support Request</option>
@@ -221,34 +221,34 @@
                                     </select>
                                 </div>
 
-                                <div class="form-group">
+                                <div class="widget-group">
                                     <div class="checkbox-group">
-                                        <input type="checkbox" id="form-enabled" name="enabled" checked>
-                                        <label for="form-enabled">Form Active</label>
+                                        <input type="checkbox" id="widget-enabled" name="enabled" checked>
+                                        <label for="widget-enabled">Widget Active</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="form-editor-section">
-                            <div class="form-fields-header">
-                                <h3>Form Fields</h3>
+                        <div class="widget-editor-section">
+                            <div class="widget-fields-header">
+                                <h3>Widget Fields</h3>
                                 <button type="button" id="add-field-btn" class="btn-add-field">
                                     ➕ Add Field
                                 </button>
                             </div>
-                            <div id="form-fields-container" class="form-fields-container">
-                                <!-- Dynamic form fields will be added here -->
+                            <div id="widget-fields-container" class="widget-fields-container">
+                                <!-- Dynamic widget fields will be added here -->
                             </div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" id="form-editor-save" class="btn btn-primary">
-                        <span class="btn-text">Save Form</span>
+                    <button type="button" id="widget-editor-save" class="btn btn-primary">
+                        <span class="btn-text">Save Widget</span>
                         <span class="btn-loading" style="display: none;">Saving...</span>
                     </button>
-                    <button type="button" id="form-editor-cancel" class="btn btn-outline">
+                    <button type="button" id="widget-editor-cancel" class="btn btn-outline">
                         Cancel
                     </button>
                 </div>
@@ -263,13 +263,13 @@
                     <button id="delete-confirm-close" class="modal-close">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <p class="delete-confirm-text">Are you sure you want to delete this form?</p>
-                    <p><strong class="delete-form-name" id="delete-form-name"></strong></p>
+                    <p class="delete-confirm-text">Are you sure you want to delete this widget?</p>
+                    <p><strong class="delete-widget-name" id="delete-widget-name"></strong></p>
                     <p style="color: #f44336; font-size: 0.9em;">This action cannot be undone.</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" id="delete-confirm" class="btn btn-confirm-delete">
-                        <span class="btn-text">Delete Form</span>
+                        <span class="btn-text">Delete Widget</span>
                         <span class="btn-loading" style="display: none;">Deleting...</span>
                     </button>
                     <button type="button" id="delete-cancel" class="btn btn-outline">
@@ -286,7 +286,7 @@
     <script src="/panel/js/auth.js"></script>
     <script src="/panel/js/api.js"></script>
     <script src="/panel/js/ui.js"></script>
-    <script src="/panel/js/forms.js"></script>
+    <script src="/panel/js/widgets.js"></script>
     <script src="/panel/js/dashboard.js"></script>
     <script src="/panel/js/app.js"></script>
 </body>

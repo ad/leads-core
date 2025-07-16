@@ -12,10 +12,10 @@ import (
 // SubmissionRepository defines interface for submission storage operations
 type SubmissionRepository interface {
 	Create(ctx context.Context, submission *models.Submission) error
-	GetByFormID(ctx context.Context, formID string, opts models.PaginationOptions) ([]*models.Submission, int, error)
-	GetByID(ctx context.Context, formID, submissionID string) (*models.Submission, error)
+	GetByWidgetID(ctx context.Context, widgetID string, opts models.PaginationOptions) ([]*models.Submission, int, error)
+	GetByID(ctx context.Context, widgetID, submissionID string) (*models.Submission, error)
 	UpdateTTL(ctx context.Context, userID string, newTTL time.Duration) error
-	UpdateFormSubmissionsTTL(ctx context.Context, formID string, ttlDays int) error
+	UpdateWidgetSubmissionsTTL(ctx context.Context, widgetID string, ttlDays int) error
 }
 
 // RedisSubmissionRepository implements SubmissionRepository for Redis
@@ -30,11 +30,11 @@ func NewRedisSubmissionRepository(client *RedisClient) *RedisSubmissionRepositor
 
 // Create creates a new submission with TTL
 func (r *RedisSubmissionRepository) Create(ctx context.Context, submission *models.Submission) error {
-	// All submission-related keys use {formID} hash tag, so they'll be in same slot
+	// All submission-related keys use {widgetID} hash tag, so they'll be in same slot
 	pipe := r.client.client.TxPipeline()
 
 	// Store submission data
-	submissionKey := GenerateSubmissionKey(submission.FormID, submission.ID)
+	submissionKey := GenerateSubmissionKey(submission.WidgetID, submission.ID)
 	pipe.HSet(ctx, submissionKey, submission.ToRedisHash())
 
 	// Set TTL if specified
@@ -42,21 +42,21 @@ func (r *RedisSubmissionRepository) Create(ctx context.Context, submission *mode
 		pipe.Expire(ctx, submissionKey, submission.TTL)
 	}
 
-	// Add to form submissions index (same slot due to hash tag)
-	formSubmissionsKey := GenerateFormSubmissionsKey(submission.FormID)
+	// Add to widget submissions index (same slot due to hash tag)
+	widgetSubmissionsKey := GenerateWidgetSubmissionsKey(submission.WidgetID)
 	timestamp := float64(submission.CreatedAt.Unix())
-	pipe.ZAdd(ctx, formSubmissionsKey, redis.Z{Score: timestamp, Member: submission.ID})
+	pipe.ZAdd(ctx, widgetSubmissionsKey, redis.Z{Score: timestamp, Member: submission.ID})
 
 	_, err := pipe.Exec(ctx)
 	return err
 }
 
-// GetByFormID retrieves submissions for a specific form with pagination
-func (r *RedisSubmissionRepository) GetByFormID(ctx context.Context, formID string, opts models.PaginationOptions) ([]*models.Submission, int, error) {
-	formSubmissionsKey := GenerateFormSubmissionsKey(formID)
+// GetByWidgetID retrieves submissions for a specific widget with pagination
+func (r *RedisSubmissionRepository) GetByWidgetID(ctx context.Context, widgetID string, opts models.PaginationOptions) ([]*models.Submission, int, error) {
+	widgetSubmissionsKey := GenerateWidgetSubmissionsKey(widgetID)
 
 	// Get total number of submissions
-	total, err := r.client.client.ZCard(ctx, formSubmissionsKey).Result()
+	total, err := r.client.client.ZCard(ctx, widgetSubmissionsKey).Result()
 	if err != nil {
 		return nil, 0, err
 	}
@@ -66,7 +66,7 @@ func (r *RedisSubmissionRepository) GetByFormID(ctx context.Context, formID stri
 	end := start + int64(opts.PerPage) - 1
 
 	// Get submission IDs (sorted by timestamp, newest first)
-	submissionIDs, err := r.client.client.ZRevRange(ctx, formSubmissionsKey, start, end).Result()
+	submissionIDs, err := r.client.client.ZRevRange(ctx, widgetSubmissionsKey, start, end).Result()
 	if err != nil {
 		return nil, 0, err
 	}
@@ -78,7 +78,7 @@ func (r *RedisSubmissionRepository) GetByFormID(ctx context.Context, formID stri
 	// Get submissions
 	submissions := make([]*models.Submission, 0, len(submissionIDs))
 	for _, submissionID := range submissionIDs {
-		submission, err := r.GetByID(ctx, formID, submissionID)
+		submission, err := r.GetByID(ctx, widgetID, submissionID)
 		if err != nil {
 			continue // Skip submissions that can't be loaded (expired, etc.)
 		}
@@ -89,8 +89,8 @@ func (r *RedisSubmissionRepository) GetByFormID(ctx context.Context, formID stri
 }
 
 // GetByID retrieves a specific submission
-func (r *RedisSubmissionRepository) GetByID(ctx context.Context, formID, submissionID string) (*models.Submission, error) {
-	submissionKey := GenerateSubmissionKey(formID, submissionID)
+func (r *RedisSubmissionRepository) GetByID(ctx context.Context, widgetID, submissionID string) (*models.Submission, error) {
+	submissionKey := GenerateSubmissionKey(widgetID, submissionID)
 	hash, err := r.client.client.HGetAll(ctx, submissionKey).Result()
 	if err != nil {
 		return nil, err
@@ -110,25 +110,25 @@ func (r *RedisSubmissionRepository) GetByID(ctx context.Context, formID, submiss
 
 // UpdateTTL updates TTL for all submissions of a user
 func (r *RedisSubmissionRepository) UpdateTTL(ctx context.Context, userID string, newTTL time.Duration) error {
-	// Get all forms for the user
-	userFormsKey := GenerateUserFormsKey(userID)
-	formIDs, err := r.client.client.SMembers(ctx, userFormsKey).Result()
+	// Get all widgets for the user
+	userWidgetsKey := GenerateUserWidgetsKey(userID)
+	widgetIDs, err := r.client.client.SMembers(ctx, userWidgetsKey).Result()
 	if err != nil {
 		return err
 	}
 
 	pipe := r.client.client.TxPipeline()
 
-	// Update TTL for all submissions of each form
-	for _, formID := range formIDs {
-		formSubmissionsKey := GenerateFormSubmissionsKey(formID)
-		submissionIDs, err := r.client.client.ZRange(ctx, formSubmissionsKey, 0, -1).Result()
+	// Update TTL for all submissions of each widget
+	for _, widgetID := range widgetIDs {
+		widgetSubmissionsKey := GenerateWidgetSubmissionsKey(widgetID)
+		submissionIDs, err := r.client.client.ZRange(ctx, widgetSubmissionsKey, 0, -1).Result()
 		if err != nil {
-			continue // Skip this form if we can't get submissions
+			continue // Skip this widget if we can't get submissions
 		}
 
 		for _, submissionID := range submissionIDs {
-			submissionKey := GenerateSubmissionKey(formID, submissionID)
+			submissionKey := GenerateSubmissionKey(widgetID, submissionID)
 			pipe.Expire(ctx, submissionKey, newTTL)
 		}
 	}
@@ -137,21 +137,21 @@ func (r *RedisSubmissionRepository) UpdateTTL(ctx context.Context, userID string
 	return err
 }
 
-// UpdateFormSubmissionsTTL updates TTL for all submissions of a specific form
-func (r *RedisSubmissionRepository) UpdateFormSubmissionsTTL(ctx context.Context, formID string, ttlDays int) error {
+// UpdateWidgetSubmissionsTTL updates TTL for all submissions of a specific widget
+func (r *RedisSubmissionRepository) UpdateWidgetSubmissionsTTL(ctx context.Context, widgetID string, ttlDays int) error {
 	pipe := r.client.client.Pipeline()
 
-	// Get all submissions for the form
-	submissionsKey := fmt.Sprintf("form:%s:submissions", formID)
+	// Get all submissions for the widget
+	submissionsKey := fmt.Sprintf("widget:%s:submissions", widgetID)
 	submissionIDs, err := r.client.client.ZRange(ctx, submissionsKey, 0, -1).Result()
 	if err != nil {
-		return fmt.Errorf("failed to get submissions for form %s: %w", formID, err)
+		return fmt.Errorf("failed to get submissions for widget %s: %w", widgetID, err)
 	}
 
 	// Update TTL for each submission
 	ttlDuration := time.Duration(ttlDays) * 24 * time.Hour
 	for _, submissionID := range submissionIDs {
-		submissionKey := fmt.Sprintf("submission:%s:%s", formID, submissionID)
+		submissionKey := fmt.Sprintf("submission:%s:%s", widgetID, submissionID)
 		pipe.Expire(ctx, submissionKey, ttlDuration)
 	}
 
@@ -161,7 +161,7 @@ func (r *RedisSubmissionRepository) UpdateFormSubmissionsTTL(ctx context.Context
 	// Execute pipeline
 	_, err = pipe.Exec(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to update TTL for form %s submissions: %w", formID, err)
+		return fmt.Errorf("failed to update TTL for widget %s submissions: %w", widgetID, err)
 	}
 
 	return nil

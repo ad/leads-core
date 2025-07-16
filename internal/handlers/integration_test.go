@@ -159,7 +159,7 @@ func TestJWTAuthentication_Integration(t *testing.T) {
 			checkResponse:  false,
 		},
 		{
-			name:           "malformed token",
+			name:           "malwidgeted token",
 			token:          "invalid.token.here",
 			expectedStatus: http.StatusUnauthorized,
 			checkResponse:  false,
@@ -203,10 +203,10 @@ func TestValidation_Integration(t *testing.T) {
 		expectedValid bool
 	}{
 		{
-			name:   "valid form creation",
-			schema: "form-create",
+			name:   "valid widget creation",
+			schema: "widget-create",
 			requestBody: `{
-				"name": "Contact Form",
+				"name": "Contact Widget",
 				"type": "contact",
 				"enabled": true,
 				"fields": {
@@ -217,8 +217,8 @@ func TestValidation_Integration(t *testing.T) {
 			expectedValid: true,
 		},
 		{
-			name:   "invalid form creation - missing name",
-			schema: "form-create",
+			name:   "invalid widget creation - missing name",
+			schema: "widget-create",
 			requestBody: `{
 				"type": "contact",
 				"enabled": true,
@@ -410,14 +410,14 @@ func TestRedisConnection_Integration(t *testing.T) {
 	}
 }
 
-func TestFormDataFlow_Integration(t *testing.T) {
+func TestWidgetDataFlow_Integration(t *testing.T) {
 	_ = setupTestEnvironment(t) // Create environment but don't use it yet
 
 	// Test data models integration
-	form := &models.Form{
-		ID:      "test-form-123",
+	widget := &models.Widget{
+		ID:      "test-widget-123",
 		OwnerID: "user-456",
-		Name:    "Integration Test Form",
+		Name:    "Integration Test Widget",
 		Type:    "contact",
 		Enabled: true,
 		Fields: map[string]interface{}{
@@ -429,30 +429,30 @@ func TestFormDataFlow_Integration(t *testing.T) {
 	}
 
 	// Test JSON serialization
-	jsonData, err := json.Marshal(form)
+	jsonData, err := json.Marshal(widget)
 	if err != nil {
-		t.Fatalf("Failed to marshal form: %v", err)
+		t.Fatalf("Failed to marshal widget: %v", err)
 	}
 
 	// Test JSON deserialization
-	var deserializedForm models.Form
-	err = json.Unmarshal(jsonData, &deserializedForm)
+	var deserializedWidget models.Widget
+	err = json.Unmarshal(jsonData, &deserializedWidget)
 	if err != nil {
-		t.Fatalf("Failed to unmarshal form: %v", err)
+		t.Fatalf("Failed to unmarshal widget: %v", err)
 	}
 
 	// Verify data integrity
-	if deserializedForm.ID != form.ID {
-		t.Errorf("ID mismatch: expected %s, got %s", form.ID, deserializedForm.ID)
+	if deserializedWidget.ID != widget.ID {
+		t.Errorf("ID mismatch: expected %s, got %s", widget.ID, deserializedWidget.ID)
 	}
-	if deserializedForm.Name != form.Name {
-		t.Errorf("Name mismatch: expected %s, got %s", form.Name, deserializedForm.Name)
+	if deserializedWidget.Name != widget.Name {
+		t.Errorf("Name mismatch: expected %s, got %s", widget.Name, deserializedWidget.Name)
 	}
 
 	// Test submission data
 	submission := &models.Submission{
-		ID:     "sub-789",
-		FormID: form.ID,
+		ID:       "sub-789",
+		WidgetID: widget.ID,
 		Data: map[string]interface{}{
 			"name":  "John Doe",
 			"email": "john@example.com",
@@ -472,7 +472,7 @@ func TestFormDataFlow_Integration(t *testing.T) {
 		t.Fatalf("Failed to unmarshal submission: %v", err)
 	}
 
-	if deserializedSub.FormID != submission.FormID {
-		t.Errorf("FormID mismatch: expected %s, got %s", submission.FormID, deserializedSub.FormID)
+	if deserializedSub.WidgetID != submission.WidgetID {
+		t.Errorf("WidgetID mismatch: expected %s, got %s", submission.WidgetID, deserializedSub.WidgetID)
 	}
 }

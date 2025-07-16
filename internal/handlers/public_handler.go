@@ -12,29 +12,29 @@ import (
 
 // PublicHandler handles public (non-authenticated) endpoints
 type PublicHandler struct {
-	formService *services.FormService
-	validator   *validation.SchemaValidator
+	widgetService *services.WidgetService
+	validator     *validation.SchemaValidator
 }
 
 // NewPublicHandler creates a new public handler
-func NewPublicHandler(formService *services.FormService, validator *validation.SchemaValidator) *PublicHandler {
+func NewPublicHandler(widgetService *services.WidgetService, validator *validation.SchemaValidator) *PublicHandler {
 	return &PublicHandler{
-		formService: formService,
-		validator:   validator,
+		widgetService: widgetService,
+		validator:     validator,
 	}
 }
 
-// SubmitForm handles POST /forms/{id}/submit
-func (h *PublicHandler) SubmitForm(w http.ResponseWriter, r *http.Request) {
+// SubmitWidget handles POST /widgets/{id}/submit
+func (h *PublicHandler) SubmitWidget(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
-	// Extract form ID from URL
-	formID := extractFormIDFromSubmitPath(r.URL.Path)
-	if formID == "" {
-		writeErrorResponse(w, http.StatusBadRequest, "Form ID is required")
+	// Extract widget ID from URL
+	widgetID := extractWidgetIDFromSubmitPath(r.URL.Path)
+	if widgetID == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "Widget ID is required")
 		return
 	}
 
@@ -49,35 +49,35 @@ func (h *PublicHandler) SubmitForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Submit form
-	submission, err := h.formService.SubmitForm(r.Context(), formID, req)
+	// Submit widget
+	submission, err := h.widgetService.SubmitWidget(r.Context(), widgetID, req)
 	if err != nil {
-		log.Printf("action=submit_form form_id=%s error=%q", formID, err.Error())
+		log.Printf("action=submit_widget widget_id=%s error=%q", widgetID, err.Error())
 		if strings.Contains(err.Error(), "not found") {
-			writeErrorResponse(w, http.StatusNotFound, "Form not found")
+			writeErrorResponse(w, http.StatusNotFound, "Widget not found")
 		} else if strings.Contains(err.Error(), "disabled") {
-			writeErrorResponse(w, http.StatusForbidden, "Form is disabled")
+			writeErrorResponse(w, http.StatusForbidden, "Widget is disabled")
 		} else {
 			writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		}
 		return
 	}
 
-	log.Printf("action=submit_form form_id=%s submission_id=%s", formID, submission.ID)
+	log.Printf("action=submit_widget widget_id=%s submission_id=%s", widgetID, submission.ID)
 	writeJSONResponse(w, http.StatusCreated, models.Response{Data: submission})
 }
 
-// RegisterEvent handles POST /forms/{id}/events
+// RegisterEvent handles POST /widgets/{id}/events
 func (h *PublicHandler) RegisterEvent(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
-	// Extract form ID from URL
-	formID := extractFormIDFromEventPath(r.URL.Path)
-	if formID == "" {
-		writeErrorResponse(w, http.StatusBadRequest, "Form ID is required")
+	// Extract widget ID from URL
+	widgetID := extractWidgetIDFromEventPath(r.URL.Path)
+	if widgetID == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "Widget ID is required")
 		return
 	}
 
@@ -99,39 +99,39 @@ func (h *PublicHandler) RegisterEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Register event
-	if err := h.formService.RegisterFormEvent(r.Context(), formID, req.Type); err != nil {
-		log.Printf("action=register_event form_id=%s type=%s error=%q", formID, req.Type, err.Error())
+	if err := h.widgetService.RegisterWidgetEvent(r.Context(), widgetID, req.Type); err != nil {
+		log.Printf("action=register_event widget_id=%s type=%s error=%q", widgetID, req.Type, err.Error())
 		if strings.Contains(err.Error(), "not found") {
-			writeErrorResponse(w, http.StatusNotFound, "Form not found")
+			writeErrorResponse(w, http.StatusNotFound, "Widget not found")
 		} else if strings.Contains(err.Error(), "disabled") {
-			writeErrorResponse(w, http.StatusForbidden, "Form is disabled")
+			writeErrorResponse(w, http.StatusForbidden, "Widget is disabled")
 		} else {
 			writeErrorResponse(w, http.StatusInternalServerError, "Failed to register event")
 		}
 		return
 	}
 
-	log.Printf("action=register_event form_id=%s type=%s", formID, req.Type)
+	log.Printf("action=register_event widget_id=%s type=%s", widgetID, req.Type)
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// extractFormIDFromSubmitPath extracts form ID from paths like /forms/{id}/submit
-func extractFormIDFromSubmitPath(path string) string {
+// extractWidgetIDFromSubmitPath extracts widget ID from paths like /widgets/{id}/submit
+func extractWidgetIDFromSubmitPath(path string) string {
 	// Remove leading/trailing slashes and split
 	parts := strings.Split(strings.Trim(path, "/"), "/")
-	// Expected format: ["forms", "{id}", "submit"]
-	if len(parts) == 3 && parts[0] == "forms" && parts[2] == "submit" {
+	// Expected format: ["widgets", "{id}", "submit"]
+	if len(parts) == 3 && parts[0] == "widgets" && parts[2] == "submit" {
 		return parts[1]
 	}
 	return ""
 }
 
-// extractFormIDFromEventPath extracts form ID from paths like /forms/{id}/events
-func extractFormIDFromEventPath(path string) string {
+// extractWidgetIDFromEventPath extracts widget ID from paths like /widgets/{id}/events
+func extractWidgetIDFromEventPath(path string) string {
 	// Remove leading/trailing slashes and split
 	parts := strings.Split(strings.Trim(path, "/"), "/")
-	// Expected format: ["forms", "{id}", "events"]
-	if len(parts) == 3 && parts[0] == "forms" && parts[2] == "events" {
+	// Expected format: ["widgets", "{id}", "events"]
+	if len(parts) == 3 && parts[0] == "widgets" && parts[2] == "events" {
 		return parts[1]
 	}
 	return ""

@@ -37,20 +37,20 @@ func TestSchemaValidator_ValidateRequest(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name:        "valid form creation",
-			schemaName:  "form-create",
-			requestBody: `{"type":"contact","name":"Test Form","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}`,
+			name:        "valid widget creation",
+			schemaName:  "widget-create",
+			requestBody: `{"type":"contact","name":"Test Widget","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}`,
 			expectError: false,
 		},
 		{
-			name:        "invalid form creation - missing type",
-			schemaName:  "form-create",
-			requestBody: `{"name":"Test Form","enabled":true,"fields":{"name":"text"}}`,
+			name:        "invalid widget creation - missing type",
+			schemaName:  "widget-create",
+			requestBody: `{"name":"Test Widget","enabled":true,"fields":{"name":"text"}}`,
 			expectError: true,
 		},
 		{
-			name:        "invalid form creation - empty name",
-			schemaName:  "form-create",
+			name:        "invalid widget creation - empty name",
+			schemaName:  "widget-create",
 			requestBody: `{"type":"contact","name":"","enabled":true,"fields":{"name":"text"}}`,
 			expectError: true,
 		},
@@ -139,7 +139,7 @@ func TestSchemaValidator_InvalidJSON(t *testing.T) {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 
-	_, err = validator.ValidateRequest(req, "form-create")
+	_, err = validator.ValidateRequest(req, "widget-create")
 	if err == nil {
 		t.Error("Expected error for invalid JSON, but got none")
 	}
@@ -168,34 +168,34 @@ func TestSchemaValidator_ValidateAndDecode(t *testing.T) {
 	}
 
 	// Test struct for decoding
-	type TestForm struct {
+	type TestWidget struct {
 		Type    string                 `json:"type"`
 		Name    string                 `json:"name"`
 		Enabled bool                   `json:"enabled"`
 		Fields  map[string]interface{} `json:"fields"`
 	}
 
-	requestBody := `{"type":"contact","name":"Test Form","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}`
+	requestBody := `{"type":"contact","name":"Test Widget","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}`
 	req, err := http.NewRequest("POST", "/test", bytes.NewBufferString(requestBody))
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	var form TestForm
-	err = validator.ValidateAndDecode(req, "form-create", &form)
+	var widget TestWidget
+	err = validator.ValidateAndDecode(req, "widget-create", &widget)
 	if err != nil {
 		t.Fatalf("Failed to validate and decode: %v", err)
 	}
 
 	// Check decoded values
-	if form.Type != "contact" {
-		t.Errorf("Expected type 'contact', got '%s'", form.Type)
+	if widget.Type != "contact" {
+		t.Errorf("Expected type 'contact', got '%s'", widget.Type)
 	}
-	if form.Name != "Test Form" {
-		t.Errorf("Expected name 'Test Form', got '%s'", form.Name)
+	if widget.Name != "Test Widget" {
+		t.Errorf("Expected name 'Test Widget', got '%s'", widget.Name)
 	}
-	if !form.Enabled {
-		t.Errorf("Expected enabled to be true, got %v", form.Enabled)
+	if !widget.Enabled {
+		t.Errorf("Expected enabled to be true, got %v", widget.Enabled)
 	}
 }

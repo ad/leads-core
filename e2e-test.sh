@@ -8,7 +8,7 @@
 
 # Start cluster
 echo "🚀 Starting Redis cluster..."
-docker-compose -f docker-compose.cluster.yml up -d
+docker-compose -f docker-compose.cluster.yml up --build -d
 
 # Colors for output
 RED='\033[0;31m'
@@ -51,7 +51,7 @@ run_test() {
 echo "📄 CONTENT TYPE TESTS"
 echo "===================="
 
-test_http "JSON endpoint with wrong content type" "POST" "$SERVER_URL/api/v1/forms" "$AUTH_HEADER -H 'Content-Type: text/plain'" "invalid data" "400"
+test_http "JSON endpoint with wrong content type" "POST" "$SERVER_URL/api/v1/widgets" "$AUTH_HEADER -H 'Content-Type: text/plain'" "invalid data" "400"
 
 # Final Results
 echo
@@ -166,100 +166,100 @@ test_http "Metrics Endpoint" "GET" "$SERVER_URL/metrics" "" "" "200"
 echo "🔐 AUTHENTICATION TESTS"
 echo "======================"
 
-test_http "Access private endpoint without token" "GET" "$SERVER_URL/api/v1/forms" "" "" "401"
-test_http "Access private endpoint with invalid token" "GET" "$SERVER_URL/api/v1/forms" "-H 'Authorization: Bearer invalid-token'" "" "401"
-test_http "Access private endpoint with valid token" "GET" "$SERVER_URL/api/v1/forms" "$AUTH_HEADER" "" "200"
+test_http "Access private endpoint without token" "GET" "$SERVER_URL/api/v1/widgets" "" "" "401"
+test_http "Access private endpoint with invalid token" "GET" "$SERVER_URL/api/v1/widgets" "-H 'Authorization: Bearer invalid-token'" "" "401"
+test_http "Access private endpoint with valid token" "GET" "$SERVER_URL/api/v1/widgets" "$AUTH_HEADER" "" "200"
 
-# Test 3: Private Form Management Endpoints (Authenticated)
-echo "📝 PRIVATE FORM MANAGEMENT TESTS"
+# Test 3: Private Widget Management Endpoints (Authenticated)
+echo "📝 PRIVATE WIDGET MANAGEMENT TESTS"
 echo "==============================="
 
-# Create a form and extract its ID
-FORM_DATA='{"name":"Test Form","type":"contact","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}'
-log_info "Creating form and extracting ID..."
-response=$(curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$FORM_DATA" "$SERVER_URL/api/v1/forms")
-CREATED_FORM_ID=$(echo "$response" | jq -r '.data.id // empty')
+# Create a widget and extract its ID
+WIDGET_DATA='{"name":"Test Widget","type":"contact","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}'
+log_info "Creating widget and extracting ID..."
+response=$(curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$WIDGET_DATA" "$SERVER_URL/api/v1/widgets")
+CREATED_WIDGET_ID=$(echo "$response" | jq -r '.data.id // empty')
 
-if [ -n "$CREATED_FORM_ID" ] && [ "$CREATED_FORM_ID" != "null" ]; then
-    log_info "Form created with ID: $CREATED_FORM_ID"
+if [ -n "$CREATED_WIDGET_ID" ] && [ "$CREATED_WIDGET_ID" != "null" ]; then
+    log_info "Widget created with ID: $CREATED_WIDGET_ID"
     
-    # Now test operations with the real form ID
-    # Note: Form might be disabled by default, so some tests may return 403/404
-    test_http "Get Real Form" "GET" "$SERVER_URL/api/v1/forms/$CREATED_FORM_ID" "$AUTH_HEADER" "" "200"
+    # Now test operations with the real widget ID
+    # Note: Widget might be disabled by default, so some tests may return 403/404
+    test_http "Get Real Widget" "GET" "$SERVER_URL/api/v1/widgets/$CREATED_WIDGET_ID" "$AUTH_HEADER" "" "200"
     
-    # Update the real form
-    UPDATE_DATA='{"name":"Updated Test Form","type":"contact"}'
-    test_http "Update Real Form" "PUT" "$SERVER_URL/api/v1/forms/$CREATED_FORM_ID" "$AUTH_HEADER -H 'Content-Type: application/json'" "$UPDATE_DATA" "200"
+    # Update the real widget
+    UPDATE_DATA='{"name":"Updated Test Widget","type":"contact"}'
+    test_http "Update Real Widget" "PUT" "$SERVER_URL/api/v1/widgets/$CREATED_WIDGET_ID" "$AUTH_HEADER -H 'Content-Type: application/json'" "$UPDATE_DATA" "200"
     
-    # Get stats for real form
-    test_http "Get Real Form Stats" "GET" "$SERVER_URL/api/v1/forms/$CREATED_FORM_ID/stats" "$AUTH_HEADER" "" "200"
+    # Get stats for real widget
+    test_http "Get Real Widget Stats" "GET" "$SERVER_URL/api/v1/widgets/$CREATED_WIDGET_ID/stats" "$AUTH_HEADER" "" "200"
     
-    # Get submissions for real form
-    test_http "Get Real Form Submissions" "GET" "$SERVER_URL/api/v1/forms/$CREATED_FORM_ID/submissions" "$AUTH_HEADER" "" "200"
+    # Get submissions for real widget
+    test_http "Get Real Widget Submissions" "GET" "$SERVER_URL/api/v1/widgets/$CREATED_WIDGET_ID/submissions" "$AUTH_HEADER" "" "200"
     
-    # Test public endpoints with real form
+    # Test public endpoints with real widget
     echo
-    echo "🌐 PUBLIC FORM TESTS (with real form)"
+    echo "🌐 PUBLIC WIDGET TESTS (with real widget)"
     echo "===================================="
     
-    # Submit to real form (public endpoint) - should work if enabled
+    # Submit to real widget (public endpoint) - should work if enabled
     SUBMIT_DATA='{"data":{"name":"John Doe","email":"test@example.com"}}'
-    test_http "Submit to Real Form (Public)" "POST" "$SERVER_URL/forms/$CREATED_FORM_ID/submit" "-H 'Content-Type: application/json'" "$SUBMIT_DATA" "201"
+    test_http "Submit to Real Widget (Public)" "POST" "$SERVER_URL/widgets/$CREATED_WIDGET_ID/submit" "-H 'Content-Type: application/json'" "$SUBMIT_DATA" "201"
     
-    # Register event on real form (public endpoint) - should work if enabled
+    # Register event on real widget (public endpoint) - should work if enabled
     EVENT_DATA='{"type":"view"}'
-    test_http "Register Event on Real Form (Public)" "POST" "$SERVER_URL/forms/$CREATED_FORM_ID/events" "-H 'Content-Type: application/json'" "$EVENT_DATA" "204"
+    test_http "Register Event on Real Widget (Public)" "POST" "$SERVER_URL/widgets/$CREATED_WIDGET_ID/events" "-H 'Content-Type: application/json'" "$EVENT_DATA" "204"
     
-    # Delete the real form at the end
-    test_http "Delete Real Form" "DELETE" "$SERVER_URL/api/v1/forms/$CREATED_FORM_ID" "$AUTH_HEADER" "" "204"
+    # Delete the real widget at the end
+    test_http "Delete Real Widget" "DELETE" "$SERVER_URL/api/v1/widgets/$CREATED_WIDGET_ID" "$AUTH_HEADER" "" "204"
 else
-    log_error "Failed to create form or extract ID. Response: $response"
+    log_error "Failed to create widget or extract ID. Response: $response"
     # Fall back to original tests with fake ID - skip additional tests
     ((FAILED_TESTS+=7))  # Account for the 7 tests we couldn't run
     ((TOTAL_TESTS+=7))
 fi
 
-# Always test form creation to verify the endpoint works
-test_http "Create Form (verification)" "POST" "$SERVER_URL/api/v1/forms" "$AUTH_HEADER -H 'Content-Type: application/json'" "$FORM_DATA" "201"
+# Always test widget creation to verify the endpoint works
+test_http "Create Widget (verification)" "POST" "$SERVER_URL/api/v1/widgets" "$AUTH_HEADER -H 'Content-Type: application/json'" "$WIDGET_DATA" "201"
 
-# List forms
-test_http "List Forms" "GET" "$SERVER_URL/api/v1/forms" "$AUTH_HEADER" "" "200"
+# List widgets
+test_http "List Widgets" "GET" "$SERVER_URL/api/v1/widgets" "$AUTH_HEADER" "" "200"
 
-# Get forms summary (implemented endpoint)
-test_http "Get Forms Summary" "GET" "$SERVER_URL/api/v1/forms/summary" "$AUTH_HEADER" "" "200"
+# Get widgets summary (implemented endpoint)
+test_http "Get Widgets Summary" "GET" "$SERVER_URL/api/v1/widgets/summary" "$AUTH_HEADER" "" "200"
 
-# Test with a sample form ID (for endpoints that should return 404)
-FAKE_FORM_ID="test-form-123"
+# Test with a sample widget ID (for endpoints that should return 404)
+FAKE_WIDGET_ID="test-widget-123"
 
-# Get non-existent form
-test_http "Get Non-existent Form" "GET" "$SERVER_URL/api/v1/forms/$FAKE_FORM_ID" "$AUTH_HEADER" "" "404"
+# Get non-existent widget
+test_http "Get Non-existent Widget" "GET" "$SERVER_URL/api/v1/widgets/$FAKE_WIDGET_ID" "$AUTH_HEADER" "" "404"
 
-# Update non-existent form
-UPDATE_DATA='{"name":"Updated Test Form","type":"contact"}'
-test_http "Update Non-existent Form" "PUT" "$SERVER_URL/api/v1/forms/$FAKE_FORM_ID" "$AUTH_HEADER -H 'Content-Type: application/json'" "$UPDATE_DATA" "404"
+# Update non-existent widget
+UPDATE_DATA='{"name":"Updated Test Widget","type":"contact"}'
+test_http "Update Non-existent Widget" "PUT" "$SERVER_URL/api/v1/widgets/$FAKE_WIDGET_ID" "$AUTH_HEADER -H 'Content-Type: application/json'" "$UPDATE_DATA" "404"
 
-# Get stats for non-existent form
-test_http "Get Non-existent Form Stats" "GET" "$SERVER_URL/api/v1/forms/$FAKE_FORM_ID/stats" "$AUTH_HEADER" "" "404"
+# Get stats for non-existent widget
+test_http "Get Non-existent Widget Stats" "GET" "$SERVER_URL/api/v1/widgets/$FAKE_WIDGET_ID/stats" "$AUTH_HEADER" "" "404"
 
-# Get submissions for non-existent form
-test_http "Get Non-existent Form Submissions" "GET" "$SERVER_URL/api/v1/forms/$FAKE_FORM_ID/submissions" "$AUTH_HEADER" "" "404"
+# Get submissions for non-existent widget
+test_http "Get Non-existent Widget Submissions" "GET" "$SERVER_URL/api/v1/widgets/$FAKE_WIDGET_ID/submissions" "$AUTH_HEADER" "" "404"
 
-# Delete non-existent form
-test_http "Delete Non-existent Form" "DELETE" "$SERVER_URL/api/v1/forms/$FAKE_FORM_ID" "$AUTH_HEADER" "" "404"
+# Delete non-existent widget
+test_http "Delete Non-existent Widget" "DELETE" "$SERVER_URL/api/v1/widgets/$FAKE_WIDGET_ID" "$AUTH_HEADER" "" "404"
 
-# Test 4: Public Form Endpoints (Legacy tests with fake ID)
-echo "🌐 PUBLIC FORM TESTS (Legacy)"
+# Test 4: Public Widget Endpoints (Legacy tests with fake ID)
+echo "🌐 PUBLIC WIDGET TESTS (Legacy)"
 echo "============================"
 
-FAKE_ID="nonexistent-form-id"
+FAKE_ID="nonexistent-widget-id"
 
-# Submit to non-existent form (public endpoint)
+# Submit to non-existent widget (public endpoint)
 SUBMIT_DATA='{"data":{"email":"test@example.com","message":"Test submission"}}'
-test_http "Submit to Non-existent Form (Public)" "POST" "$SERVER_URL/forms/$FAKE_ID/submit" "-H 'Content-Type: application/json'" "$SUBMIT_DATA" "404"
+test_http "Submit to Non-existent Widget (Public)" "POST" "$SERVER_URL/widgets/$FAKE_ID/submit" "-H 'Content-Type: application/json'" "$SUBMIT_DATA" "404"
 
-# Register event on non-existent form (public endpoint)
+# Register event on non-existent widget (public endpoint)
 EVENT_DATA='{"type":"view"}'
-test_http "Register Event on Non-existent Form (Public)" "POST" "$SERVER_URL/forms/$FAKE_ID/events" "-H 'Content-Type: application/json'" "$EVENT_DATA" "404"
+test_http "Register Event on Non-existent Widget (Public)" "POST" "$SERVER_URL/widgets/$FAKE_ID/events" "-H 'Content-Type: application/json'" "$EVENT_DATA" "404"
 
 # Test 5: User Management Endpoints
 echo "👤 USER MANAGEMENT TESTS"
@@ -286,7 +286,7 @@ for i in {1..5}; do
     response=$(curl -s -w '\nHTTP_CODE:%{http_code}\n' -X POST \
         -H 'Content-Type: application/json' \
         -d '{"test":"data"}' \
-        "$SERVER_URL/forms/nonexistent/submit")
+        "$SERVER_URL/widgets/nonexistent/submit")
     
     http_code=$(echo "$response" | grep "HTTP_CODE:" | cut -d: -f2)
     
@@ -310,7 +310,7 @@ SUCCESS_COUNT=0
 for i in {1..10}; do
     response=$(curl -s -w '\nHTTP_CODE:%{http_code}\n' \
         -H "Authorization: Bearer $TOKEN" \
-        "$SERVER_URL/api/v1/forms")
+        "$SERVER_URL/api/v1/widgets")
     
     http_code=$(echo "$response" | grep "HTTP_CODE:" | cut -d: -f2)
     
@@ -334,7 +334,7 @@ echo
 echo "� INVALID METHOD TESTS"
 echo "======================"
 
-test_http "Invalid method on forms endpoint" "PATCH" "$SERVER_URL/api/v1/forms" "$AUTH_HEADER" "" "405"
+test_http "Invalid method on widgets endpoint" "PATCH" "$SERVER_URL/api/v1/widgets" "$AUTH_HEADER" "" "405"
 test_http "Invalid method on health endpoint" "POST" "$SERVER_URL/health" "" "" "405"
 
 # Test 9: Invalid Endpoints
@@ -348,57 +348,57 @@ test_http "Non-existent private endpoint" "GET" "$SERVER_URL/api/v1/invalidpath"
 echo "📈 EVENT STATISTICS TESTS"
 echo "========================"
 
-# Create a form specifically for statistics testing
-STATS_FORM_DATA='{"name":"Statistics Test Form","type":"contact","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}'
-log_info "Creating form for statistics testing..."
-stats_response=$(curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$STATS_FORM_DATA" "$SERVER_URL/api/v1/forms")
-STATS_FORM_ID=$(echo "$stats_response" | jq -r '.data.id // empty')
+# Create a widget specifically for statistics testing
+STATS_WIDGET_DATA='{"name":"Statistics Test Widget","type":"contact","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}'
+log_info "Creating widget for statistics testing..."
+stats_response=$(curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$STATS_WIDGET_DATA" "$SERVER_URL/api/v1/widgets")
+STATS_WIDGET_ID=$(echo "$stats_response" | jq -r '.data.id // empty')
 
-if [ -n "$STATS_FORM_ID" ] && [ "$STATS_FORM_ID" != "null" ]; then
-    log_info "Statistics test form created with ID: $STATS_FORM_ID"
+if [ -n "$STATS_WIDGET_ID" ] && [ "$STATS_WIDGET_ID" != "null" ]; then
+    log_info "Statistics test widget created with ID: $STATS_WIDGET_ID"
     
-    # DEBUG: Check the actual form data returned
-    log_info "Form creation response: $stats_response"
-    form_enabled=$(echo "$stats_response" | jq -r '.data.enabled // "undefined"')
-    log_info "Form enabled status after creation: $form_enabled"
+    # DEBUG: Check the actual widget data returned
+    log_info "Widget creation response: $stats_response"
+    widget_enabled=$(echo "$stats_response" | jq -r '.data.enabled // "undefined"')
+    log_info "Widget enabled status after creation: $widget_enabled"
     
-    # Additional check: Get the form directly to verify its state
-    log_info "Verifying form state with direct GET..."
-    direct_form_response=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/forms/$STATS_FORM_ID")
-    direct_enabled=$(echo "$direct_form_response" | jq -r '.data.enabled // "undefined"')
-    log_info "Direct form check enabled status: $direct_enabled"
-    log_info "Direct form response: $direct_form_response"
+    # Additional check: Get the widget directly to verify its state
+    log_info "Verifying widget state with direct GET..."
+    direct_widget_response=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID")
+    direct_enabled=$(echo "$direct_widget_response" | jq -r '.data.enabled // "undefined"')
+    log_info "Direct widget check enabled status: $direct_enabled"
+    log_info "Direct widget response: $direct_widget_response"
     
-    # If form is not enabled, try to enable it
+    # If widget is not enabled, try to enable it
     if [ "$direct_enabled" != "true" ]; then
-        log_warning "Form is not enabled ($direct_enabled), attempting to enable it..."
-        enable_response=$(curl -s -X PUT -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"enabled":true}' "$SERVER_URL/api/v1/forms/$STATS_FORM_ID")
+        log_warning "Widget is not enabled ($direct_enabled), attempting to enable it..."
+        enable_response=$(curl -s -X PUT -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"enabled":true}' "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID")
         log_info "Enable response: $enable_response"
         
         # Check again
-        recheck_response=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/forms/$STATS_FORM_ID")
+        recheck_response=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID")
         recheck_enabled=$(echo "$recheck_response" | jq -r '.data.enabled // "undefined"')
-        log_info "After enable attempt, form enabled status: $recheck_enabled"
+        log_info "After enable attempt, widget enabled status: $recheck_enabled"
         
         if [ "$recheck_enabled" != "true" ]; then
-            log_error "Unable to enable form for statistics testing. Form state: $recheck_enabled"
+            log_error "Unable to enable widget for statistics testing. Widget state: $recheck_enabled"
             log_error "This will prevent public endpoint event registration."
         else
-            log_info "Successfully enabled form for statistics testing"
+            log_info "Successfully enabled widget for statistics testing"
         fi
     else
-        log_info "Form is already enabled for statistics testing"
+        log_info "Widget is already enabled for statistics testing"
     fi
     
     # First, get initial stats (should be empty/zero)
     log_info "Checking initial statistics..."
-    initial_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/forms/$STATS_FORM_ID/stats")
+    initial_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID/stats")
     echo "Initial stats: $initial_stats"
     
     # Test 1: Register view events and check statistics
     log_info "Testing view events statistics..."
     for i in {1..3}; do
-        view_response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST -H 'Content-Type: application/json' -d '{"type":"view"}' "$SERVER_URL/forms/$STATS_FORM_ID/events")
+        view_response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST -H 'Content-Type: application/json' -d '{"type":"view"}' "$SERVER_URL/widgets/$STATS_WIDGET_ID/events")
         http_status=$(echo "$view_response" | grep "HTTP_STATUS:" | cut -d: -f2)
         response_body=$(echo "$view_response" | sed '/HTTP_STATUS:/d')
         log_info "View event $i: HTTP $http_status"
@@ -409,7 +409,7 @@ if [ -n "$STATS_FORM_ID" ] && [ "$STATS_FORM_ID" != "null" ]; then
     done
     
     # Check stats after view events
-    view_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/forms/$STATS_FORM_ID/stats")
+    view_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID/stats")
     view_count=$(echo "$view_stats" | jq -r '.data.views // 0')
     
     if [ "$view_count" = "3" ]; then
@@ -421,7 +421,7 @@ if [ -n "$STATS_FORM_ID" ] && [ "$STATS_FORM_ID" != "null" ]; then
     
     # Test 2: Register submission and check statistics
     log_info "Testing submission statistics..."
-    submit_response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST -H 'Content-Type: application/json' -d '{"data":{"name":"John Doe","email":"john@test.com"}}' "$SERVER_URL/forms/$STATS_FORM_ID/submit")
+    submit_response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST -H 'Content-Type: application/json' -d '{"data":{"name":"John Doe","email":"john@test.com"}}' "$SERVER_URL/widgets/$STATS_WIDGET_ID/submit")
     submit_http_status=$(echo "$submit_response" | grep "HTTP_STATUS:" | cut -d: -f2)
     submit_response_body=$(echo "$submit_response" | sed '/HTTP_STATUS:/d')
     log_info "Submit response HTTP status: $submit_http_status"
@@ -432,7 +432,7 @@ if [ -n "$STATS_FORM_ID" ] && [ "$STATS_FORM_ID" != "null" ]; then
     fi
     
     # Check stats after submission
-    submit_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/forms/$STATS_FORM_ID/stats")
+    submit_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID/stats")
     submit_count=$(echo "$submit_stats" | jq -r '.data.submits // 0')
     
     if [ "$submit_count" = "1" ]; then
@@ -445,7 +445,7 @@ if [ -n "$STATS_FORM_ID" ] && [ "$STATS_FORM_ID" != "null" ]; then
     # Test 3: Register close events and check statistics
     log_info "Testing close events statistics..."
     for i in {1..2}; do
-        close_response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST -H 'Content-Type: application/json' -d '{"type":"close"}' "$SERVER_URL/forms/$STATS_FORM_ID/events")
+        close_response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST -H 'Content-Type: application/json' -d '{"type":"close"}' "$SERVER_URL/widgets/$STATS_WIDGET_ID/events")
         close_http_status=$(echo "$close_response" | grep "HTTP_STATUS:" | cut -d: -f2)
         close_response_body=$(echo "$close_response" | sed '/HTTP_STATUS:/d')
         log_info "Close event $i: HTTP $close_http_status"
@@ -456,7 +456,7 @@ if [ -n "$STATS_FORM_ID" ] && [ "$STATS_FORM_ID" != "null" ]; then
     done
     
     # Check final comprehensive stats
-    final_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/forms/$STATS_FORM_ID/stats")
+    final_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID/stats")
     final_views=$(echo "$final_stats" | jq -r '.data.views // 0')
     final_submits=$(echo "$final_stats" | jq -r '.data.submits // 0')
     final_closes=$(echo "$final_stats" | jq -r '.data.closes // 0')
@@ -492,7 +492,7 @@ if [ -n "$STATS_FORM_ID" ] && [ "$STATS_FORM_ID" != "null" ]; then
     
     # Test 4: Check if statistics persist across requests
     log_info "Testing statistics persistence..."
-    persistence_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/forms/$STATS_FORM_ID/stats")
+    persistence_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID/stats")
     persistence_views=$(echo "$persistence_stats" | jq -r '.data.views // 0')
     
     if [ "$persistence_views" = "3" ]; then
@@ -502,13 +502,13 @@ if [ -n "$STATS_FORM_ID" ] && [ "$STATS_FORM_ID" != "null" ]; then
     fi
     ((TOTAL_TESTS++))
     
-    # Clean up: delete the statistics test form
-    delete_response=$(curl -s -X DELETE -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/forms/$STATS_FORM_ID")
-    log_info "Cleaned up statistics test form"
+    # Clean up: delete the statistics test widget
+    delete_response=$(curl -s -X DELETE -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID")
+    log_info "Cleaned up statistics test widget"
     
 else
-    log_error "Failed to create statistics test form. Skipping statistics tests."
-    echo "Form creation response: $stats_response"
+    log_error "Failed to create statistics test widget. Skipping statistics tests."
+    echo "Widget creation response: $stats_response"
     ((FAILED_TESTS+=6))  # Updated to account for new load tests
     ((TOTAL_TESTS+=6))
 fi
@@ -517,18 +517,18 @@ fi
 echo "🚀 LOAD TESTING FOR STATISTICS"
 echo "=============================="
 
-# Create a form specifically for load testing
-LOAD_FORM_DATA='{"name":"Load Test Form","type":"contact","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}'
-log_info "Creating form for load testing..."
-load_response=$(curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$LOAD_FORM_DATA" "$SERVER_URL/api/v1/forms")
-LOAD_FORM_ID=$(echo "$load_response" | jq -r '.data.id // empty')
+# Create a widget specifically for load testing
+LOAD_WIDGET_DATA='{"name":"Load Test Widget","type":"contact","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}'
+log_info "Creating widget for load testing..."
+load_response=$(curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$LOAD_WIDGET_DATA" "$SERVER_URL/api/v1/widgets")
+LOAD_WIDGET_ID=$(echo "$load_response" | jq -r '.data.id // empty')
 
-if [ -n "$LOAD_FORM_ID" ] && [ "$LOAD_FORM_ID" != "null" ]; then
-    log_info "Load test form created with ID: $LOAD_FORM_ID"
+if [ -n "$LOAD_WIDGET_ID" ] && [ "$LOAD_WIDGET_ID" != "null" ]; then
+    log_info "Load test widget created with ID: $LOAD_WIDGET_ID"
     
     # Get initial stats
     log_info "Getting initial statistics before load test..."
-    initial_load_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/forms/$LOAD_FORM_ID/stats")
+    initial_load_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$LOAD_WIDGET_ID/stats")
     initial_views=$(echo "$initial_load_stats" | jq -r '.data.views // 0')
     log_info "Initial views: $initial_views"
     
@@ -559,7 +559,7 @@ if [ -n "$LOAD_FORM_ID" ] && [ "$LOAD_FORM_ID" != "null" ]; then
         # Function to send a single event (optimized)
         send_single_event() {
             local event_id=$1
-            local form_id=$2
+            local widget_id=$2
             local server_url=$3
             local temp_dir=$4
             
@@ -568,7 +568,7 @@ if [ -n "$LOAD_FORM_ID" ] && [ "$LOAD_FORM_ID" != "null" ]; then
                 -d '{"type":"view"}' \
                 --connect-timeout 10 \
                 --max-time 15 \
-                "$server_url/forms/$form_id/events" 2>/dev/null)
+                "$server_url/widgets/$widget_id/events" 2>/dev/null)
             
             http_code=$(echo "$response" | tail -1)
             response_body=$(echo "$response" | sed '$d')
@@ -585,12 +585,12 @@ if [ -n "$LOAD_FORM_ID" ] && [ "$LOAD_FORM_ID" != "null" ]; then
         # Export function for this batch
         export -f send_single_event
         export BATCH_TEMP_DIR
-        export LOAD_FORM_ID
+        export LOAD_WIDGET_ID
         export SERVER_URL
         
         # Launch 10 parallel requests for this batch
         for event_id in {1..10}; do
-            send_single_event "$event_id" "$LOAD_FORM_ID" "$SERVER_URL" "$BATCH_TEMP_DIR" &
+            send_single_event "$event_id" "$LOAD_WIDGET_ID" "$SERVER_URL" "$BATCH_TEMP_DIR" &
         done
         
         # Wait for batch to complete
@@ -637,7 +637,7 @@ if [ -n "$LOAD_FORM_ID" ] && [ "$LOAD_FORM_ID" != "null" ]; then
     
     # Check final statistics
     log_info "Checking final statistics after load test..."
-    final_load_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/forms/$LOAD_FORM_ID/stats")
+    final_load_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$LOAD_WIDGET_ID/stats")
     final_load_views=$(echo "$final_load_stats" | jq -r '.data.views // 0')
     expected_views=$((initial_views + 1000))
     
@@ -666,7 +666,7 @@ if [ -n "$LOAD_FORM_ID" ] && [ "$LOAD_FORM_ID" != "null" ]; then
     echo "  Total events: 1000"
     
     # Get current stats before mixed test
-    pre_mixed_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/forms/$LOAD_FORM_ID/stats")
+    pre_mixed_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$LOAD_WIDGET_ID/stats")
     pre_mixed_views=$(echo "$pre_mixed_stats" | jq -r '.data.views // 0')
     pre_mixed_submits=$(echo "$pre_mixed_stats" | jq -r '.data.submits // 0')
     pre_mixed_closes=$(echo "$pre_mixed_stats" | jq -r '.data.closes // 0')
@@ -690,7 +690,7 @@ if [ -n "$LOAD_FORM_ID" ] && [ "$LOAD_FORM_ID" != "null" ]; then
                     -H 'Content-Type: application/json' \
                     -d '{"type":"view"}' \
                     --connect-timeout 10 --max-time 15 \
-                    "$SERVER_URL/forms/$LOAD_FORM_ID/events" 2>/dev/null)
+                    "$SERVER_URL/widgets/$LOAD_WIDGET_ID/events" 2>/dev/null)
                 
                 http_code=$(echo "$response" | tail -1)
                 if [ "$http_code" = "204" ]; then
@@ -724,7 +724,7 @@ if [ -n "$LOAD_FORM_ID" ] && [ "$LOAD_FORM_ID" != "null" ]; then
                     -H 'Content-Type: application/json' \
                     -d "{\"data\":{\"name\":\"LoadTest$batch_id-$event_id\",\"email\":\"test$batch_id-$event_id@example.com\"}}" \
                     --connect-timeout 10 --max-time 15 \
-                    "$SERVER_URL/forms/$LOAD_FORM_ID/submit" 2>/dev/null)
+                    "$SERVER_URL/widgets/$LOAD_WIDGET_ID/submit" 2>/dev/null)
                 
                 http_code=$(echo "$response" | tail -1)
                 if [ "$http_code" = "201" ]; then
@@ -758,7 +758,7 @@ if [ -n "$LOAD_FORM_ID" ] && [ "$LOAD_FORM_ID" != "null" ]; then
                     -H 'Content-Type: application/json' \
                     -d '{"type":"close"}' \
                     --connect-timeout 10 --max-time 15 \
-                    "$SERVER_URL/forms/$LOAD_FORM_ID/events" 2>/dev/null)
+                    "$SERVER_URL/widgets/$LOAD_WIDGET_ID/events" 2>/dev/null)
                 
                 http_code=$(echo "$response" | tail -1)
                 if [ "$http_code" = "204" ]; then
@@ -854,7 +854,7 @@ if [ -n "$LOAD_FORM_ID" ] && [ "$LOAD_FORM_ID" != "null" ]; then
     sleep 5
     
     # Check final mixed statistics
-    final_mixed_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/forms/$LOAD_FORM_ID/stats")
+    final_mixed_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$LOAD_WIDGET_ID/stats")
     final_mixed_views=$(echo "$final_mixed_stats" | jq -r '.data.views // 0')
     final_mixed_submits=$(echo "$final_mixed_stats" | jq -r '.data.submits // 0')
     final_mixed_closes=$(echo "$final_mixed_stats" | jq -r '.data.closes // 0')
@@ -892,13 +892,13 @@ if [ -n "$LOAD_FORM_ID" ] && [ "$LOAD_FORM_ID" != "null" ]; then
     fi
     ((TOTAL_TESTS++))
     
-    # Clean up: delete the load test form
-    delete_load_response=$(curl -s -X DELETE -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/forms/$LOAD_FORM_ID")
-    log_info "Cleaned up load test form"
+    # Clean up: delete the load test widget
+    delete_load_response=$(curl -s -X DELETE -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$LOAD_WIDGET_ID")
+    log_info "Cleaned up load test widget"
     
 else
-    log_error "Failed to create load test form. Skipping load tests."
-    echo "Load form creation response: $load_response"
+    log_error "Failed to create load test widget. Skipping load tests."
+    echo "Load widget creation response: $load_response"
     ((FAILED_TESTS+=2))
     ((TOTAL_TESTS+=2))
 fi
@@ -907,7 +907,7 @@ echo
 echo "📄 CONTENT TYPE TESTS"
 echo "===================="
 
-test_http "JSON endpoint with wrong content type" "POST" "$SERVER_URL/api/v1/forms" "$AUTH_HEADER -H 'Content-Type: text/plain'" "invalid data" "400"
+test_http "JSON endpoint with wrong content type" "POST" "$SERVER_URL/api/v1/widgets" "$AUTH_HEADER -H 'Content-Type: text/plain'" "invalid data" "400"
 
 # Final Results
 echo "🏁 TEST SUMMARY"

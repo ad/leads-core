@@ -1,11 +1,11 @@
 # Nethouse Leads Service
 
-A Go-based leads management service that handles forms, submissions, and real-time statistics using Redis Cluster as the primary storage.
+A Go-based leads management service that handles widgets, submissions, and real-time statistics using Redis Cluster as the primary storage.
 
 ## Features
 
-- **Form Management**: Create, update, delete, and manage forms
-- **Submission Handling**: Accept and store form submissions with TTL
+- **Widget Management**: Create, update, delete, and manage widgets
+- **Submission Handling**: Accept and store widget submissions with TTL
 - **Real-time Statistics**: Track views, submissions, and closes
 - **JWT Authentication**: Secure API endpoints with JWT tokens
 - **Rate Limiting**: IP-based and global rate limiting
@@ -74,13 +74,13 @@ For Redis cluster deployments, use the provided management script:
 
 ### API Examples
 
-#### Create a form (Private endpoint - requires JWT):
+#### Create a widget (Private endpoint - requires JWT):
 ```bash
-curl -X POST http://localhost:8080/forms \
+curl -X POST http://localhost:8080/widgets \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Contact Form",
+    "name": "Contact Widget",
     "type": "contact",
     "enabled": true,
     "fields": {
@@ -91,28 +91,28 @@ curl -X POST http://localhost:8080/forms \
   }'
 ```
 
-#### Submit to a form (Public endpoint):
+#### Submit to a widget (Public endpoint):
 ```bash
-curl -X POST http://localhost:8080/forms/FORM_ID/submit \
+curl -X POST http://localhost:8080/widgets/WIDGET_ID/submit \
   -H "Content-Type: application/json" \
   -d '{
     "data": {
       "name": "John Doe",
       "email": "john@example.com",
-      "message": "Hello from the contact form!"
+      "message": "Hello from the contact widget!"
     }
   }'
 ```
 
-#### Register form events (Public endpoint):
+#### Register widget events (Public endpoint):
 ```bash
 # Register a view event
-curl -X POST http://localhost:8080/forms/FORM_ID/events \
+curl -X POST http://localhost:8080/widgets/WIDGET_ID/events \
   -H "Content-Type: application/json" \
   -d '{"type": "view"}'
 
 # Register a close event
-curl -X POST http://localhost:8080/forms/FORM_ID/events \
+curl -X POST http://localhost:8080/widgets/WIDGET_ID/events \
   -H "Content-Type: application/json" \
   -d '{"type": "close"}'
 ```
@@ -121,18 +121,18 @@ curl -X POST http://localhost:8080/forms/FORM_ID/events \
 
 ### Private Endpoints (Require JWT Authentication)
 
-- `GET /forms` - List user's forms with pagination
-- `POST /forms` - Create a new form
-- `GET /forms/{id}` - Get form by ID
-- `PUT /forms/{id}` - Update form
-- `DELETE /forms/{id}` - Delete form
-- `GET /forms/{id}/stats` - Get form statistics
-- `GET /forms/{id}/submissions` - Get form submissions with pagination
+- `GET /widgets` - List user's widgets with pagination
+- `POST /widgets` - Create a new widget
+- `GET /widgets/{id}` - Get widget by ID
+- `PUT /widgets/{id}` - Update widget
+- `DELETE /widgets/{id}` - Delete widget
+- `GET /widgets/{id}/stats` - Get widget statistics
+- `GET /widgets/{id}/submissions` - Get widget submissions with pagination
 
 ### Public Endpoints
 
-- `POST /forms/{id}/submit` - Submit data to a form
-- `POST /forms/{id}/events` - Register form events (view, close)
+- `POST /widgets/{id}/submit` - Submit data to a widget
+- `POST /widgets/{id}/events` - Register widget events (view, close)
 
 ### System Endpoints
 
@@ -238,10 +238,10 @@ internal/
 
 The service uses Redis Cluster with the following key patterns:
 
-- Forms: `form:{form_id}`
-- Submissions: `submission:{form_id}:{submission_id}`
-- User forms: `forms:{user_id}`
-- Statistics: `form:{form_id}:stats`
+- Widgets: `widget:{widget_id}`
+- Submissions: `submission:{widget_id}:{submission_id}`
+- User widgets: `widgets:{user_id}`
+- Statistics: `widget:{widget_id}:stats`
 - Rate limiting: `rate_limit:ip:{ip}:{window}`
 
 ## Security

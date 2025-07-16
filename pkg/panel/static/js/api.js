@@ -103,7 +103,7 @@ class APIClient {
         }
 
         try {
-            await this.getFormsSummary();
+            await this.getWidgetsSummary();
             return true;
         } catch (error) {
             throw new Error('Authentication test failed: ' + error.message);
@@ -111,19 +111,19 @@ class APIClient {
     }
 
     /**
-     * Get forms summary statistics
+     * Get widgets summary statistics
      */
-    async getFormsSummary() {
-        const url = `${this.baseURL}/api/v1/forms/summary`;
+    async getWidgetsSummary() {
+        const url = `${this.baseURL}/api/v1/widgets/summary`;
         const response = await this.makeRequest(url);
         return response.data;
     }
 
     /**
-     * Get forms list with optional pagination and filtering
+     * Get widgets list with optional pagination and filtering
      */
-    async getForms(options = {}) {
-        const url = new URL(`${this.baseURL}/api/v1/forms`);
+    async getWidgets(options = {}) {
+        const url = new URL(`${this.baseURL}/api/v1/widgets`);
         
         // Add query parameters
         Object.entries(options).forEach(([key, value]) => {
@@ -136,28 +136,28 @@ class APIClient {
     }
 
     /**
-     * Get single form by ID
+     * Get single widget by ID
      */
-    async getForm(formId) {
-        const url = `${this.baseURL}/api/v1/forms/${formId}`;
+    async getWidget(widgetId) {
+        const url = `${this.baseURL}/api/v1/widgets/${widgetId}`;
         const response = await this.makeRequest(url);
         return response.data;
     }
 
     /**
-     * Get form statistics
+     * Get widget statistics
      */
-    async getFormStats(formId) {
-        const url = `${this.baseURL}/api/v1/forms/${formId}/stats`;
+    async getWidgetStats(widgetId) {
+        const url = `${this.baseURL}/api/v1/widgets/${widgetId}/stats`;
         const response = await this.makeRequest(url);
         return response.data;
     }
 
     /**
-     * Get form submissions with optional pagination
+     * Get widget submissions with optional pagination
      */
-    async getFormSubmissions(formId, options = {}) {
-        const url = new URL(`${this.baseURL}/api/v1/forms/${formId}/submissions`);
+    async getWidgetSubmissions(widgetId, options = {}) {
+        const url = new URL(`${this.baseURL}/api/v1/widgets/${widgetId}/submissions`);
         
         // Add query parameters
         Object.entries(options).forEach(([key, value]) => {
@@ -170,32 +170,32 @@ class APIClient {
     }
 
     /**
-     * Create a new form
+     * Create a new widget
      */
-    async createForm(formData) {
-        const url = `${this.baseURL}/api/v1/forms`;
+    async createWidget(widgetData) {
+        const url = `${this.baseURL}/api/v1/widgets`;
         return await this.makeRequest(url, {
             method: 'POST',
-            body: JSON.stringify(formData)
+            body: JSON.stringify(widgetData)
         });
     }
 
     /**
-     * Update an existing form
+     * Update an existing widget
      */
-    async updateForm(formId, formData) {
-        const url = `${this.baseURL}/api/v1/forms/${formId}`;
+    async updateWidget(widgetId, widgetData) {
+        const url = `${this.baseURL}/api/v1/widgets/${widgetId}`;
         return await this.makeRequest(url, {
             method: 'PUT',
-            body: JSON.stringify(formData)
+            body: JSON.stringify(widgetData)
         });
     }
 
     /**
-     * Delete a form
+     * Delete a widget
      */
-    async deleteForm(formId) {
-        const url = `${this.baseURL}/api/v1/forms/${formId}`;
+    async deleteWidget(widgetId) {
+        const url = `${this.baseURL}/api/v1/widgets/${widgetId}`;
         return await this.makeRequest(url, {
             method: 'DELETE'
         });
@@ -210,10 +210,10 @@ class APIClient {
     }
 
     /**
-     * Send form event (view, close)
+     * Send widget event (view, close)
      */
-    async sendFormEvent(formId, eventType) {
-        const url = `${this.baseURL}/forms/${formId}/events`;
+    async sendWidgetEvent(widgetId, eventType) {
+        const url = `${this.baseURL}/widgets/${widgetId}/events`;
         return await this.makeRequest(url, {
             method: 'POST',
             body: JSON.stringify({ type: eventType })
@@ -221,10 +221,10 @@ class APIClient {
     }
 
     /**
-     * Submit test form data
+     * Submit test widget data
      */
-    async submitTestFormData(formId, testData) {
-        const url = `${this.baseURL}/forms/${formId}/submit`;
+    async submitTestWidgetData(widgetId, testData) {
+        const url = `${this.baseURL}/widgets/${widgetId}/submit`;
         return await this.makeRequest(url, {
             method: 'POST',
             body: JSON.stringify(testData)
@@ -232,10 +232,10 @@ class APIClient {
     }
 
     /**
-     * Get recent form submissions for preview
+     * Get recent widget submissions for preview
      */
-    async getRecentSubmissions(formId, limit = 5) {
-        const url = `${this.baseURL}/api/v1/forms/${formId}/submissions?limit=${limit}&sort=desc`;
+    async getRecentSubmissions(widgetId, limit = 5) {
+        const url = `${this.baseURL}/api/v1/widgets/${widgetId}/submissions?limit=${limit}&sort=desc`;
         return await this.makeRequest(url);
     }
 }
