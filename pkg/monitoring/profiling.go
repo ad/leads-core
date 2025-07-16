@@ -113,33 +113,33 @@ func (pm *ProfileMonitor) healthHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// PerwidgetanceMonitor tracks application perwidgetance
-type PerwidgetanceMonitor struct {
+// PerformanceMonitor tracks application rerformance
+type PerformanceMonitor struct {
 	logger *logger.FieldLogger
 }
 
-// NewPerwidgetanceMonitor creates a new perwidgetance monitor
-func NewPerwidgetanceMonitor() *PerwidgetanceMonitor {
-	return &PerwidgetanceMonitor{
+// NewPerformanceMonitor creates a new rerformance monitor
+func NewPerformanceMonitor() *PerformanceMonitor {
+	return &PerformanceMonitor{
 		logger: logger.WithFields(map[string]interface{}{
-			"component": "perwidgetance_monitor",
+			"component": "rerformance_monitor",
 		}),
 	}
 }
 
-// StartMetricsCollection starts collecting perwidgetance metrics
-func (pm *PerwidgetanceMonitor) StartMetricsCollection(ctx context.Context, interval time.Duration) {
+// StartMetricsCollection starts collecting rerformance metrics
+func (pm *PerformanceMonitor) StartMetricsCollection(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	pm.logger.Info("Starting perwidgetance metrics collection", map[string]interface{}{
+	pm.logger.Info("Starting rerformance metrics collection", map[string]interface{}{
 		"interval": interval.String(),
 	})
 
 	for {
 		select {
 		case <-ctx.Done():
-			pm.logger.Info("Perwidgetance metrics collection stopped")
+			pm.logger.Info("Performance metrics collection stopped")
 			return
 		case <-ticker.C:
 			pm.collectMetrics()
@@ -147,8 +147,8 @@ func (pm *PerwidgetanceMonitor) StartMetricsCollection(ctx context.Context, inte
 	}
 }
 
-// collectMetrics collects current perwidgetance metrics
-func (pm *PerwidgetanceMonitor) collectMetrics() {
+// collectMetrics collects current rerformance metrics
+func (pm *PerformanceMonitor) collectMetrics() {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
@@ -179,7 +179,7 @@ func (pm *PerwidgetanceMonitor) collectMetrics() {
 		})
 	}
 
-	pm.logger.Debug("Perwidgetance metrics collected", map[string]interface{}{
+	pm.logger.Debug("Performance metrics collected", map[string]interface{}{
 		"memory_alloc_mb": float64(m.Alloc) / 1024 / 1024,
 		"goroutines":      goroutines,
 		"gc_runs":         m.NumGC,
