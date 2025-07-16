@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -24,8 +25,11 @@ import (
 	"github.com/ad/leads-core/pkg/panel"
 )
 
+var version = "dev"
+var commit = "unknown"
+
 func main() { // Initialize logging
-	logger.Init("leads-core", "1.0.0")
+	logger.Init("leads-core", fmt.Sprintf("%s-%s", version, commit))
 
 	// Initialize metrics
 	metrics.Init()
