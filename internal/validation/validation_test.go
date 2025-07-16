@@ -154,7 +154,7 @@ func TestValidationError_Error(t *testing.T) {
 	}
 
 	errMsg := validationErr.Error()
-	expectedMsg := "validation failed: [&{name Field 'name' is required} &{email Field 'email' is invalid}]"
+	expectedMsg := "validation failed: [{name Field 'name' is required} {email Field 'email' is invalid}]"
 
 	if errMsg != expectedMsg {
 		t.Errorf("Expected error message '%s', got '%s'", expectedMsg, errMsg)
