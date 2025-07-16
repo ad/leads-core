@@ -75,9 +75,9 @@ func main() { // Initialize logging
 	connectionMonitor := monitoring.NewConnectionMonitor(underlyingClient)
 	go connectionMonitor.StartHealthCheck(ctx, 30*time.Second)
 
-	// Start perwidgetance monitoring
-	perwidgetanceMonitor := monitoring.NewPerwidgetanceMonitor()
-	go perwidgetanceMonitor.StartMetricsCollection(ctx, 15*time.Second)
+	// Start performance monitoring
+	performanceMonitor := monitoring.NewPerformanceMonitor()
+	go performanceMonitor.StartMetricsCollection(ctx, 15*time.Second)
 
 	// Start system monitoring with alerts
 	go monitoring.StartSystemMonitoring(ctx, 30*time.Second)

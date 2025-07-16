@@ -113,26 +113,26 @@ func (pm *ProfileMonitor) healthHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// PerformanceMonitor tracks application rerformance
+// PerformanceMonitor tracks application performance
 type PerformanceMonitor struct {
 	logger *logger.FieldLogger
 }
 
-// NewPerformanceMonitor creates a new rerformance monitor
+// NewPerformanceMonitor creates a new performance monitor
 func NewPerformanceMonitor() *PerformanceMonitor {
 	return &PerformanceMonitor{
 		logger: logger.WithFields(map[string]interface{}{
-			"component": "rerformance_monitor",
+			"component": "performance_monitor",
 		}),
 	}
 }
 
-// StartMetricsCollection starts collecting rerformance metrics
+// StartMetricsCollection starts collecting performance metrics
 func (pm *PerformanceMonitor) StartMetricsCollection(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	pm.logger.Info("Starting rerformance metrics collection", map[string]interface{}{
+	pm.logger.Info("Starting performance metrics collection", map[string]interface{}{
 		"interval": interval.String(),
 	})
 
@@ -147,7 +147,7 @@ func (pm *PerformanceMonitor) StartMetricsCollection(ctx context.Context, interv
 	}
 }
 
-// collectMetrics collects current rerformance metrics
+// collectMetrics collects current performance metrics
 func (pm *PerformanceMonitor) collectMetrics() {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
