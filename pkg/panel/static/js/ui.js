@@ -60,12 +60,27 @@ class UIManager {
      */
     showToast(message, type = 'info', duration = 5000) {
         if (!this.toastContainer) return;
+
+        let title = '';
+        switch (type) {
+            case 'success':
+                title = 'Success';
+                break;
+            case 'error':
+                title = 'Error';
+                break;
+            case 'warning':
+                title = 'Warning';
+                break;
+            default:
+                title = 'Info';
+        }
         
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         toast.innerHTML = `
             <label for="t-success" class="close" onclick="this.parentNode.remove()"></label>
-			<h3>Success!</h3>
+			<h3>${title}</h3>
 			<p>${this.escapeHtml(message)}!</p>
         `;
         

@@ -750,6 +750,21 @@ body {
 	--brd: #03a65a40;
 }
 
+.toast.error {
+	--clr: #e53e3e;
+	--brd: #e53e3e40;
+}
+
+.toast.warning {
+    --clr: #d69e2e;
+    --brd: #d69e2e40;
+}
+
+.toast.info {
+    --clr: #3182ce;
+    --brd: #3182ce40;
+}
+
 .toast .close {
 	position: absolute;
 	width: 1.35rem;
