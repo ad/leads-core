@@ -3,12 +3,12 @@ package services
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/ad/leads-core/internal/errors"
 	"github.com/ad/leads-core/internal/models"
 	"github.com/ad/leads-core/internal/storage"
+	"github.com/ad/leads-core/pkg/logger"
 )
 
 // WidgetService handles business logic for widgets
@@ -211,7 +211,10 @@ func (s *WidgetService) SubmitWidget(ctx context.Context, widgetID string, req m
 	// Increment submit count
 	if err := s.statsRepo.IncrementSubmits(ctx, widgetID); err != nil {
 		// Log error but don't fail the submission
-		// log.Printf("failed to increment submit count for widget %s: %v", widgetID, err)
+		logger.Error("failed to increment submit count for widget", map[string]interface{}{
+			"widget_id": widgetID,
+			"error":     err,
+		})
 	}
 
 	return submission, nil
@@ -281,7 +284,12 @@ func (s *WidgetService) UpdateUserSubmissionsTTL(ctx context.Context, userID str
 		// Update TTL for submissions of each widget
 		for _, widget := range widgets {
 			if err := s.submissionRepo.UpdateWidgetSubmissionsTTL(ctx, widget.ID, ttlDays); err != nil {
-				log.Printf("Failed to update TTL for widget %s submissions: %v", widget.ID, err)
+				logger.Error("Failed to update TTL for widget submissions", map[string]interface{}{
+					"action":    "update_widget_ttl",
+					"widget_id": widget.ID,
+					"ttl_days":  ttlDays,
+					"error":     err.Error(),
+				})
 				// Continue with other widgets
 			}
 		}
@@ -328,7 +336,11 @@ func (s *WidgetService) GetWidgetsSummary(ctx context.Context, userID string) (*
 			stats, err := s.statsRepo.GetWidgetStats(ctx, widget.ID)
 			if err != nil {
 				// Log error but continue
-				log.Printf("Failed to get stats for widget %s: %v", widget.ID, err)
+				logger.Error("Failed to get stats for widget", map[string]interface{}{
+					"action":    "get_widget_stats_for_summary",
+					"widget_id": widget.ID,
+					"error":     err.Error(),
+				})
 				continue
 			}
 

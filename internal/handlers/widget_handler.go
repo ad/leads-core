@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"github.com/ad/leads-core/internal/models"
 	"github.com/ad/leads-core/internal/services"
 	"github.com/ad/leads-core/internal/validation"
+	"github.com/ad/leads-core/pkg/logger"
 )
 
 // WidgetHandler handles widget-related HTTP requests
@@ -56,12 +56,21 @@ func (h *WidgetHandler) CreateWidget(w http.ResponseWriter, r *http.Request) {
 	// Create widget
 	widget, err := h.widgetService.CreateWidget(r.Context(), user.ID, req)
 	if err != nil {
-		log.Printf("action=create_widget user_id=%s error=%q", user.ID, err.Error())
+		logger.Error("Failed to create widget", map[string]interface{}{
+			"action":  "create_widget",
+			"user_id": user.ID,
+			"error":   err.Error(),
+		})
 		writeErrorResponse(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	log.Printf("action=create_widget user_id=%s widget_id=%s type=%s", user.ID, widget.ID, widget.Type)
+	logger.Debug("Widget created successfully", map[string]interface{}{
+		"action":    "create_widget",
+		"user_id":   user.ID,
+		"widget_id": widget.ID,
+		"type":      widget.Type,
+	})
 	writeJSONResponse(w, http.StatusCreated, models.Response{Data: widget})
 }
 
@@ -85,7 +94,11 @@ func (h *WidgetHandler) GetWidgets(w http.ResponseWriter, r *http.Request) {
 	// Get widgets
 	widgets, total, err := h.widgetService.GetUserWidgets(r.Context(), user.ID, opts)
 	if err != nil {
-		log.Printf("action=get_widgets user_id=%s error=%q", user.ID, err.Error())
+		logger.Error("Failed to get widgets", map[string]interface{}{
+			"action":  "get_widgets",
+			"user_id": user.ID,
+			"error":   err.Error(),
+		})
 		writeErrorResponse(w, http.StatusInternalServerError, "Failed to get widgets")
 		return
 	}
@@ -98,7 +111,11 @@ func (h *WidgetHandler) GetWidgets(w http.ResponseWriter, r *http.Request) {
 		HasMore: len(widgets) == opts.PerPage,
 	}
 
-	log.Printf("action=get_widgets user_id=%s count=%d", user.ID, len(widgets))
+	logger.Debug("Retrieved widgets successfully", map[string]interface{}{
+		"action":  "get_widgets",
+		"user_id": user.ID,
+		"count":   len(widgets),
+	})
 	writeJSONResponse(w, http.StatusOK, models.Response{Data: widgets, Meta: meta})
 }
 
@@ -126,7 +143,12 @@ func (h *WidgetHandler) GetWidget(w http.ResponseWriter, r *http.Request) {
 	// Get widget
 	widget, err := h.widgetService.GetWidget(r.Context(), widgetID, user.ID)
 	if err != nil {
-		log.Printf("action=get_widget user_id=%s widget_id=%s error=%q", user.ID, widgetID, err.Error())
+		logger.Error("Failed to get widget", map[string]interface{}{
+			"action":    "get_widget",
+			"user_id":   user.ID,
+			"widget_id": widgetID,
+			"error":     err.Error(),
+		})
 		if errors.Is(err, customErrors.ErrNotFound) || errors.Is(err, customErrors.ErrAccessDenied) {
 			writeErrorResponse(w, http.StatusNotFound, "Widget not found")
 		} else {
@@ -135,7 +157,11 @@ func (h *WidgetHandler) GetWidget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("action=get_widget user_id=%s widget_id=%s", user.ID, widgetID)
+	logger.Debug("Retrieved widget successfully", map[string]interface{}{
+		"action":    "get_widget",
+		"user_id":   user.ID,
+		"widget_id": widgetID,
+	})
 	writeJSONResponse(w, http.StatusOK, models.Response{Data: widget})
 }
 
@@ -174,7 +200,12 @@ func (h *WidgetHandler) UpdateWidget(w http.ResponseWriter, r *http.Request) {
 	// Update widget
 	widget, err := h.widgetService.UpdateWidget(r.Context(), widgetID, user.ID, req)
 	if err != nil {
-		log.Printf("action=update_widget user_id=%s widget_id=%s error=%q", user.ID, widgetID, err.Error())
+		logger.Error("Failed to update widget", map[string]interface{}{
+			"action":    "update_widget",
+			"user_id":   user.ID,
+			"widget_id": widgetID,
+			"error":     err.Error(),
+		})
 		if errors.Is(err, customErrors.ErrNotFound) || errors.Is(err, customErrors.ErrAccessDenied) {
 			writeErrorResponse(w, http.StatusNotFound, "Widget not found")
 		} else {
@@ -183,7 +214,11 @@ func (h *WidgetHandler) UpdateWidget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("action=update_widget user_id=%s widget_id=%s", user.ID, widgetID)
+	logger.Debug("Updated widget successfully", map[string]interface{}{
+		"action":    "update_widget",
+		"user_id":   user.ID,
+		"widget_id": widgetID,
+	})
 	writeJSONResponse(w, http.StatusOK, models.Response{Data: widget})
 }
 
@@ -210,7 +245,12 @@ func (h *WidgetHandler) DeleteWidget(w http.ResponseWriter, r *http.Request) {
 
 	// Delete widget
 	if err := h.widgetService.DeleteWidget(r.Context(), widgetID, user.ID); err != nil {
-		log.Printf("action=delete_widget user_id=%s widget_id=%s error=%q", user.ID, widgetID, err.Error())
+		logger.Error("Failed to delete widget", map[string]interface{}{
+			"action":    "delete_widget",
+			"user_id":   user.ID,
+			"widget_id": widgetID,
+			"error":     err.Error(),
+		})
 		if errors.Is(err, customErrors.ErrNotFound) || errors.Is(err, customErrors.ErrAccessDenied) {
 			writeErrorResponse(w, http.StatusNotFound, "Widget not found")
 		} else {
@@ -219,7 +259,11 @@ func (h *WidgetHandler) DeleteWidget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("action=delete_widget user_id=%s widget_id=%s", user.ID, widgetID)
+	logger.Debug("Deleted widget successfully", map[string]interface{}{
+		"action":    "delete_widget",
+		"user_id":   user.ID,
+		"widget_id": widgetID,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -247,7 +291,12 @@ func (h *WidgetHandler) GetWidgetStats(w http.ResponseWriter, r *http.Request) {
 	// Get stats
 	stats, err := h.widgetService.GetWidgetStats(r.Context(), widgetID, user.ID)
 	if err != nil {
-		log.Printf("action=get_widget_stats user_id=%s widget_id=%s error=%q", user.ID, widgetID, err.Error())
+		logger.Error("Failed to get widget stats", map[string]interface{}{
+			"action":    "get_widget_stats",
+			"user_id":   user.ID,
+			"widget_id": widgetID,
+			"error":     err.Error(),
+		})
 		if errors.Is(err, customErrors.ErrNotFound) || errors.Is(err, customErrors.ErrAccessDenied) {
 			writeErrorResponse(w, http.StatusNotFound, "Widget not found")
 		} else {
@@ -256,7 +305,11 @@ func (h *WidgetHandler) GetWidgetStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("action=get_widget_stats user_id=%s widget_id=%s", user.ID, widgetID)
+	logger.Debug("Retrieved widget stats successfully", map[string]interface{}{
+		"action":    "get_widget_stats",
+		"user_id":   user.ID,
+		"widget_id": widgetID,
+	})
 	writeJSONResponse(w, http.StatusOK, models.Response{Data: stats})
 }
 
@@ -287,7 +340,12 @@ func (h *WidgetHandler) GetWidgetSubmissions(w http.ResponseWriter, r *http.Requ
 	// Get submissions
 	submissions, total, err := h.widgetService.GetWidgetSubmissions(r.Context(), widgetID, user.ID, opts)
 	if err != nil {
-		log.Printf("action=get_widget_submissions user_id=%s widget_id=%s error=%q", user.ID, widgetID, err.Error())
+		logger.Error("Failed to get widget submissions", map[string]interface{}{
+			"action":    "get_widget_submissions",
+			"user_id":   user.ID,
+			"widget_id": widgetID,
+			"error":     err.Error(),
+		})
 		if errors.Is(err, customErrors.ErrNotFound) || errors.Is(err, customErrors.ErrAccessDenied) {
 			writeErrorResponse(w, http.StatusNotFound, "Widget not found")
 		} else {
@@ -304,7 +362,12 @@ func (h *WidgetHandler) GetWidgetSubmissions(w http.ResponseWriter, r *http.Requ
 		HasMore: len(submissions) == opts.PerPage,
 	}
 
-	log.Printf("action=get_widget_submissions user_id=%s widget_id=%s count=%d", user.ID, widgetID, len(submissions))
+	logger.Debug("Retrieved widget submissions successfully", map[string]interface{}{
+		"action":    "get_widget_submissions",
+		"user_id":   user.ID,
+		"widget_id": widgetID,
+		"count":     len(submissions),
+	})
 	writeJSONResponse(w, http.StatusOK, models.Response{Data: submissions, Meta: meta})
 }
 
@@ -325,12 +388,19 @@ func (h *WidgetHandler) GetWidgetsSummary(w http.ResponseWriter, r *http.Request
 	// Get widgets summary
 	summary, err := h.widgetService.GetWidgetsSummary(r.Context(), user.ID)
 	if err != nil {
-		log.Printf("action=get_widgets_summary user_id=%s error=%q", user.ID, err.Error())
+		logger.Error("Failed to get widgets summary", map[string]interface{}{
+			"action":  "get_widgets_summary",
+			"user_id": user.ID,
+			"error":   err.Error(),
+		})
 		writeErrorResponse(w, http.StatusInternalServerError, "Failed to get widgets summary")
 		return
 	}
 
-	log.Printf("action=get_widgets_summary user_id=%s", user.ID)
+	logger.Debug("Retrieved widgets summary successfully", map[string]interface{}{
+		"action":  "get_widgets_summary",
+		"user_id": user.ID,
+	})
 	writeJSONResponse(w, http.StatusOK, models.Response{Data: summary})
 }
 

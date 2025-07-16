@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/ad/leads-core/internal/models"
 	"github.com/ad/leads-core/internal/services"
 	"github.com/ad/leads-core/internal/validation"
+	"github.com/ad/leads-core/pkg/logger"
 )
 
 // PublicHandler handles public (non-authenticated) endpoints
@@ -52,7 +52,11 @@ func (h *PublicHandler) SubmitWidget(w http.ResponseWriter, r *http.Request) {
 	// Submit widget
 	submission, err := h.widgetService.SubmitWidget(r.Context(), widgetID, req)
 	if err != nil {
-		log.Printf("action=submit_widget widget_id=%s error=%q", widgetID, err.Error())
+		logger.Error("Failed to submit widget", map[string]interface{}{
+			"action":    "submit_widget",
+			"widget_id": widgetID,
+			"error":     err.Error(),
+		})
 		if strings.Contains(err.Error(), "not found") {
 			writeErrorResponse(w, http.StatusNotFound, "Widget not found")
 		} else if strings.Contains(err.Error(), "disabled") {
@@ -63,7 +67,11 @@ func (h *PublicHandler) SubmitWidget(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("action=submit_widget widget_id=%s submission_id=%s", widgetID, submission.ID)
+	logger.Debug("Widget submitted successfully", map[string]interface{}{
+		"action":        "submit_widget",
+		"widget_id":     widgetID,
+		"submission_id": submission.ID,
+	})
 	writeJSONResponse(w, http.StatusCreated, models.Response{Data: submission})
 }
 
@@ -100,7 +108,12 @@ func (h *PublicHandler) RegisterEvent(w http.ResponseWriter, r *http.Request) {
 
 	// Register event
 	if err := h.widgetService.RegisterWidgetEvent(r.Context(), widgetID, req.Type); err != nil {
-		log.Printf("action=register_event widget_id=%s type=%s error=%q", widgetID, req.Type, err.Error())
+		logger.Error("Failed to register event", map[string]interface{}{
+			"action":    "register_event",
+			"widget_id": widgetID,
+			"type":      req.Type,
+			"error":     err.Error(),
+		})
 		if strings.Contains(err.Error(), "not found") {
 			writeErrorResponse(w, http.StatusNotFound, "Widget not found")
 		} else if strings.Contains(err.Error(), "disabled") {
@@ -111,7 +124,11 @@ func (h *PublicHandler) RegisterEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("action=register_event widget_id=%s type=%s", widgetID, req.Type)
+	logger.Debug("Event registered successfully", map[string]interface{}{
+		"action":    "register_event",
+		"widget_id": widgetID,
+		"type":      req.Type,
+	})
 	w.WriteHeader(http.StatusNoContent)
 }
 
