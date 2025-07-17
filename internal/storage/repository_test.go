@@ -130,7 +130,7 @@ func TestWidgetRepository_Create(t *testing.T) {
 		ID:        "test-widget-1",
 		OwnerID:   "user-123",
 		Name:      "Test Widget",
-		Type:      "contact",
+		Type:      "lead-form",
 		Enabled:   true,
 		Fields:    map[string]interface{}{"name": map[string]interface{}{"type": "text", "required": true}},
 		CreatedAt: time.Now(),
@@ -179,7 +179,7 @@ func TestWidgetRepository_GetByID(t *testing.T) {
 					ID:      "existing-widget",
 					OwnerID: "user-123",
 					Name:    "Existing Widget",
-					Type:    "contact",
+					Type:    "lead-form",
 					Enabled: true,
 				}
 				repo.Create(ctx, widget)
@@ -189,7 +189,7 @@ func TestWidgetRepository_GetByID(t *testing.T) {
 				ID:      "existing-widget",
 				OwnerID: "user-123",
 				Name:    "Existing Widget",
-				Type:    "contact",
+				Type:    "lead-form",
 				Enabled: true,
 			},
 		},
@@ -240,7 +240,7 @@ func TestWidgetRepository_GetByUserID(t *testing.T) {
 			ID:        "widget-1",
 			OwnerID:   userID,
 			Name:      "Widget 1",
-			Type:      "contact",
+			Type:      "lead-form",
 			Enabled:   true,
 			CreatedAt: time.Now().Add(-2 * time.Hour),
 		},
@@ -256,7 +256,7 @@ func TestWidgetRepository_GetByUserID(t *testing.T) {
 			ID:        "widget-3",
 			OwnerID:   "other-user",
 			Name:      "Other User Widget",
-			Type:      "contact",
+			Type:      "lead-form",
 			Enabled:   true,
 			CreatedAt: time.Now(),
 		},
@@ -295,7 +295,7 @@ func TestWidgetRepository_Update(t *testing.T) {
 		ID:      "update-widget",
 		OwnerID: "user-123",
 		Name:    "Original Name",
-		Type:    "contact",
+		Type:    "lead-form",
 		Enabled: true,
 	}
 
@@ -338,7 +338,7 @@ func TestWidgetRepository_Delete(t *testing.T) {
 		ID:      "delete-widget",
 		OwnerID: "user-123",
 		Name:    "Delete Me",
-		Type:    "contact",
+		Type:    "lead-form",
 	}
 
 	err := repo.Create(ctx, widget)

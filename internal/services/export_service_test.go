@@ -136,7 +136,7 @@ func TestExportService_ExportSubmissions(t *testing.T) {
 		ID:      widgetID,
 		OwnerID: userID,
 		Name:    "Test Widget",
-		Type:    "contact",
+		Type:    "lead-form",
 	}
 
 	submissions := []*models.Submission{

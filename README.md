@@ -95,7 +95,7 @@ curl -X POST http://localhost:8080/widgets \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Contact Widget",
-    "type": "contact",
+    "type": "lead-form",
     "enabled": true,
     "fields": {
       "name": {"type": "text", "required": true},
@@ -190,7 +190,7 @@ curl -X GET "http://localhost:8080/widgets/{widget-id}/export?format=json" \
   "widget": {
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "name": "Contact Widget",
-    "type": "contact"
+    "type": "lead-form"
   },
   "exported_at": "2024-01-15T10:30:00Z",
   "total_count": 150,

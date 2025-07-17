@@ -117,7 +117,7 @@ if [ -f "./bin/jwt-gen" ]; then
     echo "📝 Testing widget creation..."
     widget_data='{
         "name": "Test Cluster Widget",
-        "type": "contact",
+        "type": "lead-form",
         "enabled": true,
         "fields": {
             "name": {"type": "text", "required": true},

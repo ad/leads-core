@@ -20,7 +20,7 @@ func TestE2E_SimpleWidgetCreation(t *testing.T) {
 	// Create a simple widget
 	createWidgetData := []byte(`{
 		"name": "Simple Test Widget",
-		"type": "contact",
+		"type": "lead-form",
 		"enabled": true,
 		"description": "Simple test widget for E2E testing",
 		"fields": {
@@ -105,7 +105,7 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 	// Step 1: Create multiple widgets
 	widgetData1 := []byte(`{
 		"name": "Contact Widget",
-		"type": "contact",
+		"type": "lead-form",
 		"enabled": true,
 		"fields": {
 			"name": {"type": "text", "required": true},
@@ -114,8 +114,8 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 	}`)
 
 	widgetData2 := []byte(`{
-		"name": "Newsletter Widget",
-		"type": "newsletter",
+		"name": "Banner Widget",
+		"type": "banner",
 		"enabled": false,
 		"fields": {
 			"email": {"type": "email", "required": true}

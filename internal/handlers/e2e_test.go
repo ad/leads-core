@@ -294,7 +294,7 @@ func TestE2E_WidgetLifecycle(t *testing.T) {
 	// Step 1: Create widget
 	createWidgetData := []byte(`{
 		"name": "E2E Test Widget",
-		"type": "contact",
+		"type": "lead-form",
 		"enabled": true,
 		"description": "Widget for end-to-end testing",
 		"fields": {
@@ -404,7 +404,7 @@ func TestE2E_PublicSubmission(t *testing.T) {
 	// Step 1: Create widget
 	createWidgetData := []byte(`{
 		"name": "Submission Test Widget",
-		"type": "contact",
+		"type": "lead-form",
 		"enabled": true,
 		"description": "Widget for submission testing",
 		"fields": {
@@ -500,7 +500,7 @@ func TestE2E_Authorization(t *testing.T) {
 	// Step 1: User1 creates widget
 	createWidgetData := []byte(`{
 		"name": "User1's Widget",
-		"type": "contact",
+		"type": "lead-form",
 		"enabled": true,
 		"fields": {
 			"name": {"type": "text", "required": true},

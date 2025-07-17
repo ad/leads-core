@@ -11,7 +11,7 @@ func TestWidgetToRedisHash(t *testing.T) {
 	widget := &Widget{
 		ID:        "test-widget-1",
 		OwnerID:   "user-123",
-		Type:      "contact",
+		Type:      "lead-form",
 		Name:      "Test Widget",
 		Enabled:   true,
 		Fields:    map[string]interface{}{"name": "text", "email": "email"},
@@ -46,7 +46,7 @@ func TestWidgetFromRedisHash(t *testing.T) {
 	hash := map[string]string{
 		"id":         "test-widget-1",
 		"owner_id":   "user-123",
-		"type":       "contact",
+		"type":       "lead-form",
 		"name":       "Test Widget",
 		"enabled":    "true",
 		"fields":     `{"name":"text","email":"email"}`,
@@ -89,7 +89,7 @@ func TestWidget_JSONSerialization(t *testing.T) {
 	original := &Widget{
 		ID:        "test-widget-1",
 		OwnerID:   "user-123",
-		Type:      "contact",
+		Type:      "lead-form",
 		Name:      "Contact Widget",
 		Enabled:   true,
 		Fields:    map[string]interface{}{"name": "required", "email": "required"},

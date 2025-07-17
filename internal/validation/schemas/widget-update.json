@@ -10,7 +10,7 @@
     },
     "type": {
       "type": "string",
-      "enum": ["contact", "survey", "quiz", "feedback"]
+      "enum": ["lead-form", "banner", "action", "social-proof", "live-interest", "widget-tab", "sticky-bar", "quiz", "wheelOfFortune"]
     },
     "enabled": {
       "type": "boolean"

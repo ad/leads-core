@@ -39,7 +39,7 @@ func TestSchemaValidator_ValidateRequest(t *testing.T) {
 		{
 			name:        "valid widget creation",
 			schemaName:  "widget-create",
-			requestBody: `{"type":"contact","name":"Test Widget","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}`,
+			requestBody: `{"type":"lead-form","name":"Test Widget","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}`,
 			expectError: false,
 		},
 		{
@@ -51,7 +51,7 @@ func TestSchemaValidator_ValidateRequest(t *testing.T) {
 		{
 			name:        "invalid widget creation - empty name",
 			schemaName:  "widget-create",
-			requestBody: `{"type":"contact","name":"","enabled":true,"fields":{"name":"text"}}`,
+			requestBody: `{"type":"lead-form","name":"","enabled":true,"fields":{"name":"text"}}`,
 			expectError: true,
 		},
 		{
@@ -175,7 +175,7 @@ func TestSchemaValidator_ValidateAndDecode(t *testing.T) {
 		Fields  map[string]interface{} `json:"fields"`
 	}
 
-	requestBody := `{"type":"contact","name":"Test Widget","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}`
+	requestBody := `{"type":"lead-form","name":"Test Widget","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}`
 	req, err := http.NewRequest("POST", "/test", bytes.NewBufferString(requestBody))
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
@@ -189,8 +189,8 @@ func TestSchemaValidator_ValidateAndDecode(t *testing.T) {
 	}
 
 	// Check decoded values
-	if widget.Type != "contact" {
-		t.Errorf("Expected type 'contact', got '%s'", widget.Type)
+	if widget.Type != "lead-form" {
+		t.Errorf("Expected type 'lead-form', got '%s'", widget.Type)
 	}
 	if widget.Name != "Test Widget" {
 		t.Errorf("Expected name 'Test Widget', got '%s'", widget.Name)

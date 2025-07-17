@@ -207,7 +207,7 @@ func TestValidation_Integration(t *testing.T) {
 			schema: "widget-create",
 			requestBody: `{
 				"name": "Contact Widget",
-				"type": "contact",
+				"type": "lead-form",
 				"enabled": true,
 				"fields": {
 					"name": {"type": "text", "required": true},
@@ -220,7 +220,7 @@ func TestValidation_Integration(t *testing.T) {
 			name:   "invalid widget creation - missing name",
 			schema: "widget-create",
 			requestBody: `{
-				"type": "contact",
+				"type": "lead-form",
 				"enabled": true,
 				"fields": {
 					"name": {"type": "text"}
@@ -418,7 +418,7 @@ func TestWidgetDataFlow_Integration(t *testing.T) {
 		ID:      "test-widget-123",
 		OwnerID: "user-456",
 		Name:    "Integration Test Widget",
-		Type:    "contact",
+		Type:    "lead-form",
 		Enabled: true,
 		Fields: map[string]interface{}{
 			"name":  map[string]interface{}{"type": "text", "required": true},
