@@ -192,6 +192,9 @@ class DashboardManager {
                         <button class="btn-icon" onclick="window.WidgetsManager.editWidget('${widget.id}')" title="Edit Widget">
                             ✏️
                         </button>
+                        <button class="btn-icon" onclick="window.WidgetsManager.showExportModal('${widget.id}')" title="Export Submissions">
+                            📥
+                        </button>
                         <button class="btn-icon" onclick="window.WidgetsManager.toggleWidgetStatus('${widget.id}', ${!widget.enabled})" title="${widget.enabled ? 'Disable' : 'Enable'}">
                             ${widget.enabled ? '⏸️' : '▶️'}
                         </button>

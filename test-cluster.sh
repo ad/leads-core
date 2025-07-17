@@ -5,7 +5,7 @@
 
 set -e
 
-JWT_SECRET="super-secret-jwt-key-change-in-production"
+JWT_SECRET="development-jwt-secret-change-in-production"
 JWT_USER="test-user"
 
 CLUSTER_COMPOSE_FILE="docker-compose.cluster.yml"

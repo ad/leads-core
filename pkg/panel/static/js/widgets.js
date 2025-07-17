@@ -410,6 +410,220 @@ class WidgetsManager {
             window.UI.hideLoading();
         }
     }
+
+    /**
+     * Export widget submissions
+     */
+    async exportSubmissions(widgetId, format = 'csv', dateRange = null) {
+        try {
+            window.UI.showLoading();
+            
+            let url = `/api/v1/widgets/${widgetId}/export?format=${format}`;
+            
+            // Add date range parameters if provided
+            if (dateRange && dateRange.from) {
+                url += `&from=${dateRange.from}`;
+            }
+            if (dateRange && dateRange.to) {
+                url += `&to=${dateRange.to}`;
+            }
+            
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${window.AuthManager.getToken()}`
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Export failed: ${response.statusText}`);
+            }
+            
+            // Get filename from response header
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = `submissions_${widgetId}.${format}`;
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                if (filenameMatch) {
+                    filename = filenameMatch[1];
+                }
+            }
+            
+            // Create blob and download
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(downloadUrl);
+            
+            window.UI.hideLoading();
+            window.UI.showToast(`Submissions exported as ${format.toUpperCase()}`, 'success');
+            
+        } catch (error) {
+            console.error('Error exporting submissions:', error);
+            window.UI.hideLoading();
+            window.UI.showToast('Failed to export submissions: ' + error.message, 'error');
+        }
+    }
+
+    /**
+     * Show export options modal
+     */
+    showExportModal(widgetId) {
+        const modal = document.getElementById('export-modal');
+        if (!modal) {
+            this.createExportModal();
+        }
+        
+        const exportModal = document.getElementById('export-modal');
+        const widgetIdInput = document.getElementById('export-widget-id');
+        
+        if (exportModal && widgetIdInput) {
+            widgetIdInput.value = widgetId;
+            exportModal.style.display = 'flex';
+        }
+    }
+
+    /**
+     * Create export modal if it doesn't exist
+     */
+    createExportModal() {
+        const modal = document.createElement('div');
+        modal.id = 'export-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Export Submissions</h3>
+                    <span class="close" onclick="window.WidgetsManager.closeExportModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="export-widget-id">
+                    
+                    <div class="form-group">
+                        <label for="export-format">Format:</label>
+                        <select id="export-format" class="form-control">
+                            <option value="csv">CSV</option>
+                            <option value="json">JSON</option>
+                            <option value="xlsx">Excel (XLSX)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="export-date-range">Date Range (optional):</label>
+                        <div class="date-range-container">
+                            <input type="datetime-local" id="export-date-from" class="form-control" placeholder="From">
+                            <span>to</span>
+                            <input type="datetime-local" id="export-date-to" class="form-control" placeholder="To">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="button" class="btn btn-secondary" onclick="window.WidgetsManager.setQuickDateRange('today')">Today</button>
+                        <button type="button" class="btn btn-secondary" onclick="window.WidgetsManager.setQuickDateRange('week')">This Week</button>
+                        <button type="button" class="btn btn-secondary" onclick="window.WidgetsManager.setQuickDateRange('month')">This Month</button>
+                        <button type="button" class="btn btn-secondary" onclick="window.WidgetsManager.setQuickDateRange('all')">All Time</button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="window.WidgetsManager.closeExportModal()">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="window.WidgetsManager.startExport()">Export</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Add some basic styling
+        const style = document.createElement('style');
+        style.textContent = `
+            .date-range-container {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .date-range-container input {
+                flex: 1;
+            }
+            .date-range-container span {
+                color: #666;
+                font-weight: bold;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    /**
+     * Set quick date range
+     */
+    setQuickDateRange(range) {
+        const fromInput = document.getElementById('export-date-from');
+        const toInput = document.getElementById('export-date-to');
+        
+        if (!fromInput || !toInput) return;
+        
+        const now = new Date();
+        let from, to;
+        
+        switch (range) {
+            case 'today':
+                from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+                break;
+            case 'week':
+                const startOfWeek = new Date(now);
+                startOfWeek.setDate(now.getDate() - now.getDay());
+                startOfWeek.setHours(0, 0, 0, 0);
+                from = startOfWeek;
+                to = now;
+                break;
+            case 'month':
+                from = new Date(now.getFullYear(), now.getMonth(), 1);
+                to = now;
+                break;
+            case 'all':
+                fromInput.value = '';
+                toInput.value = '';
+                return;
+        }
+        
+        // Convert to local datetime string format
+        fromInput.value = from.toISOString().slice(0, 16);
+        toInput.value = to.toISOString().slice(0, 16);
+    }
+
+    /**
+     * Start export process
+     */
+    async startExport() {
+        const widgetId = document.getElementById('export-widget-id').value;
+        const format = document.getElementById('export-format').value;
+        const dateFrom = document.getElementById('export-date-from').value;
+        const dateTo = document.getElementById('export-date-to').value;
+        
+        let dateRange = null;
+        if (dateFrom || dateTo) {
+            dateRange = {};
+            if (dateFrom) dateRange.from = new Date(dateFrom).toISOString();
+            if (dateTo) dateRange.to = new Date(dateTo).toISOString();
+        }
+        
+        this.closeExportModal();
+        await this.exportSubmissions(widgetId, format, dateRange);
+    }
+
+    /**
+     * Close export modal
+     */
+    closeExportModal() {
+        const modal = document.getElementById('export-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
 }
 
 // Create global instance

@@ -131,6 +131,107 @@ curl -X POST http://localhost:8080/widgets/550e8400-e29b-41d4-a716-446655440000/
   -d '{"type": "close"}'
 ```
 
+## Export Functionality
+
+The service provides powerful export capabilities for widget submissions in multiple formats:
+
+### Supported Formats
+
+- **JSON**: Structured data with metadata, perfect for API integrations
+- **CSV**: Comma-separated values, ideal for spreadsheet applications
+- **XLSX**: Microsoft Excel format with styling and auto-fitting columns
+
+### Export Features
+
+- **Flexible Date Ranges**: Export data from specific time periods
+- **Dynamic Field Detection**: Automatically detects all fields from submissions
+- **Secure Access**: JWT authentication required for all exports
+- **Filename Generation**: Auto-generates descriptive filenames with timestamps
+- **Large Dataset Support**: Handles thousands of submissions efficiently
+
+### Export API Parameters
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `format` | string | Export format: `json`, `csv`, `xlsx` | `?format=csv` |
+| `from` | string | Start date (RFC3339) | `?from=2024-01-01T00:00:00Z` |
+| `to` | string | End date (RFC3339) | `?to=2024-12-31T23:59:59Z` |
+
+### Export Examples
+
+#### Quick Export (All Data)
+```bash
+# Export all submissions as CSV
+curl -X GET "http://localhost:8080/widgets/{widget-id}/export?format=csv" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -o submissions.csv
+```
+
+#### Date Range Export
+```bash
+# Export data from specific date range
+curl -X GET "http://localhost:8080/widgets/{widget-id}/export?format=xlsx&from=2024-01-01T00:00:00Z&to=2024-12-31T23:59:59Z" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -o submissions_2024.xlsx
+```
+
+#### JSON Export with Metadata
+```bash
+# Export as JSON with full metadata
+curl -X GET "http://localhost:8080/widgets/{widget-id}/export?format=json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -o submissions.json
+```
+
+### JSON Export Structure
+
+```json
+{
+  "widget": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Contact Widget",
+    "type": "contact"
+  },
+  "exported_at": "2024-01-15T10:30:00Z",
+  "total_count": 150,
+  "submissions": [
+    {
+      "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "widget_id": "550e8400-e29b-41d4-a716-446655440000",
+      "data": {
+        "name": "John Doe",
+        "email": "john@example.com",
+        "message": "Contact form submission"
+      },
+      "created_at": "2024-01-15T09:15:30Z"
+    }
+  ]
+}
+```
+
+### CSV Export Features
+
+- **Dynamic Headers**: Automatically generates headers from all detected fields
+- **Missing Field Handling**: Empty values for missing fields in submissions
+- **Proper Escaping**: Handles commas, quotes, and newlines in data
+- **UTF-8 Encoding**: Supports international characters
+
+### Excel (XLSX) Export Features
+
+- **Styled Headers**: Bold headers with background color
+- **Auto-fit Columns**: Columns automatically sized for content
+- **Proper Data Types**: Numbers, dates, and text formatted correctly
+- **Large Dataset Support**: Handles thousands of rows efficiently
+
+### Use Cases
+
+1. **CRM Integration**: Export submissions for import into CRM systems
+2. **Data Analysis**: Download data for analysis in Excel or Google Sheets
+3. **Backup & Archive**: Regular data backups in multiple formats
+4. **Reporting**: Generate reports for specific time periods
+5. **Migration**: Export data for migration to other systems
+```
+
 ## API Endpoints
 
 ### Private Endpoints (Require JWT Authentication)
@@ -142,6 +243,7 @@ curl -X POST http://localhost:8080/widgets/550e8400-e29b-41d4-a716-446655440000/
 - `DELETE /widgets/{id}` - Delete widget
 - `GET /widgets/{id}/stats` - Get widget statistics
 - `GET /widgets/{id}/submissions` - Get widget submissions with pagination
+- `GET /widgets/{id}/export` - Export widget submissions in various formats
 
 ### Public Endpoints
 
@@ -231,6 +333,26 @@ This makes it easy to override settings for different environments.
 - `make logs` - Show logs
 - `make dev` - Run application locally
 - `make setup-dev` - Setup development environment (.env file)
+
+### Testing Export Functionality
+
+You can test the export functionality using the provided test script:
+
+```bash
+# Make sure the server is running first
+make dev
+
+# In another terminal, run the export test
+./test-export.sh
+```
+
+This script will:
+1. Create a test widget
+2. Submit sample data
+3. Test all export formats (JSON, CSV, XLSX)
+4. Test date range filtering
+5. Show file information and sample content
+6. Clean up test data
 
 ### Testing
 

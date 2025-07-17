@@ -215,3 +215,17 @@ type RuntimeMetrics struct {
 	NextGC     uint64    `json:"next_gc"`
 	LastGC     time.Time `json:"last_gc"`
 }
+
+// ExportRequest represents request data for exporting submissions
+type ExportRequest struct {
+	Format string     `json:"format"` // "csv", "json", "xlsx"
+	From   *time.Time `json:"from,omitempty"`
+	To     *time.Time `json:"to,omitempty"`
+}
+
+// ExportOptions represents options for exporting submissions
+type ExportOptions struct {
+	Format string
+	From   *time.Time
+	To     *time.Time
+}

@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 
 # Test configuration
 SERVER_URL="http://localhost:8080"
-JWT_SECRET="super-secret-jwt-key-change-in-production"
+JWT_SECRET="development-jwt-secret-change-in-production"
 TEST_USER="e2e-test-user"
 
 # Global test counters

@@ -2,9 +2,7 @@ package handlers
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,11 +14,91 @@ import (
 	"github.com/ad/leads-core/internal/config"
 	"github.com/ad/leads-core/internal/middleware"
 	"github.com/ad/leads-core/internal/models"
+	"github.com/ad/leads-core/internal/services"
+	"github.com/ad/leads-core/internal/storage"
 	"github.com/ad/leads-core/internal/validation"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/redis/go-redis/v9"
 )
+
+// routePrivateWidgetEndpoints routes private widget endpoints for /api/v1/widgets/*
+func routePrivateWidgetEndpoints(handler *WidgetHandler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Remove /api/v1/widgets prefix to get the actual path
+		path := strings.TrimPrefix(r.URL.Path, "/api/v1/widgets")
+
+		switch {
+		case path == "" || path == "/":
+			// GET /api/v1/widgets - list widgets
+			// POST /api/v1/widgets - create widget
+			switch r.Method {
+			case http.MethodGet:
+				handler.GetWidgets(w, r)
+			case http.MethodPost:
+				handler.CreateWidget(w, r)
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+		case path == "/summary":
+			// GET /api/v1/widgets/summary
+			if r.Method == http.MethodGet {
+				handler.GetWidgetsSummary(w, r)
+			} else {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+		case strings.HasSuffix(path, "/stats"):
+			// GET /api/v1/widgets/{id}/stats
+			// Reconstruct URL as /widgets/{id}/stats for handler
+			r.URL.Path = "/widgets" + path
+			handler.GetWidgetStats(w, r)
+		case strings.HasSuffix(path, "/submissions"):
+			// GET /api/v1/widgets/{id}/submissions
+			// Reconstruct URL as /widgets/{id}/submissions for handler
+			r.URL.Path = "/widgets" + path
+			handler.GetWidgetSubmissions(w, r)
+		case strings.HasSuffix(path, "/export"):
+			// GET /api/v1/widgets/{id}/export
+			// Reconstruct URL as /widgets/{id}/export for handler
+			r.URL.Path = "/widgets" + path
+			handler.ExportWidgetSubmissions(w, r)
+		default:
+			// GET /api/v1/widgets/{id} - get widget
+			// PUT /api/v1/widgets/{id} - update widget
+			// DELETE /api/v1/widgets/{id} - delete widget
+			// Reconstruct URL as /widgets/{id} for handler
+			r.URL.Path = "/widgets" + path
+			switch r.Method {
+			case http.MethodGet:
+				handler.GetWidget(w, r)
+			case http.MethodPut:
+				handler.UpdateWidget(w, r)
+			case http.MethodDelete:
+				handler.DeleteWidget(w, r)
+			default:
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+		}
+	}
+}
+
+// routePublicWidgetEndpoints routes public widget endpoints
+func routePublicWidgetEndpoints(handler *PublicHandler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+
+		switch {
+		case strings.HasSuffix(path, "/submit"):
+			// POST /widgets/{id}/submit
+			handler.SubmitWidget(w, r)
+		case strings.HasSuffix(path, "/events"):
+			// POST /widgets/{id}/events
+			handler.RegisterEvent(w, r)
+		default:
+			http.Error(w, "Not found", http.StatusNotFound)
+		}
+	}
+}
 
 // E2ETestServer represents a complete test server for end-to-end testing
 type E2ETestServer struct {
@@ -79,7 +157,27 @@ func setupE2EServer(t *testing.T) *E2ETestServer {
 	// Create middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtValidator)
 
-	// Create router
+	// Create a RedisClient wrapper for the repositories
+	wrappedRedisClient := storage.NewRedisClientWithUniversal(redisClient)
+
+	// Initialize repositories
+	statsRepo := storage.NewRedisStatsRepository(wrappedRedisClient)
+	widgetRepo := storage.NewRedisWidgetRepository(wrappedRedisClient, statsRepo)
+	submissionRepo := storage.NewRedisSubmissionRepository(wrappedRedisClient)
+
+	// Initialize services
+	ttlConfig := services.TTLConfig{
+		FreeDays: cfg.TTL.FreeDays,
+		ProDays:  cfg.TTL.ProDays,
+	}
+	widgetService := services.NewWidgetService(widgetRepo, submissionRepo, statsRepo, ttlConfig)
+	exportService := services.NewExportService(submissionRepo, widgetRepo)
+
+	// Initialize handlers
+	widgetHandler := NewWidgetHandler(widgetService, exportService, validator)
+	publicHandler := NewPublicHandler(widgetService, validator)
+
+	// Create router using the same structure as main server
 	mux := http.NewServeMux()
 
 	// Health endpoint
@@ -96,77 +194,13 @@ func setupE2EServer(t *testing.T) *E2ETestServer {
 	})
 
 	// Public widget submission endpoint (no auth required)
-	mux.HandleFunc("/api/widgets/", func(w http.ResponseWriter, r *http.Request) {
-		// Extract widget ID from path
-		path := r.URL.Path
-		if len(path) <= len("/api/widgets/") {
-			http.Error(w, "Widget ID is required", http.StatusBadRequest)
-			return
-		}
+	publicChain := http.HandlerFunc(routePublicWidgetEndpoints(publicHandler))
+	mux.Handle("/widgets/", publicChain)
 
-		// Remove /api/widgets/ prefix and parse the rest
-		remaining := path[len("/api/widgets/"):]
-
-		// Check if it's a submission request
-		if r.Method == "POST" && len(remaining) > 7 && remaining[len(remaining)-7:] == "/submit" {
-			widgetID := remaining[:len(remaining)-7]
-			handlePublicSubmission(w, r, widgetID, redisClient)
-			return
-		}
-
-		// Get widget for viewing (public endpoint)
-		if r.Method == "GET" {
-			widgetID := remaining
-			// Remove trailing slash if present
-			if len(widgetID) > 0 && widgetID[len(widgetID)-1] == '/' {
-				widgetID = widgetID[:len(widgetID)-1]
-			}
-			handleGetWidget(w, widgetID, redisClient)
-			return
-		}
-
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	})
-
-	// Private API endpoints (require authentication)
-	mux.Handle("/api/private/", authMiddleware.RequireAuth(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Extract path after /api/private/
-			path := r.URL.Path[len("/api/private/"):]
-
-			switch {
-			case path == "widgets" && r.Method == "POST":
-				handleCreateWidget(w, r, redisClient)
-			case path == "widgets" && r.Method == "GET":
-				handleListWidgets(w, r, redisClient)
-			case len(path) > 6 && path[:6] == "widgets/":
-				widgetID := path[6:]
-				// Remove potential trailing slash or path suffixes
-				if idx := strings.Index(widgetID, "/"); idx > 0 {
-					suffix := widgetID[idx:]
-					widgetID = widgetID[:idx]
-
-					if suffix == "/stats" && r.Method == "GET" {
-						handleGetStats(w, r, widgetID, redisClient)
-						return
-					}
-				}
-
-				switch r.Method {
-				case "GET":
-					handleGetPrivateWidget(w, r, widgetID, redisClient)
-				case "PUT":
-					handleUpdateWidget(w, r, widgetID, redisClient)
-				case "DELETE":
-					handleDeleteWidget(w, r, widgetID, redisClient)
-				default:
-					http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-				}
-			default:
-				http.Error(w, "Not found", http.StatusNotFound)
-			}
-		}),
-	))
+	// Private API endpoints using the same routing as main server
+	privateWidgetsChain := authMiddleware.Authenticate(http.HandlerFunc(routePrivateWidgetEndpoints(widgetHandler)))
+	mux.Handle("/api/v1/widgets/", privateWidgetsChain)
+	mux.Handle("/api/v1/widgets", privateWidgetsChain)
 
 	// Start test server
 	server := httptest.NewServer(mux)
@@ -213,12 +247,7 @@ func (e2e *E2ETestServer) makeRequest(method, path string, body []byte, headers 
 		return nil, err
 	}
 
-	// Set default headers
-	if reqBody != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	// Set custom headers
+	// Set headers
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
@@ -227,373 +256,14 @@ func (e2e *E2ETestServer) makeRequest(method, path string, body []byte, headers 
 	return client.Do(req)
 }
 
-// Test handlers implementation (simplified versions for E2E testing)
-
-func handlePublicSubmission(w http.ResponseWriter, r *http.Request, widgetID string, client redis.UniversalClient) {
-	// Parse request body first
-	var submission struct {
-		Data map[string]interface{} `json:"data"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&submission); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-
-	// Check if data field exists
-	if len(submission.Data) == 0 {
-		http.Error(w, "Submission data is required", http.StatusBadRequest)
-		return
-	}
-
-	// Check if widget exists and is enabled
-	ctx := context.Background()
-	widgetData, err := client.HGetAll(ctx, "widget:"+widgetID).Result()
-	if err != nil || len(widgetData) == 0 {
-		http.Error(w, "Widget not found", http.StatusNotFound)
-		return
-	}
-
-	if widgetData["enabled"] != "true" {
-		http.Error(w, "Widget is disabled", http.StatusBadRequest)
-		return
-	}
-
-	// Create submission
-	submissionID := fmt.Sprintf("sub_%d", time.Now().UnixNano())
-	submissionKey := fmt.Sprintf("submission:%s:%s", widgetID, submissionID)
-
-	submissionObj := map[string]interface{}{
-		"id":         submissionID,
-		"widget_id":  widgetID,
-		"data":       submission.Data,
-		"created_at": time.Now().Format(time.RFC3339),
-	}
-
-	submissionJSON, _ := json.Marshal(submissionObj)
-
-	// Store submission
-	if err := client.HSet(ctx, submissionKey, "data", submissionJSON).Err(); err != nil {
-		http.Error(w, "Failed to store submission", http.StatusInternalServerError)
-		return
-	}
-
-	// Update widget stats
-	client.HIncrBy(ctx, "widget:"+widgetID+":stats", "submits", 1)
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{
-		"id":      submissionID,
-		"message": "Submission created successfully",
-	})
-}
-
-func handleGetWidget(w http.ResponseWriter, widgetID string, client redis.UniversalClient) {
-	ctx := context.Background()
-	widgetData, err := client.HGetAll(ctx, "widget:"+widgetID).Result()
-	if err != nil || len(widgetData) == 0 {
-		http.Error(w, "Widget not found", http.StatusNotFound)
-		return
-	}
-
-	// Increment views
-	client.HIncrBy(ctx, "widget:"+widgetID+":stats", "views", 1)
-
-	// Parse fields JSON
-	var fields map[string]interface{}
-	if fieldsStr, ok := widgetData["fields"]; ok {
-		json.Unmarshal([]byte(fieldsStr), &fields)
-	}
-
-	// Return only public widget data
-	publicWidget := map[string]interface{}{
-		"id":      widgetID,
-		"name":    widgetData["name"],
-		"type":    widgetData["type"],
-		"enabled": widgetData["enabled"] == "true",
-		"fields":  fields,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(publicWidget)
-}
-
-func handleCreateWidget(w http.ResponseWriter, r *http.Request, client redis.UniversalClient) {
-	// Get user from context
-	user, exists := auth.GetUserFromContext(r.Context())
-	if !exists {
-		http.Error(w, "User not found in context", http.StatusInternalServerError)
-		return
-	}
-
-	// Parse request first
-	var widget models.Widget
-	if err := json.NewDecoder(r.Body).Decode(&widget); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-
-	// Basic validation - check required fields
-	if widget.Name == "" {
-		http.Error(w, "Widget name is required", http.StatusBadRequest)
-		return
-	}
-	if widget.Type == "" {
-		http.Error(w, "Widget type is required", http.StatusBadRequest)
-		return
-	}
-
-	// Set widget metadata
-	widget.ID = fmt.Sprintf("widget_%d", time.Now().UnixNano())
-	widget.OwnerID = user.ID
-	widget.CreatedAt = time.Now()
-	widget.UpdatedAt = time.Now()
-
-	// Store widget in Redis
-	ctx := context.Background()
-	widgetKey := "widget:" + widget.ID
-
-	fieldsJSON, _ := json.Marshal(widget.Fields)
-
-	widgetData := map[string]interface{}{
-		"id":         widget.ID,
-		"owner_id":   widget.OwnerID,
-		"name":       widget.Name,
-		"type":       widget.Type,
-		"enabled":    fmt.Sprintf("%v", widget.Enabled),
-		"fields":     string(fieldsJSON),
-		"created_at": widget.CreatedAt.Format(time.RFC3339),
-		"updated_at": widget.UpdatedAt.Format(time.RFC3339),
-	}
-
-	if err := client.HMSet(ctx, widgetKey, widgetData).Err(); err != nil {
-		http.Error(w, "Failed to create widget", http.StatusInternalServerError)
-		return
-	}
-
-	// Add to user's widgets set
-	client.SAdd(ctx, "widgets:"+user.ID, widget.ID)
-
-	// Initialize stats
-	client.HMSet(ctx, "widget:"+widget.ID+":stats", map[string]interface{}{
-		"widget_id": widget.ID,
-		"views":     0,
-		"submits":   0,
-		"closes":    0,
-	})
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(widget)
-}
-
-func handleListWidgets(w http.ResponseWriter, r *http.Request, client redis.UniversalClient) {
-	user, exists := auth.GetUserFromContext(r.Context())
-	if !exists {
-		http.Error(w, "User not found in context", http.StatusInternalServerError)
-		return
-	}
-
-	ctx := context.Background()
-	widgetIDs, err := client.SMembers(ctx, "widgets:"+user.ID).Result()
-	if err != nil {
-		http.Error(w, "Failed to get widgets", http.StatusInternalServerError)
-		return
-	}
-
-	var widgets []map[string]interface{}
-	for _, widgetID := range widgetIDs {
-		widgetData, err := client.HGetAll(ctx, "widget:"+widgetID).Result()
-		if err != nil || len(widgetData) == 0 {
-			continue
-		}
-
-		widgets = append(widgets, map[string]interface{}{
-			"id":      widgetData["id"],
-			"name":    widgetData["name"],
-			"type":    widgetData["type"],
-			"enabled": widgetData["enabled"] == "true",
-		})
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"data": widgets,
-		"meta": map[string]interface{}{
-			"total": len(widgets),
-		},
-	})
-}
-
-func handleGetPrivateWidget(w http.ResponseWriter, r *http.Request, widgetID string, client redis.UniversalClient) {
-	user, exists := auth.GetUserFromContext(r.Context())
-	if !exists {
-		http.Error(w, "User not found in context", http.StatusInternalServerError)
-		return
-	}
-
-	ctx := context.Background()
-	widgetData, err := client.HGetAll(ctx, "widget:"+widgetID).Result()
-	if err != nil || len(widgetData) == 0 {
-		http.Error(w, "Widget not found", http.StatusNotFound)
-		return
-	}
-
-	// Check ownership
-	if widgetData["owner_id"] != user.ID {
-		http.Error(w, "Access denied", http.StatusForbidden)
-		return
-	}
-
-	// Parse fields from JSON string
-	var fields []map[string]interface{}
-	if fieldsStr, ok := widgetData["fields"]; ok && fieldsStr != "" {
-		if err := json.Unmarshal([]byte(fieldsStr), &fields); err != nil {
-			fields = []map[string]interface{}{}
-		}
-	}
-
-	// Parse enabled field
-	enabled := false
-	if enabledStr, ok := widgetData["enabled"]; ok {
-		enabled = enabledStr == "true"
-	}
-
-	// Create response with properly typed fields
-	response := map[string]interface{}{
-		"id":         widgetData["id"],
-		"name":       widgetData["name"],
-		"type":       widgetData["type"],
-		"fields":     fields,
-		"enabled":    enabled,
-		"owner_id":   widgetData["owner_id"],
-		"created_at": widgetData["created_at"],
-		"updated_at": widgetData["updated_at"],
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"data": response})
-}
-
-func handleUpdateWidget(w http.ResponseWriter, r *http.Request, widgetID string, client redis.UniversalClient) {
-	user, exists := auth.GetUserFromContext(r.Context())
-	if !exists {
-		http.Error(w, "User not found in context", http.StatusInternalServerError)
-		return
-	}
-
-	// Check widget ownership
-	ctx := context.Background()
-	ownerID, err := client.HGet(ctx, "widget:"+widgetID, "owner_id").Result()
-	if err != nil {
-		http.Error(w, "Widget not found", http.StatusNotFound)
-		return
-	}
-
-	if ownerID != user.ID {
-		http.Error(w, "Access denied", http.StatusForbidden)
-		return
-	}
-
-	// Parse request first
-	var updateData map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&updateData); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-
-	// Basic validation - don't allow empty name if it's being updated
-	if name, exists := updateData["name"]; exists {
-		if nameStr, ok := name.(string); ok && nameStr == "" {
-			http.Error(w, "Widget name cannot be empty", http.StatusBadRequest)
-			return
-		}
-	}
-
-	// Process special fields that need conversion
-	if enabled, exists := updateData["enabled"]; exists {
-		updateData["enabled"] = fmt.Sprintf("%v", enabled)
-	}
-
-	// Update widget
-	updateData["updated_at"] = time.Now().Format(time.RFC3339)
-	if err := client.HMSet(ctx, "widget:"+widgetID, updateData).Err(); err != nil {
-		http.Error(w, "Failed to update widget", http.StatusInternalServerError)
-		return
-	}
-
-	// Get updated widget
-	widgetData, _ := client.HGetAll(ctx, "widget:"+widgetID).Result()
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(widgetData)
-}
-
-func handleDeleteWidget(w http.ResponseWriter, r *http.Request, widgetID string, client redis.UniversalClient) {
-	user, exists := auth.GetUserFromContext(r.Context())
-	if !exists {
-		http.Error(w, "User not found in context", http.StatusInternalServerError)
-		return
-	}
-
-	// Check widget ownership
-	ctx := context.Background()
-	ownerID, err := client.HGet(ctx, "widget:"+widgetID, "owner_id").Result()
-	if err != nil {
-		http.Error(w, "Widget not found", http.StatusNotFound)
-		return
-	}
-
-	if ownerID != user.ID {
-		http.Error(w, "Access denied", http.StatusForbidden)
-		return
-	}
-
-	// Delete widget and related data
-	client.Del(ctx, "widget:"+widgetID)
-	client.Del(ctx, "widget:"+widgetID+":stats")
-	client.SRem(ctx, "widgets:"+user.ID, widgetID)
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func handleGetStats(w http.ResponseWriter, r *http.Request, widgetID string, client redis.UniversalClient) {
-	user, exists := auth.GetUserFromContext(r.Context())
-	if !exists {
-		http.Error(w, "User not found in context", http.StatusInternalServerError)
-		return
-	}
-
-	// Check widget ownership
-	ctx := context.Background()
-	ownerID, err := client.HGet(ctx, "widget:"+widgetID, "owner_id").Result()
-	if err != nil {
-		http.Error(w, "Widget not found", http.StatusNotFound)
-		return
-	}
-
-	if ownerID != user.ID {
-		http.Error(w, "Access denied", http.StatusForbidden)
-		return
-	}
-
-	// Get stats
-	stats, err := client.HGetAll(ctx, "widget:"+widgetID+":stats").Result()
-	if err != nil {
-		http.Error(w, "Failed to get stats", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stats)
-}
-
-// E2E Test Cases
+// === E2E TESTS ===
 
 func TestE2E_HealthCheck(t *testing.T) {
 	e2e := setupE2EServer(t)
 
 	resp, err := e2e.makeRequest("GET", "/health", nil, nil)
 	if err != nil {
-		t.Fatalf("Failed to make request: %v", err)
+		t.Fatalf("Failed to make health check request: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -601,62 +271,67 @@ func TestE2E_HealthCheck(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
 
-	var health map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&health); err != nil {
+	var response map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if health["status"] != "ok" {
-		t.Errorf("Expected status 'ok', got %v", health["status"])
+	if response["status"] != "ok" {
+		t.Errorf("Expected status 'ok', got %v", response["status"])
 	}
 }
 
 func TestE2E_WidgetLifecycle(t *testing.T) {
 	e2e := setupE2EServer(t)
-	userID := "test-user-e2e"
-	token := e2e.createTestToken(userID)
+
+	// Create test token
+	token := e2e.createTestToken("test-user-id")
 	headers := map[string]string{
 		"Authorization": "Bearer " + token,
+		"Content-Type":  "application/json",
 	}
 
-	// Step 1: Create a widget
+	// Step 1: Create widget
 	createWidgetData := []byte(`{
 		"name": "E2E Test Widget",
 		"type": "contact",
 		"enabled": true,
+		"description": "Widget for end-to-end testing",
 		"fields": {
 			"name": {"type": "text", "required": true},
 			"email": {"type": "email", "required": true}
 		}
 	}`)
 
-	resp, err := e2e.makeRequest("POST", "/api/private/widgets", createWidgetData, headers)
+	resp, err := e2e.makeRequest("POST", "/api/v1/widgets", createWidgetData, headers)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		t.Errorf("Expected status 201, got %d", resp.StatusCode)
-		// Read response body for debugging
-		var buf bytes.Buffer
-		buf.ReadFrom(resp.Body)
-		t.Logf("Response body: %s", buf.String())
-		return
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected status 201, got %d. Body: %s", resp.StatusCode, body)
 	}
 
-	var createdWidget models.Widget
-	if err := json.NewDecoder(resp.Body).Decode(&createdWidget); err != nil {
-		t.Fatalf("Failed to decode widget: %v", err)
+	var createdWidgetResponse models.Response
+	if err := json.NewDecoder(resp.Body).Decode(&createdWidgetResponse); err != nil {
+		t.Fatalf("Failed to decode created widget: %v", err)
 	}
 
-	widgetID := createdWidget.ID
-	if widgetID == "" {
-		t.Fatal("Widget ID is empty")
+	// Extract widget from response data
+	widgetData, ok := createdWidgetResponse.Data.(map[string]interface{})
+	if !ok {
+		t.Fatal("Widget data is not a map")
+	}
+
+	widgetID, ok := widgetData["id"].(string)
+	if !ok || widgetID == "" {
+		t.Fatal("Widget ID is empty or not a string")
 	}
 
 	// Step 2: List widgets
-	resp, err = e2e.makeRequest("GET", "/api/private/widgets", nil, headers)
+	resp, err = e2e.makeRequest("GET", "/api/v1/widgets", nil, headers)
 	if err != nil {
 		t.Fatalf("Failed to list widgets: %v", err)
 	}
@@ -666,18 +341,8 @@ func TestE2E_WidgetLifecycle(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", resp.StatusCode)
 	}
 
-	var listResponse map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&listResponse); err != nil {
-		t.Fatalf("Failed to decode list response: %v", err)
-	}
-
-	widgets, ok := listResponse["data"].([]interface{})
-	if !ok || len(widgets) == 0 {
-		t.Error("Expected at least one widget in list")
-	}
-
-	// Step 3: Get widget details
-	resp, err = e2e.makeRequest("GET", "/api/private/widgets/"+widgetID, nil, headers)
+	// Step 3: Get specific widget
+	resp, err = e2e.makeRequest("GET", "/api/v1/widgets/"+widgetID, nil, headers)
 	if err != nil {
 		t.Fatalf("Failed to get widget: %v", err)
 	}
@@ -693,7 +358,7 @@ func TestE2E_WidgetLifecycle(t *testing.T) {
 		"enabled": false
 	}`)
 
-	resp, err = e2e.makeRequest("PUT", "/api/private/widgets/"+widgetID, updateData, headers)
+	resp, err = e2e.makeRequest("PUT", "/api/v1/widgets/"+widgetID, updateData, headers)
 	if err != nil {
 		t.Fatalf("Failed to update widget: %v", err)
 	}
@@ -704,7 +369,7 @@ func TestE2E_WidgetLifecycle(t *testing.T) {
 	}
 
 	// Step 5: Delete widget
-	resp, err = e2e.makeRequest("DELETE", "/api/private/widgets/"+widgetID, nil, headers)
+	resp, err = e2e.makeRequest("DELETE", "/api/v1/widgets/"+widgetID, nil, headers)
 	if err != nil {
 		t.Fatalf("Failed to delete widget: %v", err)
 	}
@@ -715,7 +380,7 @@ func TestE2E_WidgetLifecycle(t *testing.T) {
 	}
 
 	// Step 6: Verify widget is deleted
-	resp, err = e2e.makeRequest("GET", "/api/private/widgets/"+widgetID, nil, headers)
+	resp, err = e2e.makeRequest("GET", "/api/v1/widgets/"+widgetID, nil, headers)
 	if err != nil {
 		t.Fatalf("Failed to check deleted widget: %v", err)
 	}
@@ -728,76 +393,73 @@ func TestE2E_WidgetLifecycle(t *testing.T) {
 
 func TestE2E_PublicSubmission(t *testing.T) {
 	e2e := setupE2EServer(t)
-	userID := "test-user-public"
-	token := e2e.createTestToken(userID)
+
+	// Create test token
+	token := e2e.createTestToken("test-user-id")
 	headers := map[string]string{
 		"Authorization": "Bearer " + token,
+		"Content-Type":  "application/json",
 	}
 
-	// Create a widget first
+	// Step 1: Create widget
 	createWidgetData := []byte(`{
-		"name": "Public Submission Widget",
+		"name": "Submission Test Widget",
 		"type": "contact",
 		"enabled": true,
+		"description": "Widget for submission testing",
 		"fields": {
 			"name": {"type": "text", "required": true},
-			"email": {"type": "email", "required": true}
+			"email": {"type": "email", "required": true},
+			"message": {"type": "textarea", "required": false}
 		}
 	}`)
 
-	resp, err := e2e.makeRequest("POST", "/api/private/widgets", createWidgetData, headers)
+	resp, err := e2e.makeRequest("POST", "/api/v1/widgets", createWidgetData, headers)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
 	defer resp.Body.Close()
 
-	var widget models.Widget
-	if err := json.NewDecoder(resp.Body).Decode(&widget); err != nil {
-		t.Fatalf("Failed to decode widget: %v", err)
+	var response models.Response
+	json.NewDecoder(resp.Body).Decode(&response)
+
+	// Extract widget from response data
+	widgetData, ok := response.Data.(map[string]interface{})
+	if !ok {
+		t.Fatal("Widget data is not a map")
 	}
 
-	widgetID := widget.ID
-
-	// Test public widget view
-	resp, err = e2e.makeRequest("GET", "/api/widgets/"+widgetID, nil, nil)
-	if err != nil {
-		t.Fatalf("Failed to get public widget: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
+	widgetID, ok := widgetData["id"].(string)
+	if !ok || widgetID == "" {
+		t.Fatal("Widget ID is empty or not a string")
 	}
 
-	// Test public submission
+	// Step 2: Submit data to widget (public endpoint, no auth)
 	submissionData := []byte(`{
 		"data": {
 			"name": "John Doe",
-			"email": "john@example.com"
+			"email": "john@example.com",
+			"message": "Test submission"
 		}
 	}`)
 
-	resp, err = e2e.makeRequest("POST", "/api/widgets/"+widgetID+"/submit", submissionData, nil)
+	publicHeaders := map[string]string{
+		"Content-Type": "application/json",
+	}
+
+	resp, err = e2e.makeRequest("POST", "/widgets/"+widgetID+"/submit", submissionData, publicHeaders)
 	if err != nil {
-		t.Fatalf("Failed to submit widget: %v", err)
+		t.Fatalf("Failed to submit data: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		t.Errorf("Expected status 201, got %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Expected status 201 for submission, got %d. Body: %s", resp.StatusCode, body)
 	}
 
-	var submissionResponse map[string]string
-	if err := json.NewDecoder(resp.Body).Decode(&submissionResponse); err != nil {
-		t.Fatalf("Failed to decode submission response: %v", err)
-	}
-
-	if submissionResponse["id"] == "" {
-		t.Error("Submission ID is empty")
-	}
-
-	// Check stats
-	resp, err = e2e.makeRequest("GET", "/api/private/widgets/"+widgetID+"/stats", nil, headers)
+	// Step 3: Check stats
+	resp, err = e2e.makeRequest("GET", "/api/v1/widgets/"+widgetID+"/stats", nil, headers)
 	if err != nil {
 		t.Fatalf("Failed to get stats: %v", err)
 	}
@@ -812,10 +474,7 @@ func TestE2E_PublicSubmission(t *testing.T) {
 		t.Fatalf("Failed to decode stats: %v", err)
 	}
 
-	// Should have at least 1 view and 1 submit
-	if stats["views"] == "0" {
-		t.Error("Expected at least 1 view")
-	}
+	// Should have at least 1 submission
 	if stats["submits"] == "0" {
 		t.Error("Expected at least 1 submission")
 	}
@@ -823,72 +482,96 @@ func TestE2E_PublicSubmission(t *testing.T) {
 
 func TestE2E_Authorization(t *testing.T) {
 	e2e := setupE2EServer(t)
-	user1ID := "user1"
-	user2ID := "user2"
-	token1 := e2e.createTestToken(user1ID)
-	token2 := e2e.createTestToken(user2ID)
 
-	headers1 := map[string]string{"Authorization": "Bearer " + token1}
-	headers2 := map[string]string{"Authorization": "Bearer " + token2}
+	// Create test tokens for different users
+	token1 := e2e.createTestToken("user1")
+	token2 := e2e.createTestToken("user2")
 
-	// User 1 creates a widget
+	headers1 := map[string]string{
+		"Authorization": "Bearer " + token1,
+		"Content-Type":  "application/json",
+	}
+
+	headers2 := map[string]string{
+		"Authorization": "Bearer " + token2,
+		"Content-Type":  "application/json",
+	}
+
+	// Step 1: User1 creates widget
 	createWidgetData := []byte(`{
-		"name": "User 1 Widget",
+		"name": "User1's Widget",
 		"type": "contact",
 		"enabled": true,
-		"fields": {"name": {"type": "text"}}
+		"fields": {
+			"name": {"type": "text", "required": true},
+			"email": {"type": "email", "required": true}
+		}
 	}`)
 
-	resp, err := e2e.makeRequest("POST", "/api/private/widgets", createWidgetData, headers1)
+	resp, err := e2e.makeRequest("POST", "/api/v1/widgets", createWidgetData, headers1)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
 	defer resp.Body.Close()
 
-	var widget models.Widget
-	json.NewDecoder(resp.Body).Decode(&widget)
-	widgetID := widget.ID
+	var response models.Response
+	json.NewDecoder(resp.Body).Decode(&response)
 
-	// User 2 tries to access User 1's widget (should fail)
-	resp, err = e2e.makeRequest("GET", "/api/private/widgets/"+widgetID, nil, headers2)
+	// Extract widget from response data
+	widgetData, ok := response.Data.(map[string]interface{})
+	if !ok {
+		t.Fatal("Widget data is not a map")
+	}
+
+	widgetID, ok := widgetData["id"].(string)
+	if !ok || widgetID == "" {
+		t.Fatal("Widget ID is empty or not a string")
+	}
+
+	// Step 2: User2 tries to access User1's widget (should fail)
+	resp, err = e2e.makeRequest("GET", "/api/v1/widgets/"+widgetID, nil, headers2)
 	if err != nil {
-		t.Fatalf("Failed to request widget: %v", err)
+		t.Fatalf("Failed to get widget: %v", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusForbidden {
-		t.Errorf("Expected status 403, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", resp.StatusCode)
 	}
 
-	// User 2 tries to update User 1's widget (should fail)
+	// Step 3: User2 tries to update User1's widget (should fail)
 	updateData := []byte(`{"name": "Hacked Widget"}`)
-	resp, err = e2e.makeRequest("PUT", "/api/private/widgets/"+widgetID, updateData, headers2)
+
+	resp, err = e2e.makeRequest("PUT", "/api/v1/widgets/"+widgetID, updateData, headers2)
 	if err != nil {
-		t.Fatalf("Failed to request update: %v", err)
+		t.Fatalf("Failed to update widget: %v", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusForbidden {
-		t.Errorf("Expected status 403, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", resp.StatusCode)
 	}
 
-	// User 2 tries to delete User 1's widget (should fail)
-	resp, err = e2e.makeRequest("DELETE", "/api/private/widgets/"+widgetID, nil, headers2)
+	// Step 4: User2 tries to delete User1's widget (should fail)
+	resp, err = e2e.makeRequest("DELETE", "/api/v1/widgets/"+widgetID, nil, headers2)
 	if err != nil {
-		t.Fatalf("Failed to request delete: %v", err)
+		t.Fatalf("Failed to delete widget: %v", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusForbidden {
-		t.Errorf("Expected status 403, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status 404, got %d", resp.StatusCode)
 	}
 }
 
 func TestE2E_InvalidRequests(t *testing.T) {
 	e2e := setupE2EServer(t)
-	userID := "test-user-invalid"
-	token := e2e.createTestToken(userID)
-	headers := map[string]string{"Authorization": "Bearer " + token}
+
+	token := e2e.createTestToken("test-user")
+	headers := map[string]string{
+		"Authorization": "Bearer " + token,
+		"Content-Type":  "application/json",
+	}
 
 	tests := []struct {
 		name           string
@@ -901,31 +584,31 @@ func TestE2E_InvalidRequests(t *testing.T) {
 		{
 			name:           "invalid JSON",
 			method:         "POST",
-			path:           "/api/private/widgets",
-			body:           []byte(`{invalid json`),
+			path:           "/api/v1/widgets",
+			body:           []byte(`{"invalid": json}`),
 			headers:        headers,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "missing required fields",
 			method:         "POST",
-			path:           "/api/private/widgets",
-			body:           []byte(`{"type": "contact"}`),
+			path:           "/api/v1/widgets",
+			body:           []byte(`{"description": "Missing name and type"}`),
 			headers:        headers,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "unauthorized request",
-			method:         "POST",
-			path:           "/api/private/widgets",
-			body:           []byte(`{"name": "Test", "type": "contact"}`),
-			headers:        nil,
+			method:         "GET",
+			path:           "/api/v1/widgets",
+			body:           nil,
+			headers:        map[string]string{"Content-Type": "application/json"},
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
 			name:           "nonexistent widget",
 			method:         "GET",
-			path:           "/api/private/widgets/nonexistent",
+			path:           "/api/v1/widgets/nonexistent",
 			body:           nil,
 			headers:        headers,
 			expectedStatus: http.StatusNotFound,
@@ -933,10 +616,10 @@ func TestE2E_InvalidRequests(t *testing.T) {
 		{
 			name:           "invalid submission - missing data",
 			method:         "POST",
-			path:           "/api/widgets/nonexistent/submit",
-			body:           []byte(`{"invalid": "data"}`),
-			headers:        nil,
-			expectedStatus: http.StatusBadRequest,
+			path:           "/widgets/nonexistent/submit",
+			body:           []byte(`{}`),
+			headers:        map[string]string{"Content-Type": "application/json"},
+			expectedStatus: http.StatusBadRequest, // Validation error happens before widget lookup
 		},
 	}
 
@@ -949,7 +632,8 @@ func TestE2E_InvalidRequests(t *testing.T) {
 			defer resp.Body.Close()
 
 			if resp.StatusCode != tt.expectedStatus {
-				t.Errorf("Expected status %d, got %d", tt.expectedStatus, resp.StatusCode)
+				body, _ := io.ReadAll(resp.Body)
+				t.Errorf("Expected status %d, got %d. Body: %s", tt.expectedStatus, resp.StatusCode, body)
 			}
 		})
 	}

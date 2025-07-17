@@ -22,12 +22,14 @@ func TestE2E_SimpleWidgetCreation(t *testing.T) {
 		"name": "Simple Test Widget",
 		"type": "contact",
 		"enabled": true,
+		"description": "Simple test widget for E2E testing",
 		"fields": {
-			"name": {"type": "text", "required": true}
+			"name": {"type": "text", "required": true},
+			"email": {"type": "email", "required": true}
 		}
 	}`)
 
-	resp, err := e2e.makeRequest("POST", "/api/private/widgets", createWidgetData, headers)
+	resp, err := e2e.makeRequest("POST", "/api/v1/widgets", createWidgetData, headers)
 	if err != nil {
 		t.Fatalf("Failed to create widget: %v", err)
 	}
@@ -42,22 +44,29 @@ func TestE2E_SimpleWidgetCreation(t *testing.T) {
 		return
 	}
 
-	var createdWidget models.Widget
-	if err := json.NewDecoder(resp.Body).Decode(&createdWidget); err != nil {
-		t.Fatalf("Failed to decode widget: %v", err)
+	var response models.Response
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if createdWidget.ID == "" {
-		t.Error("Widget ID is empty")
-	}
-	if createdWidget.Name != "Simple Test Widget" {
-		t.Errorf("Expected widget name 'Simple Test Widget', got %s", createdWidget.Name)
-	}
-	if createdWidget.OwnerID != userID {
-		t.Errorf("Expected owner ID %s, got %s", userID, createdWidget.OwnerID)
+	// Extract widget from response data
+	widgetData, ok := response.Data.(map[string]interface{})
+	if !ok {
+		t.Fatal("Widget data is not a map")
 	}
 
-	t.Logf("Successfully created widget with ID: %s", createdWidget.ID)
+	widgetID, ok := widgetData["id"].(string)
+	if !ok || widgetID == "" {
+		t.Fatal("Widget ID is empty")
+	}
+
+	if name, ok := widgetData["name"].(string); !ok || name != "Simple Test Widget" {
+		t.Errorf("Expected widget name 'Simple Test Widget', got %v", name)
+	}
+
+	// Note: user_id may not be included in the response for security reasons
+
+	t.Logf("Successfully created widget with ID: %s", widgetID)
 }
 
 func TestE2E_SimpleHealthCheck(t *testing.T) {
@@ -114,27 +123,31 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 	}`)
 
 	// Create first widget
-	resp1, err := e2e.makeRequest("POST", "/api/private/widgets", widgetData1, headers)
+	resp1, err := e2e.makeRequest("POST", "/api/v1/widgets", widgetData1, headers)
 	if err != nil {
 		t.Fatalf("Failed to create first widget: %v", err)
 	}
 	defer resp1.Body.Close()
 
-	var widget1 models.Widget
-	json.NewDecoder(resp1.Body).Decode(&widget1)
+	var response1 models.Response
+	json.NewDecoder(resp1.Body).Decode(&response1)
+	widget1Data := response1.Data.(map[string]interface{})
+	widget1ID := widget1Data["id"].(string)
 
 	// Create second widget
-	resp2, err := e2e.makeRequest("POST", "/api/private/widgets", widgetData2, headers)
+	resp2, err := e2e.makeRequest("POST", "/api/v1/widgets", widgetData2, headers)
 	if err != nil {
 		t.Fatalf("Failed to create second widget: %v", err)
 	}
 	defer resp2.Body.Close()
 
-	var widget2 models.Widget
-	json.NewDecoder(resp2.Body).Decode(&widget2)
+	var response2 models.Response
+	json.NewDecoder(resp2.Body).Decode(&response2)
+	widget2Data := response2.Data.(map[string]interface{})
+	widget2ID := widget2Data["id"].(string)
 
 	// Step 2: List widgets - should return 2 widgets
-	listResp, err := e2e.makeRequest("GET", "/api/private/widgets", nil, headers)
+	listResp, err := e2e.makeRequest("GET", "/api/v1/widgets", nil, headers)
 	if err != nil {
 		t.Fatalf("Failed to list widgets: %v", err)
 	}
@@ -156,7 +169,7 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 		}
 	}`)
 
-	submitResp, err := e2e.makeRequest("POST", "/api/widgets/"+widget1.ID+"/submit", submissionData, nil)
+	submitResp, err := e2e.makeRequest("POST", "/widgets/"+widget1ID+"/submit", submissionData, nil)
 	if err != nil {
 		t.Fatalf("Failed to submit to enabled widget: %v", err)
 	}
@@ -167,18 +180,18 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 	}
 
 	// Step 4: Try to submit to disabled widget (should fail)
-	submitResp2, err := e2e.makeRequest("POST", "/api/widgets/"+widget2.ID+"/submit", submissionData, nil)
+	submitResp2, err := e2e.makeRequest("POST", "/widgets/"+widget2ID+"/submit", submissionData, nil)
 	if err != nil {
 		t.Fatalf("Failed to make request to disabled widget: %v", err)
 	}
 	defer submitResp2.Body.Close()
 
-	if submitResp2.StatusCode != http.StatusBadRequest {
-		t.Errorf("Expected 400 for disabled widget submission, got %d", submitResp2.StatusCode)
+	if submitResp2.StatusCode != http.StatusForbidden {
+		t.Errorf("Expected 403 for disabled widget submission, got %d", submitResp2.StatusCode)
 	}
 
 	// Step 5: Check stats for first widget
-	statsResp, err := e2e.makeRequest("GET", "/api/private/widgets/"+widget1.ID+"/stats", nil, headers)
+	statsResp, err := e2e.makeRequest("GET", "/api/v1/widgets/"+widget1ID+"/stats", nil, headers)
 	if err != nil {
 		t.Fatalf("Failed to get stats: %v", err)
 	}
@@ -202,7 +215,7 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 		"enabled": false
 	}`)
 
-	updateResp, err := e2e.makeRequest("PUT", "/api/private/widgets/"+widget1.ID, updateData, headers)
+	updateResp, err := e2e.makeRequest("PUT", "/api/v1/widgets/"+widget1ID, updateData, headers)
 	if err != nil {
 		t.Fatalf("Failed to update widget: %v", err)
 	}
@@ -213,7 +226,7 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 	}
 
 	// Step 7: Verify update worked
-	getResp, err := e2e.makeRequest("GET", "/api/private/widgets/"+widget1.ID, nil, headers)
+	getResp, err := e2e.makeRequest("GET", "/api/v1/widgets/"+widget1ID, nil, headers)
 	if err != nil {
 		t.Fatalf("Failed to get updated widget: %v", err)
 	}

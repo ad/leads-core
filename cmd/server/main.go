@@ -143,6 +143,9 @@ func main() {
 	}
 	widgetService := services.NewWidgetService(widgetRepo, submissionRepo, statsRepo, ttlConfig)
 
+	// Initialize export service
+	exportService := services.NewExportService(submissionRepo, widgetRepo)
+
 	// Initialize JWT validator
 	jwtValidator := auth.NewJWTValidator(cfg.JWT.Secret)
 
@@ -159,7 +162,7 @@ func main() {
 	}
 
 	// Initialize handlers
-	widgetHandler := handlers.NewWidgetHandler(widgetService, validator)
+	widgetHandler := handlers.NewWidgetHandler(widgetService, exportService, validator)
 	publicHandler := handlers.NewPublicHandler(widgetService, validator)
 	userHandler := handlers.NewUserHandler(widgetService, validator)
 	healthHandler := handlers.NewHealthHandler(redisClient)
@@ -266,6 +269,11 @@ func routePrivateWidgetEndpoints(handler *handlers.WidgetHandler) http.HandlerFu
 			// Reconstruct URL as /widgets/{id}/submissions for handler
 			r.URL.Path = "/widgets" + path
 			handler.GetWidgetSubmissions(w, r)
+		case strings.HasSuffix(path, "/export"):
+			// GET /api/v1/widgets/{id}/export
+			// Reconstruct URL as /widgets/{id}/export for handler
+			r.URL.Path = "/widgets" + path
+			handler.ExportWidgetSubmissions(w, r)
 		default:
 			// GET /api/v1/widgets/{id} - get widget
 			// PUT /api/v1/widgets/{id} - update widget

@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ad/leads-core/internal/auth"
 	customErrors "github.com/ad/leads-core/internal/errors"
@@ -17,13 +19,15 @@ import (
 // WidgetHandler handles widget-related HTTP requests
 type WidgetHandler struct {
 	widgetService *services.WidgetService
+	exportService *services.ExportService
 	validator     *validation.SchemaValidator
 }
 
 // NewWidgetHandler creates a new widget handler
-func NewWidgetHandler(widgetService *services.WidgetService, validator *validation.SchemaValidator) *WidgetHandler {
+func NewWidgetHandler(widgetService *services.WidgetService, exportService *services.ExportService, validator *validation.SchemaValidator) *WidgetHandler {
 	return &WidgetHandler{
 		widgetService: widgetService,
+		exportService: exportService,
 		validator:     validator,
 	}
 }
@@ -369,6 +373,118 @@ func (h *WidgetHandler) GetWidgetSubmissions(w http.ResponseWriter, r *http.Requ
 		"count":     len(submissions),
 	})
 	writeJSONResponse(w, http.StatusOK, models.Response{Data: submissions, Meta: meta})
+}
+
+// ExportWidgetSubmissions handles GET /widgets/{id}/export
+func (h *WidgetHandler) ExportWidgetSubmissions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// Get user from context
+	user, ok := auth.GetUserFromContext(r.Context())
+	if !ok {
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found in context")
+		return
+	}
+
+	// Extract widget ID from URL
+	widgetID := extractWidgetID(r.URL.Path)
+	if widgetID == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "Widget ID is required")
+		return
+	}
+
+	// Parse query parameters
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		format = "json" // Default format
+	}
+
+	// Validate format
+	if format != "csv" && format != "json" && format != "xlsx" {
+		writeErrorResponse(w, http.StatusBadRequest, "Invalid format. Supported formats: csv, json, xlsx")
+		return
+	}
+
+	// Parse time range parameters
+	var from, to *time.Time
+	if fromStr := r.URL.Query().Get("from"); fromStr != "" {
+		if parsedFrom, err := time.Parse(time.RFC3339, fromStr); err == nil {
+			from = &parsedFrom
+		} else {
+			writeErrorResponse(w, http.StatusBadRequest, "Invalid 'from' date format. Use RFC3339 format (e.g., 2023-01-01T00:00:00Z)")
+			return
+		}
+	}
+
+	if toStr := r.URL.Query().Get("to"); toStr != "" {
+		if parsedTo, err := time.Parse(time.RFC3339, toStr); err == nil {
+			to = &parsedTo
+		} else {
+			writeErrorResponse(w, http.StatusBadRequest, "Invalid 'to' date format. Use RFC3339 format (e.g., 2023-12-31T23:59:59Z)")
+			return
+		}
+	}
+
+	// Create export options
+	options := models.ExportOptions{
+		Format: format,
+		From:   from,
+		To:     to,
+	}
+
+	// Export submissions using export service
+	data, filename, err := h.exportService.ExportSubmissions(r.Context(), widgetID, user.ID, options)
+	if err != nil {
+		logger.Error("Failed to export widget submissions", map[string]interface{}{
+			"action":    "export_widget_submissions",
+			"widget_id": widgetID,
+			"user_id":   user.ID,
+			"format":    format,
+			"error":     err.Error(),
+		})
+
+		if err.Error() == "unauthorized" {
+			writeErrorResponse(w, http.StatusForbidden, "Access denied")
+			return
+		}
+
+		if err.Error() == "widget not found" {
+			writeErrorResponse(w, http.StatusNotFound, "Widget not found")
+			return
+		}
+
+		writeErrorResponse(w, http.StatusInternalServerError, "Failed to export submissions")
+		return
+	}
+
+	// Set appropriate headers based on format
+	var contentType string
+	switch format {
+	case "csv":
+		contentType = "text/csv"
+	case "json":
+		contentType = "application/json"
+	case "xlsx":
+		contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	}
+
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+
+	logger.Info("Widget submissions exported successfully", map[string]interface{}{
+		"action":    "export_widget_submissions",
+		"widget_id": widgetID,
+		"user_id":   user.ID,
+		"format":    format,
+		"filename":  filename,
+		"size":      len(data),
+	})
+
+	w.Write(data)
 }
 
 // GetWidgetsSummary handles GET /widgets/summary
