@@ -183,10 +183,16 @@ JWT_SECRET=your-super-secret-jwt-key
 RATE_LIMIT_IP_PER_MINUTE=1
 RATE_LIMIT_GLOBAL_PER_MINUTE=1000
 
-# TTL Settings
-TTL_FREE_DAYS=30
-TTL_PRO_DAYS=365
+# TTL Settings for Submissions
+TTL_FREE_DAYS=30          # Free plan: submissions expire after 30 days
+TTL_PRO_DAYS=365          # Pro plan: submissions expire after 365 days
 ```
+
+**Note on TTL Settings:**
+- TTL applies only to submission data (`{widget_id}:submission:{submission_id}`)
+- Widget data, statistics, and indexes persist permanently until manually deleted
+- Daily view statistics have fixed 30-day TTL regardless of user plan
+- Rate limiting keys use 1-minute TTL for sliding window implementation
 
 ## Development
 
@@ -256,13 +262,45 @@ internal/
 
 ## Data Storage
 
-The service uses Redis Cluster with the following key patterns:
+The service uses Redis with the following key patterns and TTL policies:
 
-- Widgets: `widget:{widget_id}`
-- Submissions: `submission:{widget_id}:{submission_id}`
-- User widgets: `widgets:{user_id}`
-- Statistics: `widget:{widget_id}:stats`
-- Rate limiting: `rate_limit:ip:{ip}:{window}`
+### Key Patterns with Hash Tags (for Redis Cluster compatibility)
+- **Widgets**: `{widget_id}:widget` - Widget data (HASH)
+- **Submissions**: `{widget_id}:submission:{submission_id}` - Submission data (HASH)
+- **Widget Submissions Index**: `{widget_id}:submissions` - Widget submissions sorted by timestamp (ZSET)
+- **Widget Statistics**: `{widget_id}:stats` - Widget stats (views, submits, closes) (HASH)
+- **Daily Views**: `{widget_id}:views:{YYYY-MM-DD}` - Daily view counts (INCR)
+- **User Widgets**: `{user_id}:user:widgets` - User's widgets index (SET)
+
+### Global Indexes (without hash tags)
+- **Widgets by Time**: `widgets:by_time` - All widgets sorted by creation time (ZSET)
+- **Widgets by Type**: `widgets:type:{type}` - Widgets grouped by type (SET)
+- **Widgets by Status**: `widgets:enabled:{0|1}` - Widgets grouped by enabled status (SET)
+
+### Rate Limiting Keys
+- **IP Rate Limit**: `rate_limit:{window}:ip:{ip}` - IP-based rate limiting (INCR)
+- **Global Rate Limit**: `rate_limit:{window}:global` - Global rate limiting (INCR)
+
+### TTL (Time To Live) Policies
+
+#### Keys with Automatic TTL:
+- **Submissions**: TTL based on user plan
+  - Free plan: 30 days (TTL_FREE_DAYS)
+  - Pro plan: 365 days (TTL_PRO_DAYS)
+- **Daily Views**: 30 days (fixed) - Daily statistics cleanup
+- **Rate Limiting Keys**: 1 minute (sliding window)
+
+#### Keys without TTL (persistent):
+- **Widgets**: No TTL - persist until manually deleted
+- **Widget Statistics**: No TTL - persist until widget is deleted
+- **User Widgets Index**: No TTL - persist until manually cleaned
+- **Global Indexes**: No TTL - persist until manually cleaned
+- **Widget Submissions Index**: No TTL - persist until widget is deleted (but individual submissions may expire)
+
+#### TTL Update Behavior:
+- When user upgrades/downgrades plan, all their submissions get updated TTL
+- New submissions inherit TTL based on current user plan
+- TTL can be manually updated for specific users via admin API
 
 ## Security
 
@@ -270,10 +308,6 @@ The service uses Redis Cluster with the following key patterns:
 - Rate limiting to prevent abuse
 - Input validation for all requests
 - Automatic TTL for submissions based on user plan
-
-## License
-
-See LICENSE file for details.
 
 ## Redis Configuration Options
 
@@ -298,10 +332,3 @@ REDIS_ADDRESSES=redka
 REDKA_PORT=6379
 REDKA_DB_PATH=file:redka.db    # or :memory: for in-memory storage
 ```
-
-**Benefits of Embedded Redis:**
-- ✅ No external Redis server required
-- ✅ Simplified deployment and testing
-- ✅ Full Redis API compatibility
-- ✅ Persistent or in-memory storage options
-- ✅ Perfect for development, testing, and small deployments
