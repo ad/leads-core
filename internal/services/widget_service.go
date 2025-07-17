@@ -9,6 +9,7 @@ import (
 	"github.com/ad/leads-core/internal/models"
 	"github.com/ad/leads-core/internal/storage"
 	"github.com/ad/leads-core/pkg/logger"
+	"github.com/google/uuid"
 )
 
 // WidgetService handles business logic for widgets
@@ -40,6 +41,34 @@ func NewWidgetService(
 	}
 }
 
+// generateWidgetID generates a UUID v5 using user_id as namespace
+func (s *WidgetService) generateWidgetID(userID string) string {
+	// Create a namespace UUID from user_id
+	userNamespace := uuid.NewSHA1(uuid.NameSpaceOID, []byte(userID))
+
+	// Use timestamp for uniqueness within user namespace
+	name := fmt.Sprintf("widget_%d", time.Now().UnixNano())
+
+	// Generate UUID v5
+	widgetUUID := uuid.NewSHA1(userNamespace, []byte(name))
+
+	return widgetUUID.String()
+}
+
+// generateSubmissionID generates a UUID v5 using widget_id as namespace
+func (s *WidgetService) generateSubmissionID(widgetID string) string {
+	// Create a namespace UUID from widget_id
+	widgetNamespace := uuid.NewSHA1(uuid.NameSpaceOID, []byte(widgetID))
+
+	// Use timestamp for uniqueness within widget namespace
+	name := fmt.Sprintf("submission_%d", time.Now().UnixNano())
+
+	// Generate UUID v5
+	submissionUUID := uuid.NewSHA1(widgetNamespace, []byte(name))
+
+	return submissionUUID.String()
+}
+
 // CreateWidget creates a new widget
 func (s *WidgetService) CreateWidget(ctx context.Context, userID string, req models.CreateWidgetRequest) (*models.Widget, error) {
 	// Validate request
@@ -50,8 +79,8 @@ func (s *WidgetService) CreateWidget(ctx context.Context, userID string, req mod
 		return nil, fmt.Errorf("widget type is required")
 	}
 
-	// Generate ID (simple timestamp-based ID for now)
-	widgetID := fmt.Sprintf("widget_%d", time.Now().UnixNano())
+	// Generate UUID v5 using user_id as namespace
+	widgetID := s.generateWidgetID(userID)
 
 	// Create widget
 	widget := &models.Widget{
@@ -188,8 +217,8 @@ func (s *WidgetService) SubmitWidget(ctx context.Context, widgetID string, req m
 		return nil, errors.ErrWidgetDisabled
 	}
 
-	// Generate submission ID
-	submissionID := fmt.Sprintf("sub_%d", time.Now().UnixNano())
+	// Generate submission ID using UUID v5
+	submissionID := s.generateSubmissionID(widgetID)
 
 	// Calculate TTL based on widget owner's plan (this would come from user data)
 	// For now, use default TTL

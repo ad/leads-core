@@ -107,7 +107,7 @@ curl -X POST http://localhost:8080/widgets \
 
 #### Submit to a widget (Public endpoint):
 ```bash
-curl -X POST http://localhost:8080/widgets/WIDGET_ID/submit \
+curl -X POST http://localhost:8080/widgets/550e8400-e29b-41d4-a716-446655440000/submit \
   -H "Content-Type: application/json" \
   -d '{
     "data": {
@@ -121,12 +121,12 @@ curl -X POST http://localhost:8080/widgets/WIDGET_ID/submit \
 #### Register widget events (Public endpoint):
 ```bash
 # Register a view event
-curl -X POST http://localhost:8080/widgets/WIDGET_ID/events \
+curl -X POST http://localhost:8080/widgets/550e8400-e29b-41d4-a716-446655440000/events \
   -H "Content-Type: application/json" \
   -d '{"type": "view"}'
 
 # Register a close event
-curl -X POST http://localhost:8080/widgets/WIDGET_ID/events \
+curl -X POST http://localhost:8080/widgets/550e8400-e29b-41d4-a716-446655440000/events \
   -H "Content-Type: application/json" \
   -d '{"type": "close"}'
 ```
@@ -281,6 +281,27 @@ The service uses Redis with the following key patterns and TTL policies:
 - **IP Rate Limit**: `rate_limit:{window}:ip:{ip}` - IP-based rate limiting (INCR)
 - **Global Rate Limit**: `rate_limit:{window}:global` - Global rate limiting (INCR)
 
+### ID Generation Strategy
+
+**Widget IDs**: Generated using **UUID v5** with user_id as namespace
+- Format: Standard UUID v5 (e.g., `550e8400-e29b-41d4-a716-446655440000`)
+- Namespace: SHA-1 hash of user_id
+- Name: `widget_{timestamp_nanoseconds}`
+- **Benefits**: 
+  - Deterministic (reproducible for debugging)
+  - Logically grouped by user
+  - Cryptographically secure (SHA-1 hash)
+  - Guaranteed uniqueness within user namespace
+
+**Submission IDs**: Generated using **UUID v5** with widget_id as namespace
+- Format: Standard UUID v5
+- Namespace: SHA-1 hash of widget_id  
+- Name: `submission_{timestamp_nanoseconds}`
+- **Benefits**:
+  - Logically grouped by widget
+  - Deterministic for debugging
+  - Guaranteed uniqueness within widget namespace
+
 ### TTL (Time To Live) Policies
 
 #### Keys with Automatic TTL:
@@ -302,12 +323,28 @@ The service uses Redis with the following key patterns and TTL policies:
 - New submissions inherit TTL based on current user plan
 - TTL can be manually updated for specific users via admin API
 
+### ID Format Examples
+
+**Widget ID**: `550e8400-e29b-41d4-a716-446655440000`
+- Generated using UUID v5 with user_id namespace
+- Deterministic: same user + timestamp = same widget ID
+- Safe: Cannot guess other users' widget IDs
+
+**Submission ID**: `6ba7b810-9dad-11d1-80b4-00c04fd430c8`  
+- Generated using UUID v5 with widget_id namespace
+- Deterministic: same widget + timestamp = same submission ID
+- Scoped: Cannot access submissions from other widgets
+
 ## Security
 
-- JWT token validation for private endpoints
-- Rate limiting to prevent abuse
-- Input validation for all requests
-- Automatic TTL for submissions based on user plan
+- **JWT token validation** for private endpoints
+- **Rate limiting** to prevent abuse  
+- **Input validation** for all requests
+- **Automatic TTL** for submissions based on user plan
+- **Secure ID generation**: UUID v5 with namespace-based deterministic generation
+  - Widget IDs: Cannot be guessed or enumerated by attackers
+  - Submission IDs: Scoped to specific widgets, preventing cross-widget access
+  - SHA-1 hashing ensures cryptographic security while maintaining reproducibility
 
 ## Redis Configuration Options
 
