@@ -29,7 +29,7 @@ jobs:
           version=`echo $(jq -r '.version' <<< "$content")`
           echo "version=${version}" >> $GITHUB_OUTPUT
           REPO_NAME=$(echo ${{ github.repository }})
-          repo_name=`basename ${{ github.repository }}`
+          repo_name=$(echo "${{ github.repository }}" | cut -d'/' -f2)
           echo "repo_name=${repo_name}" >> $GITHUB_OUTPUT
           DOCKER_IMAGE="${{ secrets.DOCKER_USER }}/${repo_name}"
           echo "docker_image=${DOCKER_IMAGE}" >> $GITHUB_OUTPUT
