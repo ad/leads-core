@@ -24,6 +24,7 @@ type Config struct {
 
 // ServerConfig holds HTTP server configuration
 type ServerConfig struct {
+	Host         string        `json:"HOST"`
 	Port         string        `json:"PORT"`
 	ReadTimeout  time.Duration `json:"READ_TIMEOUT"`
 	WriteTimeout time.Duration `json:"WRITE_TIMEOUT"`
@@ -61,6 +62,7 @@ type TTLConfig struct {
 func Load(args []string) (*Config, error) {
 	config := &Config{
 		Server: ServerConfig{
+			Host:         getEnv("HOST", "0.0.0.0"),
 			Port:         getEnv("PORT", "8080"),
 			ReadTimeout:  getEnvDuration("READ_TIMEOUT", 30*time.Second),
 			WriteTimeout: getEnvDuration("WRITE_TIMEOUT", 30*time.Second),
@@ -103,6 +105,7 @@ func Load(args []string) (*Config, error) {
 	if !initFromFile {
 		flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 
+		flags.StringVar(&config.Server.Host, "host", lookupEnvOrString("HOST", config.Server.Host), "HOST")
 		flags.StringVar(&config.Server.Port, "port", lookupEnvOrString("PORT", config.Server.Port), "PORT")
 		flags.DurationVar(&config.Server.ReadTimeout, "readTimeout", lookupEnvOrDuration("READ_TIMEOUT", config.Server.ReadTimeout), "READ_TIMEOUT")
 		flags.DurationVar(&config.Server.WriteTimeout, "writeTimeout", lookupEnvOrDuration("WRITE_TIMEOUT", config.Server.WriteTimeout), "WRITE_TIMEOUT")

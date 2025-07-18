@@ -1,5 +1,5 @@
 {
-  "version": "1.0.8",
+  "version": "1.0.9",
   "name": "leads-core",
   "slug": "leads-core",
   "description": "",
@@ -14,16 +14,17 @@
   "panel_icon": "mdi:home-city-outline",
   "panel_title": "leads core",
   "ports": {
-    "7890/tcp": 7891
+    "7891/tcp": 7891
   },
   "ports_description": {
-    "7890/tcp": "Exposed port"
+    "7891/tcp": "Exposed port"
   },
   "hassio_api": true,
   "homeassistant_api": true,
   "host_network": false,
   "options": {
     "SERVER": {
+      "HOST": "0.0.0.0",
       "PORT": "7891",
       "READ_TIMEOUT": "30s",
       "WRITE_TIMEOUT": "30s"
@@ -49,6 +50,7 @@
   },
   "schema": {
     "SERVER": {
+      "HOST": "str",
       "PORT": "str",
       "READ_TIMEOUT": "str",
       "WRITE_TIMEOUT": "str"

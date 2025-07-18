@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -197,7 +198,7 @@ func main() {
 
 	// Create HTTP server
 	server := &http.Server{
-		Addr:         ":" + cfg.Server.Port,
+		Addr:         net.JoinHostPort(cfg.Server.Host, cfg.Server.Port),
 		Handler:      mux,
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
