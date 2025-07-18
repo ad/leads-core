@@ -213,8 +213,8 @@ class UIManager {
                                 </div>
                                 <div class="detail-item">
                                     <label>Status:</label>
-                                    <span class="status ${widget.enabled ? 'enabled' : 'disabled'}">
-                                        ${widget.enabled ? '✅ Active' : '❌ Disabled'}
+                                    <span class="status ${widget.isVisible ? 'enabled' : 'disabled'}">
+                                        ${widget.isVisible ? '✅ Active' : '❌ Disabled'}
                                     </span>
                                 </div>
                                 <div class="detail-item">
