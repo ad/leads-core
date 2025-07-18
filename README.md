@@ -88,6 +88,8 @@ For Redis cluster deployments, use the provided management script:
 
 ### API Examples
 
+Documentation for the API is available at `/api-docs.yaml`.
+
 #### Create a widget (Private endpoint - requires JWT):
 ```bash
 curl -X POST http://localhost:8080/widgets \

@@ -1,0 +1,1047 @@
+openapi: 3.0.0
+info:
+  title: Leads Core API
+  description: |
+    Комплексное API для управления виджетами лидогенерации.
+    
+    Сервис предоставляет возможности для:
+    - Создания и управления виджетами
+    - Сбора форм и событий от виджетов
+    - Получения статистики и аналитики
+    - Мониторинга состояния системы
+    
+    ## Аутентификация
+    
+    API использует JWT токены для аутентификации. Токен должен быть передан в заголовке Authorization:
+    ```
+    Authorization: Bearer <jwt_token>
+    ```
+    
+    ## Пагинация
+    
+    Многие эндпоинты поддерживают пагинацию с параметрами:
+    - `page` - номер страницы (по умолчанию 1)
+    - `per_page` или `limit` - количество элементов на странице (по умолчанию 20, максимум 100)
+    
+    ## Коды ответов
+    
+    - `200` - Успешный запрос
+    - `201` - Ресурс создан
+    - `204` - Успешный запрос без содержимого
+    - `400` - Ошибка валидации или неверный запрос
+    - `401` - Не авторизован
+    - `403` - Доступ запрещен
+    - `404` - Ресурс не найден
+    - `405` - Метод не поддерживается
+    - `500` - Внутренняя ошибка сервера
+  version: 1.0.0
+  contact:
+    name: API Support
+    url: https://github.com/ad/leads-core
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api.leads.example.com
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Health & Monitoring Endpoints
+  /health:
+    get:
+      tags:
+        - Monitoring
+      summary: Проверка состояния сервиса
+      description: Возвращает информацию о состоянии сервиса и его зависимостей
+      security: []
+      responses:
+        '200':
+          description: Состояние сервиса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Проблемы с сервисом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /metrics:
+    get:
+      tags:
+        - Monitoring
+      summary: Системные метрики
+      description: Возвращает метрики производительности и использования ресурсов в формате Prometheus
+      security: []
+      responses:
+        '200':
+          description: Системные метрики в формате Prometheus
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: |
+                  # HELP go_memstats_alloc_bytes Number of bytes allocated and still in use.
+                  # TYPE go_memstats_alloc_bytes gauge
+                  go_memstats_alloc_bytes 2.097152e+06
+
+  # Widget Management Endpoints (API v1)
+  /api/v1/widgets:
+    get:
+      tags:
+        - Widgets
+      summary: Получить список виджетов пользователя
+      description: Возвращает список виджетов текущего пользователя с поддержкой пагинации
+      parameters:
+        - name: page
+          in: query
+          description: Номер страницы
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          description: Количество элементов на странице
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Список виджетов
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Response'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Widget'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Widgets
+      summary: Создать новый виджет
+      description: Создает новый виджет для текущего пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWidgetRequest'
+            examples:
+              contactForm:
+                summary: Форма обратной связи
+                value:
+                  type: "lead-form"
+                  name: "Форма обратной связи"
+                  enabled: true
+                  fields:
+                    title: "Свяжитесь с нами"
+                    description: "Оставьте ваши контакты"
+                    required_fields: ["name", "email"]
+              newsletter:
+                summary: Баннер подписки
+                value:
+                  type: "banner"
+                  name: "Баннер подписки на новости"
+                  enabled: true
+                  fields:
+                    title: "Подпишитесь на новости"
+                    placeholder: "Введите ваш email"
+      responses:
+        '201':
+          description: Виджет создан
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Response'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Widget'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/widgets/{id}:
+    get:
+      tags:
+        - Widgets
+      summary: Получить виджет по ID
+      description: Возвращает информацию о конкретном виджете
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор виджета
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Информация о виджете
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Response'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Widget'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags:
+        - Widgets
+      summary: Обновить виджет
+      description: Обновляет настройки существующего виджета
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор виджета
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWidgetRequest'
+            examples:
+              enableWidget:
+                summary: Включить виджет
+                value:
+                  enabled: true
+              updateTitle:
+                summary: Обновить название и настройки
+                value:
+                  name: "Новое название виджета"
+                  fields:
+                    title: "Обновленный заголовок"
+                    required_fields: ["name", "email", "phone"]
+      responses:
+        '200':
+          description: Виджет обновлен
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Response'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Widget'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      tags:
+        - Widgets
+      summary: Удалить виджет
+      description: Удаляет виджет и все связанные с ним данные
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор виджета
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Виджет удален
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/widgets/{id}/stats:
+    get:
+      tags:
+        - Analytics
+      summary: Получить статистику виджета
+      description: Возвращает статистику просмотров, отправок и других событий для виджета
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор виджета
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Статистика виджета
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Response'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WidgetStats'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/widgets/{id}/submissions:
+    get:
+      tags:
+        - Analytics
+      summary: Получить отправки виджета
+      description: Возвращает список всех отправок для конкретного виджета с поддержкой пагинации
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор виджета
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Номер страницы
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Количество элементов на странице
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Список отправок
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Response'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Submission'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/widgets/{id}/export:
+    get:
+      tags:
+        - Analytics
+      summary: Экспорт отправок виджета
+      description: Экспортирует отправки конкретного виджета в различных форматах (CSV, JSON, XLSX)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор виджета
+          schema:
+            type: string
+        - name: format
+          in: query
+          description: Формат экспорта
+          schema:
+            type: string
+            enum: ["csv", "json", "xlsx"]
+            default: "json"
+        - name: from
+          in: query
+          description: Начальная дата для фильтрации (RFC3339 формат)
+          schema:
+            type: string
+            format: date-time
+            example: "2024-01-01T00:00:00Z"
+        - name: to
+          in: query
+          description: Конечная дата для фильтрации (RFC3339 формат)
+          schema:
+            type: string
+            format: date-time
+            example: "2024-12-31T23:59:59Z"
+      responses:
+        '200':
+          description: Файл экспорта
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              description: Имя файла для скачивания
+              schema:
+                type: string
+                example: 'attachment; filename="widget_submissions_2024-01-15.csv"'
+        '400':
+          description: Неверные параметры экспорта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/widgets/summary:
+    get:
+      tags:
+        - Analytics
+      summary: Общая сводка по виджетам
+      description: Возвращает сводную статистику по всем виджетам пользователя
+      responses:
+        '200':
+          description: Сводка по виджетам
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Response'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/WidgetsSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # Public Endpoints (не требуют аутентификации)
+  /widgets/{id}/submit:
+    post:
+      tags:
+        - Public
+      summary: Отправить данные в виджет
+      description: |
+        Публичный эндпоинт для отправки данных в виджет. 
+        Не требует аутентификации и используется виджетами на внешних сайтах.
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор виджета
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmissionRequest'
+            examples:
+              contactForm:
+                summary: Отправка формы обратной связи
+                value:
+                  data:
+                    name: "Иван Иванов"
+                    email: "ivan@example.com"
+                    phone: "+7 (900) 123-45-67"
+                    message: "Интересует ваш продукт"
+              newsletter:
+                summary: Подписка через баннер
+                value:
+                  data:
+                    email: "user@example.com"
+      responses:
+        '201':
+          description: Данные отправлены
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Response'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Submission'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          description: Виджет отключен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /widgets/{id}/events:
+    post:
+      tags:
+        - Public
+      summary: Зарегистрировать событие виджета
+      description: |
+        Публичный эндпоинт для регистрации событий виджета (просмотры, закрытия).
+        Не требует аутентификации и используется для аналитики.
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор виджета
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventRequest'
+            examples:
+              view:
+                summary: Регистрация просмотра
+                value:
+                  type: "view"
+              close:
+                summary: Регистрация закрытия
+                value:
+                  type: "close"
+      responses:
+        '204':
+          description: Событие зарегистрировано
+        '400':
+          description: Неверный тип события
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          description: Виджет отключен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Admin Panel
+  /panel:
+    get:
+      tags:
+        - Admin
+      summary: Панель администратора
+      description: |
+        Веб-интерфейс для управления виджетами. 
+        Предоставляет пользовательский интерфейс для создания, просмотра и управления виджетами.
+      security: []
+      responses:
+        '200':
+          description: HTML страница панели администратора
+          content:
+            text/html:
+              schema:
+                type: string
+
+  # User Management Endpoints
+  /api/v1/users/{id}/ttl:
+    put:
+      tags:
+        - Users
+      summary: Обновить TTL для отправок пользователя
+      description: |
+        Обновляет время жизни (TTL) для всех отправок пользователя.
+        Пользователь может обновлять TTL только для своих собственных данных.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор пользователя
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTTLRequest'
+            examples:
+              setTTL:
+                summary: Установить TTL на 90 дней
+                value:
+                  ttl_days: 90
+      responses:
+        '200':
+          description: TTL обновлен
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Response'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          message:
+                            type: string
+                            example: "TTL updated successfully"
+                          user_id:
+                            type: string
+                          ttl_days:
+                            type: integer
+        '400':
+          description: Неверные параметры TTL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Нельзя обновлять TTL для других пользователей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT токен для аутентификации
+
+  schemas:
+    # Core Models
+    Widget:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Уникальный идентификатор виджета
+          example: "widget_123abc"
+        owner_id:
+          type: string
+          description: ID владельца виджета
+          example: "user_456def"
+        type:
+          type: string
+          description: Тип виджета
+          example: "lead-form"
+          enum: ["lead-form", "banner", "action", "social-proof", "live-interest", "widget-tab", "sticky-bar", "quiz", "wheelOfFortune"]
+        name:
+          type: string
+          description: Название виджета
+          example: "Форма обратной связи"
+        enabled:
+          type: boolean
+          description: Активен ли виджет
+          example: true
+        fields:
+          type: object
+          description: Настройки полей виджета
+          example:
+            title: "Свяжитесь с нами"
+            description: "Оставьте ваши контакты"
+            required_fields: ["name", "email"]
+            optional_fields: ["phone", "message"]
+        created_at:
+          type: string
+          format: date-time
+          description: Время создания
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Время последнего обновления
+          example: "2024-01-16T14:20:00Z"
+        stats:
+          $ref: '#/components/schemas/WidgetStats'
+
+    Submission:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Уникальный идентификатор отправки
+          example: "submission_789ghi"
+        widget_id:
+          type: string
+          description: ID виджета
+          example: "widget_123abc"
+        data:
+          type: object
+          description: Данные отправки
+          example:
+            name: "Иван Иванов"
+            email: "ivan@example.com"
+            phone: "+7 (900) 123-45-67"
+            message: "Интересует ваш продукт"
+        created_at:
+          type: string
+          format: date-time
+          description: Время отправки
+          example: "2024-01-16T15:45:00Z"
+        ttl:
+          type: string
+          description: Время жизни записи
+          example: "2160h0m0s"
+
+    WidgetStats:
+      type: object
+      properties:
+        widget_id:
+          type: string
+          description: ID виджета
+          example: "widget_123abc"
+        views:
+          type: integer
+          format: int64
+          description: Количество просмотров
+          example: 1254
+        submits:
+          type: integer
+          format: int64
+          description: Количество отправок
+          example: 87
+        closes:
+          type: integer
+          format: int64
+          description: Количество закрытий
+          example: 156
+        last_view:
+          type: string
+          format: date-time
+          description: Время последнего просмотра
+          example: "2024-01-16T15:30:00Z"
+
+    WidgetsSummary:
+      type: object
+      properties:
+        total_widgets:
+          type: integer
+          description: Общее количество виджетов
+          example: 5
+        active_widgets:
+          type: integer
+          description: Количество активных виджетов
+          example: 4
+        disabled_widgets:
+          type: integer
+          description: Количество отключенных виджетов
+          example: 1
+        total_views:
+          type: integer
+          description: Общее количество просмотров
+          example: 3420
+        total_submissions:
+          type: integer
+          description: Общее количество отправок
+          example: 234
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Уникальный идентификатор пользователя
+          example: "user_456def"
+        username:
+          type: string
+          description: Имя пользователя
+          example: "ivan_user"
+        plan:
+          type: string
+          description: Тарифный план
+          example: "pro"
+          enum: ["free", "pro", "enterprise"]
+
+    # Request Models
+    CreateWidgetRequest:
+      type: object
+      required:
+        - type
+        - name
+        - enabled
+        - fields
+      properties:
+        type:
+          type: string
+          description: Тип виджета
+          example: "lead-form"
+          enum: ["lead-form", "banner", "action", "social-proof", "live-interest", "widget-tab", "sticky-bar", "quiz", "wheelOfFortune"]
+        name:
+          type: string
+          description: Название виджета
+          example: "Форма обратной связи"
+          minLength: 1
+          maxLength: 255
+        enabled:
+          type: boolean
+          description: Активен ли виджет
+          example: true
+        fields:
+          type: object
+          description: Настройки полей виджета
+          example:
+            title: "Свяжитесь с нами"
+            description: "Оставьте ваши контакты"
+            required_fields: ["name", "email"]
+
+    UpdateWidgetRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Тип виджета
+          example: "lead-form"
+          enum: ["lead-form", "banner", "action", "social-proof", "live-interest", "widget-tab", "sticky-bar", "quiz", "wheelOfFortune"]
+        name:
+          type: string
+          description: Название виджета
+          example: "Новое название"
+          minLength: 1
+          maxLength: 100
+        enabled:
+          type: boolean
+          description: Активен ли виджет
+          example: false
+        fields:
+          type: object
+          description: Настройки полей виджета
+          example:
+            title: "Обновленный заголовок"
+            required_fields: ["name", "email", "phone"]
+
+    SubmissionRequest:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          description: Данные для отправки
+          example:
+            name: "Иван Иванов"
+            email: "ivan@example.com"
+            phone: "+7 (900) 123-45-67"
+            message: "Интересует ваш продукт"
+
+    EventRequest:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          description: Тип события
+          example: "view"
+          enum: ["view", "close"]
+
+    UpdateTTLRequest:
+      type: object
+      required:
+        - ttl_days
+      properties:
+        ttl_days:
+          type: integer
+          description: Количество дней для TTL
+          minimum: 1
+          maximum: 3650
+          example: 90
+
+    # Response Models
+    Response:
+      type: object
+      properties:
+        data:
+          description: Данные ответа
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    Meta:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Текущая страница
+          example: 1
+        per_page:
+          type: integer
+          description: Элементов на странице
+          example: 20
+        total:
+          type: integer
+          description: Общее количество элементов
+          example: 156
+        has_more:
+          type: boolean
+          description: Есть ли еще страницы
+          example: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Описание ошибки
+          example: "Validation failed"
+        details:
+          description: Дополнительные детали ошибки
+          example:
+            field: "email"
+            message: "Invalid email format"
+
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Validation error"
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "email"
+              message:
+                type: string
+                example: "Invalid email format"
+
+    # Health & Metrics
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ok"
+          enum: ["ok", "error"]
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-01-16T10:30:00Z"
+        uptime:
+          type: string
+          description: Время работы сервиса
+          example: "72h30m15s"
+        services:
+          type: object
+          description: Состояние зависимых сервисов
+          example:
+            redis: "ok"
+            database: "ok"
+        metrics:
+          $ref: '#/components/schemas/HealthMetrics'
+
+    HealthMetrics:
+      type: object
+      properties:
+        memory_usage_mb:
+          type: number
+          format: float
+          description: Использование памяти в MB
+          example: 45.2
+        cpu_usage_percent:
+          type: number
+          format: float
+          description: Использование CPU в процентах
+          example: 12.5
+        goroutines:
+          type: integer
+          description: Количество горутин
+          example: 45
+
+  responses:
+    Unauthorized:
+      description: Не авторизован
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "User not found in context"
+
+    NotFound:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Widget not found"
+
+    ValidationError:
+      description: Ошибка валидации
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+          example:
+            error: "Validation error"
+            details:
+              - field: "email"
+                message: "Invalid email format"
+              - field: "name"
+                message: "Name is required"
+
+    InternalError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Internal server error"
+
+tags:
+  - name: Widgets
+    description: Управление виджетами - создание, обновление, удаление
+  - name: Analytics
+    description: Статистика и аналитика виджетов
+  - name: Public
+    description: Публичные эндпоинты для виджетов (без аутентификации)
+  - name: Users
+    description: Управление пользователями и их настройками
+  - name: Admin
+    description: Панель администратора для управления виджетами
+  - name: Monitoring
+    description: Мониторинг состояния системы и метрики
