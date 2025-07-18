@@ -31,9 +31,10 @@ type ServerConfig struct {
 
 // RedisConfig holds Redis cluster configuration
 type RedisConfig struct {
-	Addresses      []string `json:"ADDRESSES"`
-	Password       string   `json:"PASSWORD"`
-	DB             int      `json:"DB"`
+	Addresses      []string
+	AddressesStr   string `json:"ADDRESSES"`
+	Password       string `json:"PASSWORD"`
+	DB             int    `json:"DB"`
 	UseEmbedded    bool
 	EmbeddedPort   string `json:"REDKA_PORT"`
 	EmbeddedDBPath string `json:"REDKA_DB_PATH"`
@@ -65,7 +66,7 @@ func Load(args []string) (*Config, error) {
 			WriteTimeout: getEnvDuration("WRITE_TIMEOUT", 30*time.Second),
 		},
 		Redis: RedisConfig{
-			Addresses:      getEnvStringSlice("ADDRESSES", []string{"localhost:6379"}),
+			AddressesStr:   getEnv("ADDRESSES", "localhost:6379"),
 			Password:       getEnv("PASSWORD", ""),
 			DB:             getEnvInt("DB", 0),
 			UseEmbedded:    false,
@@ -105,10 +106,7 @@ func Load(args []string) (*Config, error) {
 		flags.StringVar(&config.Server.Port, "port", lookupEnvOrString("PORT", config.Server.Port), "PORT")
 		flags.DurationVar(&config.Server.ReadTimeout, "readTimeout", lookupEnvOrDuration("READ_TIMEOUT", config.Server.ReadTimeout), "READ_TIMEOUT")
 		flags.DurationVar(&config.Server.WriteTimeout, "writeTimeout", lookupEnvOrDuration("WRITE_TIMEOUT", config.Server.WriteTimeout), "WRITE_TIMEOUT")
-
-		var redisAddressesStr string
-		flags.StringVar(&redisAddressesStr, "redisAddresses", lookupEnvOrString("REDIS_ADDRESSES", strings.Join(config.Redis.Addresses, ",")), "REDIS_ADDRESSES")
-
+		flags.StringVar(&config.Redis.AddressesStr, "redisAddresses", lookupEnvOrString("REDIS_ADDRESSES", config.Redis.AddressesStr), "REDIS_ADDRESSES")
 		flags.StringVar(&config.Redis.Password, "redisPassword", lookupEnvOrString("REDIS_PASSWORD", config.Redis.Password), "REDIS_PASSWORD")
 		flags.IntVar(&config.Redis.DB, "redisDB", lookupEnvOrInt("REDIS_DB", config.Redis.DB), "REDIS_DB")
 		flags.StringVar(&config.Redis.EmbeddedPort, "redisEmbeddedPort", lookupEnvOrString("REDKA_PORT", config.Redis.EmbeddedPort), "REDKA_PORT")
@@ -122,15 +120,15 @@ func Load(args []string) (*Config, error) {
 		if err := flags.Parse(args[1:]); err != nil {
 			return config, fmt.Errorf("error parsing flags: %w", err)
 		}
-
-		// Преобразуем строку адресов Redis в слайс
-		if redisAddressesStr != "" {
-			config.Redis.Addresses = strings.Split(redisAddressesStr, ",")
-		}
 	}
 
 	if config.JWT.Secret == "" {
 		return nil, fmt.Errorf("JWT_SECRET environment variable is required")
+	}
+
+	// Преобразуем строку адресов Redis в слайс
+	if config.Redis.AddressesStr != "" {
+		config.Redis.Addresses = strings.Split(config.Redis.AddressesStr, ",")
 	}
 
 	// Определяем, нужно ли использовать встроенный Redis сервер
@@ -174,13 +172,4 @@ func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
 		return defaultValue
 	}
 	return duration
-}
-
-// getEnvStringSlice gets an environment variable as string slice with a default value
-func getEnvStringSlice(key string, defaultValue []string) []string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
-	return strings.Split(value, ",")
 }
