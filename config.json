@@ -1,5 +1,5 @@
 {
-  "version": "1.0.4",
+  "version": "1.0.5",
   "name": "leads-core",
   "slug": "leads-core",
   "description": "",
@@ -54,7 +54,7 @@
       "WRITE_TIMEOUT": "str"
     },
     "REDIS": {
-      "ADDRESSES": "list",
+      "ADDRESSES": "list(str)",
       "PASSWORD": "str",
       "DB": "int",
       "REDKA_PORT": "str",
