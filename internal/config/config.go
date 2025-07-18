@@ -1,12 +1,17 @@
 package config
 
 import (
+	"encoding/json"
+	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 )
+
+const ConfigFileName = "/data/options.json"
 
 // Config holds all configuration for the application
 type Config struct {
@@ -52,7 +57,7 @@ type TTLConfig struct {
 }
 
 // Load loads configuration from environment variables
-func Load() (*Config, error) {
+func Load(args []string) (*Config, error) {
 	config := &Config{
 		Server: ServerConfig{
 			Port:         getEnv("SERVER_PORT", "8080"),
@@ -78,6 +83,50 @@ func Load() (*Config, error) {
 			FreeDays: getEnvInt("TTL_FREE_DAYS", 30),
 			ProDays:  getEnvInt("TTL_PRO_DAYS", 365),
 		},
+	}
+
+	var initFromFile = false
+
+	if _, err := os.Stat(ConfigFileName); err == nil {
+		jsonFile, err := os.Open(ConfigFileName)
+		if err == nil {
+			byteValue, _ := io.ReadAll(jsonFile)
+			if err = json.Unmarshal(byteValue, &config); err == nil {
+				initFromFile = true
+			} else {
+				fmt.Printf("error on unmarshal config from file %s\n", err.Error())
+			}
+		}
+	}
+
+	if !initFromFile {
+		flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
+
+		flags.StringVar(&config.Server.Port, "port", lookupEnvOrString("PORT", config.Server.Port), "PORT")
+		flags.DurationVar(&config.Server.ReadTimeout, "readTimeout", lookupEnvOrDuration("READ_TIMEOUT", config.Server.ReadTimeout), "READ_TIMEOUT")
+		flags.DurationVar(&config.Server.WriteTimeout, "writeTimeout", lookupEnvOrDuration("WRITE_TIMEOUT", config.Server.WriteTimeout), "WRITE_TIMEOUT")
+
+		var redisAddressesStr string
+		flags.StringVar(&redisAddressesStr, "redisAddresses", lookupEnvOrString("REDIS_ADDRESSES", strings.Join(config.Redis.Addresses, ",")), "REDIS_ADDRESSES")
+
+		flags.StringVar(&config.Redis.Password, "redisPassword", lookupEnvOrString("REDIS_PASSWORD", config.Redis.Password), "REDIS_PASSWORD")
+		flags.IntVar(&config.Redis.DB, "redisDB", lookupEnvOrInt("REDIS_DB", config.Redis.DB), "REDIS_DB")
+		flags.StringVar(&config.Redis.EmbeddedPort, "redisEmbeddedPort", lookupEnvOrString("REDKA_PORT", config.Redis.EmbeddedPort), "REDKA_PORT")
+		flags.StringVar(&config.Redis.EmbeddedDBPath, "redisEmbeddedDBPath", lookupEnvOrString("REDKA_DB_PATH", config.Redis.EmbeddedDBPath), "REDKA_DB_PATH")
+		flags.StringVar(&config.JWT.Secret, "jwtSecret", lookupEnvOrString("JWT_SECRET", config.JWT.Secret), "JWT_SECRET")
+		flags.IntVar(&config.RateLimit.IPPerMinute, "rateLimitIPPerMinute", lookupEnvOrInt("RATE_LIMIT_IP_PER_MINUTE", config.RateLimit.IPPerMinute), "RATE_LIMIT_IP_PER_MINUTE")
+		flags.IntVar(&config.RateLimit.GlobalPerMinute, "rateLimitGlobalPerMinute", lookupEnvOrInt("RATE_LIMIT_GLOBAL_PER_MINUTE", config.RateLimit.GlobalPerMinute), "RATE_LIMIT_GLOBAL_PER_MINUTE")
+		flags.IntVar(&config.TTL.FreeDays, "ttlFreeDays", lookupEnvOrInt("TTL_FREE_DAYS", config.TTL.FreeDays), "TTL_FREE_DAYS")
+		flags.IntVar(&config.TTL.ProDays, "ttlProDays", lookupEnvOrInt("TTL_PRO_DAYS", config.TTL.ProDays), "TTL_PRO_DAYS")
+
+		if err := flags.Parse(args[1:]); err != nil {
+			return config, fmt.Errorf("error parsing flags: %w", err)
+		}
+
+		// Преобразуем строку адресов Redis в слайс
+		if redisAddressesStr != "" {
+			config.Redis.Addresses = strings.Split(redisAddressesStr, ",")
+		}
 	}
 
 	if config.JWT.Secret == "" {

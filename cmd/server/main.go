@@ -71,7 +71,7 @@ func main() {
 	logger.Info("Starting Leads Core service")
 
 	// Load configuration
-	cfg, err := config.Load()
+	cfg, err := config.Load(os.Args)
 	if err != nil {
 		logger.Fatal("Failed to load configuration", map[string]interface{}{
 			"error": err.Error(),
