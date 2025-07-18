@@ -1,3 +1,6 @@
+BUILD_VERSION=$(shell cat config.json | awk 'BEGIN { FS="\""; RS="," }; { if ($$2 == "version") {print $$4} }')
+REPO=danielapatin/leads-core
+
 .PHONY: build run stop test clean logs help
 
 # Default target
@@ -132,6 +135,9 @@ fmt: ## Format Go code
 lint: ## Lint Go code
 	@echo "Linting code..."
 	golangci-lint run
+
+publish:
+	@BUILD_VERSION=$(BUILD_VERSION) KO_DOCKER_REPO=$(REPO) ko publish ./cmd/server --bare --sbom=none --tags="$(BUILD_VERSION),latest"
 
 # Show help
 help: ## Show this help message
