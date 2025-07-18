@@ -141,7 +141,7 @@ class APIClient {
     async getWidget(widgetId) {
         const url = `${this.baseURL}/api/v1/widgets/${widgetId}`;
         const response = await this.makeRequest(url);
-        return response.data;
+        return response;
     }
 
     /**
@@ -186,8 +186,19 @@ class APIClient {
     async updateWidget(widgetId, widgetData) {
         const url = `${this.baseURL}/api/v1/widgets/${widgetId}`;
         return await this.makeRequest(url, {
-            method: 'PUT',
+            method: 'POST',
             body: JSON.stringify(widgetData)
+        });
+    }
+
+    /**
+     * Update widget configuration
+     */
+    async updateWidgetConfig(widgetId, configData) {
+        const url = `${this.baseURL}/api/v1/widgets/${widgetId}/config`;
+        return await this.makeRequest(url, {
+            method: 'PUT',
+            body: JSON.stringify(configData)
         });
     }
 

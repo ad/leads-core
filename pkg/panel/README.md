@@ -20,12 +20,12 @@
 Для тестирования можно использовать утилиту jwt-gen:
 
 ```bash
-./bin/jwt-gen -secret=your-secret -user=your-user-id -ttl=24h
+./bin/jwt-gen -secret=development-jwt-secret-change-in-production -user=your-user-id -ttl=24h
 ```
 
 Пример:
 ```bash
-./bin/jwt-gen -secret=test-secret -user=test-user -ttl=1h
+./bin/jwt-gen -secret=development-jwt-secret-change-in-production -user=test-user -ttl=1h
 ```
 
 ## Возможности панели

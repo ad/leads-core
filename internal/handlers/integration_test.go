@@ -208,8 +208,8 @@ func TestValidation_Integration(t *testing.T) {
 			requestBody: `{
 				"name": "Contact Widget",
 				"type": "lead-form",
-				"enabled": true,
-				"fields": {
+				"isVisible": true,
+				"config": {
 					"name": {"type": "text", "required": true},
 					"email": {"type": "email", "required": true}
 				}
@@ -221,8 +221,8 @@ func TestValidation_Integration(t *testing.T) {
 			schema: "widget-create",
 			requestBody: `{
 				"type": "lead-form",
-				"enabled": true,
-				"fields": {
+				"isVisible": true,
+				"config": {
 					"name": {"type": "text"}
 				}
 			}`,
@@ -415,12 +415,12 @@ func TestWidgetDataFlow_Integration(t *testing.T) {
 
 	// Test data models integration
 	widget := &models.Widget{
-		ID:      "test-widget-123",
-		OwnerID: "user-456",
-		Name:    "Integration Test Widget",
-		Type:    "lead-form",
-		Enabled: true,
-		Fields: map[string]interface{}{
+		ID:        "test-widget-123",
+		OwnerID:   "user-456",
+		Name:      "Integration Test Widget",
+		Type:      "lead-form",
+		IsVisible: true,
+		Config: map[string]interface{}{
 			"name":  map[string]interface{}{"type": "text", "required": true},
 			"email": map[string]interface{}{"type": "email", "required": true},
 		},

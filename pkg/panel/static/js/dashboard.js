@@ -127,9 +127,9 @@ class DashboardManager {
             const response = await window.APIClient.getWidgets(options);
             this.totalWidgets = response.meta?.total || 0;
             
-            this.renderWidgetsTable(response.data || []);
+            this.renderWidgetsTable(response.widgets || []);
             this.updatePagination();
-            this.populateFilterOptions(response.data || []);
+            this.populateFilterOptions(response.widgets || []);
             
         } catch (error) {
             console.error('Error loading widgets:', error);
@@ -177,8 +177,8 @@ class DashboardManager {
                     <span class="type-badge type-${widget.type || 'other'}">${widget.type || 'other'}</span>
                 </td>
                 <td class="widget-status">
-                    <span class="status-badge ${widget.enabled ? 'enabled' : 'disabled'}">
-                        ${widget.enabled ? '✅ Active' : '❌ Disabled'}
+                    <span class="status-badge ${widget.isVisible ? 'enabled' : 'disabled'}">
+                        ${widget.isVisible ? '✅ Active' : '❌ Disabled'}
                     </span>
                 </td>
                 <td class="widget-created">${window.UI.formatDate(widget.created_at)}</td>
@@ -195,8 +195,8 @@ class DashboardManager {
                         <button class="btn-icon" onclick="window.WidgetsManager.showExportModal('${widget.id}')" title="Export Submissions">
                             📥
                         </button>
-                        <button class="btn-icon" onclick="window.WidgetsManager.toggleWidgetStatus('${widget.id}', ${!widget.enabled})" title="${widget.enabled ? 'Disable' : 'Enable'}">
-                            ${widget.enabled ? '⏸️' : '▶️'}
+                        <button class="btn-icon" onclick="window.WidgetsManager.toggleWidgetStatus('${widget.id}', ${!widget.isVisible})" title="${widget.isVisible ? 'Disable' : 'Enable'}">
+                            ${widget.isVisible ? '⏸️' : '▶️'}
                         </button>
                         <button class="btn-icon btn-danger" onclick="window.WidgetsManager.deleteWidget('${widget.id}', '${window.UI.escapeHtml(widget.name || 'Untitled')}')" title="Delete Widget">
                             🗑️

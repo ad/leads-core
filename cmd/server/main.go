@@ -269,6 +269,15 @@ func routePrivateWidgetEndpoints(handler *handlers.WidgetHandler) http.HandlerFu
 			// Reconstruct URL as /widgets/{id}/submissions for handler
 			r.URL.Path = "/widgets" + path
 			handler.GetWidgetSubmissions(w, r)
+		case strings.HasSuffix(path, "/config"):
+			// PUT /api/v1/widgets/{id}/config
+			// Reconstruct URL as /api/v1/widgets/{id}/config for handler
+			r.URL.Path = "/api/v1/widgets" + path
+			if r.Method == http.MethodPut {
+				handler.UpdateWidgetConfig(w, r)
+			} else {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
 		case strings.HasSuffix(path, "/export"):
 			// GET /api/v1/widgets/{id}/export
 			// Reconstruct URL as /widgets/{id}/export for handler
@@ -276,14 +285,14 @@ func routePrivateWidgetEndpoints(handler *handlers.WidgetHandler) http.HandlerFu
 			handler.ExportWidgetSubmissions(w, r)
 		default:
 			// GET /api/v1/widgets/{id} - get widget
-			// PUT /api/v1/widgets/{id} - update widget
+			// POST /api/v1/widgets/{id} - update widget
 			// DELETE /api/v1/widgets/{id} - delete widget
 			// Reconstruct URL as /widgets/{id} for handler
 			r.URL.Path = "/widgets" + path
 			switch r.Method {
 			case http.MethodGet:
 				handler.GetWidget(w, r)
-			case http.MethodPut:
+			case http.MethodPost:
 				handler.UpdateWidget(w, r)
 			case http.MethodDelete:
 				handler.DeleteWidget(w, r)

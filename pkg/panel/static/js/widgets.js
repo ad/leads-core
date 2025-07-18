@@ -6,7 +6,7 @@ class WidgetsManager {
     constructor() {
         this.currentWidgetId = null;
         this.widgetToDelete = null;
-        this.widgetFields = [];
+        this.widgetConfig = [];
     }
 
     /**
@@ -22,7 +22,7 @@ class WidgetsManager {
             title.textContent = 'Create New Widget';
             widget.reset();
             this.currentWidgetId = null;
-            this.clearWidgetFields();
+            this.clearWidgetConfig();
             this.setupWidgetEditorEvents();
         }
     }
@@ -33,10 +33,9 @@ class WidgetsManager {
     async editWidget(widgetId) {
         try {
             window.UI.showLoading();
+            console.log('Loading widget with ID:', widgetId);
             const widget = await window.APIClient.getWidget(widgetId);
-            
-
-            
+            console.log('Loaded widget:', widget);
             const modal = document.getElementById('widget-editor-modal');
             const title = document.getElementById('widget-editor-title');
             
@@ -47,20 +46,20 @@ class WidgetsManager {
                 // Populate widget data
                 const nameInput = document.getElementById('widget-name');
                 const typeSelect = document.getElementById('widget-type');
-                const enabledCheckbox = document.getElementById('widget-enabled');
+                const visibleCheckbox = document.getElementById('widget-visible');
                 
                 if (nameInput) nameInput.value = widget.name || '';
                 if (typeSelect) typeSelect.value = widget.type || '';
-                if (enabledCheckbox) enabledCheckbox.checked = widget.enabled || false;
+                if (visibleCheckbox) visibleCheckbox.checked = widget.isVisible || false;
                 
                 console.log('Widget basic data populated:', {
                     name: widget.name,
                     type: widget.type,
-                    enabled: widget.enabled
+                    isVisible: widget.isVisible
                 });
                 
                 this.currentWidgetId = widgetId;
-                this.loadWidgetFields(widget.fields || {});
+                this.loadWidgetConfig(widget.config || {});
                 this.setupWidgetEditorEvents();
             }
             
@@ -79,7 +78,7 @@ class WidgetsManager {
         // Add field button
         const addFieldBtn = document.getElementById('add-field-btn');
         if (addFieldBtn) {
-            addFieldBtn.onclick = () => this.addWidgetField();
+            addFieldBtn.onclick = () => this.addWidgetConfigField();
         }
 
         // Save widget button
@@ -114,28 +113,28 @@ class WidgetsManager {
     }
 
     /**
-     * Clear widget fields container
+     * Clear widget config container
      */
-    clearWidgetFields() {
-        const container = document.getElementById('widget-fields-container');
+    clearWidgetConfig() {
+        const container = document.getElementById('widget-config-container');
         if (container) {
             container.innerHTML = '';
         }
-        this.widgetFields = [];
+        this.widgetConfig = [];
     }
 
     /**
-     * Load widget fields into editor
+     * Load widget config into editor
      */
-    loadWidgetFields(fields) {
+    loadWidgetConfig(config) {
 
-        this.clearWidgetFields();
-        this.widgetFields = [];
+        this.clearWidgetConfig();
+        this.widgetConfig = [];
         
-        // Convert object fields to array format for the UI
-        if (fields && typeof fields === 'object') {
-            console.log('Processing fields:', Object.keys(fields));
-            Object.entries(fields).forEach(([fieldName, fieldData]) => {
+        // Convert object config to array format for the UI
+        if (config && typeof config === 'object') {
+            console.log('Processing config:', Object.keys(config));
+            Object.entries(config).forEach(([fieldName, fieldData]) => {
                 const field = {
                     id: `field_${Date.now()}_${Math.random()}`,
                     name: fieldName,
@@ -145,20 +144,20 @@ class WidgetsManager {
                     description: fieldData.description || ''
                 };
                 console.log('Adding field:', field);
-                this.widgetFields.push(field);
-                this.addWidgetField(field);
+                this.widgetConfig.push(field);
+                this.addWidgetConfigField(field);
             });
         } else {
-            console.log('No fields to load or invalid fields format');
+            console.log('No config to load or invalid config format');
         }
-        console.log('Final widgetFields array:', this.widgetFields);
+        console.log('Final widgetConfig array:', this.widgetConfig);
     }
 
     /**
-     * Add widget field to editor
+     * Add widget config field to editor
      */
-    addWidgetField(field = null) {
-        const container = document.getElementById('widget-fields-container');
+    addWidgetConfigField(field = null) {
+        const container = document.getElementById('widget-config-container');
         if (!container) return;
         
         const fieldId = field ? field.id : `field_${Date.now()}`;
@@ -182,7 +181,7 @@ class WidgetsManager {
                         <input type="checkbox" ${field && field.required ? 'checked' : ''} />
                         Required
                     </label>
-                    <button type="button" class="btn-icon btn-danger" onclick="window.WidgetsManager.removeWidgetField('${fieldId}')">🗑️</button>
+                    <button type="button" class="btn-icon btn-danger" onclick="window.WidgetsManager.removeWidgetConfigField('${fieldId}')">🗑️</button>
                 </div>
                 <div class="widget-field-details">
                     <input type="text" class="field-placeholder" placeholder="Placeholder text" value="${field ? field.placeholder || '' : ''}" />
@@ -195,9 +194,9 @@ class WidgetsManager {
     }
 
     /**
-     * Remove widget field
+     * Remove widget config field
      */
-    removeWidgetField(fieldId) {
+    removeWidgetConfigField(fieldId) {
         const fieldElement = document.querySelector(`[data-field-id="${fieldId}"]`);
         if (fieldElement) {
             fieldElement.remove();
@@ -215,8 +214,21 @@ class WidgetsManager {
             window.UI.showLoading();
             
             if (this.currentWidgetId) {
-                // Update existing widget
-                await window.APIClient.updateWidget(this.currentWidgetId, widgetData);
+                // Update existing widget metadata and config separately
+                const metadataUpdate = {
+                    name: widgetData.name,
+                    type: widgetData.type,
+                    isVisible: widgetData.isVisible
+                };
+                
+                // Update widget metadata
+                await window.APIClient.updateWidget(this.currentWidgetId, metadataUpdate);
+                
+                // Update widget config separately
+                if (widgetData.config && Object.keys(widgetData.config).length > 0) {
+                    await window.APIClient.updateWidgetConfig(this.currentWidgetId, { config: widgetData.config });
+                }
+                
                 window.UI.showToast('Widget updated successfully', 'success');
             } else {
                 // Create new widget
@@ -245,11 +257,11 @@ class WidgetsManager {
     getWidgetData() {
         const nameInput = document.getElementById('widget-name');
         const typeSelect = document.getElementById('widget-type');
-        const enabledCheckbox = document.getElementById('widget-enabled');
+        const visibleCheckbox = document.getElementById('widget-visible');
         
         const name = nameInput?.value?.trim();
         const type = typeSelect?.value;
-        const enabled = enabledCheckbox?.checked || false;
+        const isVisible = visibleCheckbox?.checked || false;
         
         if (!name) {
             window.UI.showToast('Widget name is required', 'error');
@@ -261,7 +273,7 @@ class WidgetsManager {
             return null;
         }
         
-        const fields = {};
+        const config = {};
         const fieldElements = document.querySelectorAll('.widget-field-item');
         
         fieldElements.forEach(element => {
@@ -279,15 +291,36 @@ class WidgetsManager {
             if (placeholder) field.placeholder = placeholder;
             if (description) field.description = description;
             
-            fields[fieldName] = field;
+            config[fieldName] = field;
         });
         
         return {
             name,
             type,
-            enabled,
-            fields
+            isVisible,
+            config
         };
+    }
+
+    /**
+     * Update widget configuration only
+     */
+    async updateWidgetConfig(widgetId, config) {
+        try {
+            window.UI.showLoading();
+            await window.APIClient.updateWidgetConfig(widgetId, { config });
+            window.UI.showToast('Widget configuration updated successfully', 'success');
+            
+            // Refresh widgets list
+            if (window.Dashboard) {
+                window.Dashboard.loadWidgets();
+            }
+        } catch (error) {
+            console.error('Error updating widget config:', error);
+            window.UI.showToast('Failed to update widget configuration: ' + error.message, 'error');
+        } finally {
+            window.UI.hideLoading();
+        }
     }
 
     /**
@@ -299,7 +332,7 @@ class WidgetsManager {
             modal.style.display = 'none';
         }
         this.currentWidgetId = null;
-        this.widgetFields = [];
+        this.widgetConfig = [];
     }
 
     /**
@@ -383,22 +416,18 @@ class WidgetsManager {
     /**
      * Toggle widget status (enable/disable)
      */
-    async toggleWidgetStatus(widgetId, enabled) {
+    async toggleWidgetStatus(widgetId, isVisible) {
         try {
             window.UI.showLoading();
             
-            // Get current widget data
-            const widget = await window.APIClient.getWidget(widgetId);
-            
-            // Update only the enabled status
+            // Update only the isVisible status without fetching the full widget
             const updateData = {
-                ...widget,
-                enabled: enabled
+                isVisible: isVisible
             };
             
             await window.APIClient.updateWidget(widgetId, updateData);
-            window.UI.showToast(`Widget ${enabled ? 'enabled' : 'disabled'} successfully`, 'success');
-            
+            window.UI.showToast(`Widget ${isVisible ? 'enabled' : 'disabled'} successfully`, 'success');
+
             // Refresh widgets list
             if (window.Dashboard) {
                 window.Dashboard.loadWidgets();
@@ -627,4 +656,8 @@ class WidgetsManager {
 }
 
 // Create global instance
-window.WidgetsManager = new WidgetsManager();
+const widgetsManagerInstance = new WidgetsManager();
+window.WidgetsManager = widgetsManagerInstance;
+
+// Make specific methods globally accessible
+window.WidgetsManager.removeWidgetConfigField = (fieldId) => widgetsManagerInstance.removeWidgetConfigField(fieldId);

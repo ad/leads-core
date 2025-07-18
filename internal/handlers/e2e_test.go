@@ -64,15 +64,23 @@ func routePrivateWidgetEndpoints(handler *WidgetHandler) http.HandlerFunc {
 			handler.ExportWidgetSubmissions(w, r)
 		default:
 			// GET /api/v1/widgets/{id} - get widget
-			// PUT /api/v1/widgets/{id} - update widget
+			// POST /api/v1/widgets/{id} - update widget
+			// PUT /api/v1/widgets/{id}/config - update widget configuration
 			// DELETE /api/v1/widgets/{id} - delete widget
 			// Reconstruct URL as /widgets/{id} for handler
 			r.URL.Path = "/widgets" + path
 			switch r.Method {
 			case http.MethodGet:
 				handler.GetWidget(w, r)
-			case http.MethodPut:
+			case http.MethodPost:
 				handler.UpdateWidget(w, r)
+			case http.MethodPut:
+				// Handle PUT for updating widget configuration
+				if strings.HasSuffix(path, "/config") {
+					handler.UpdateWidgetConfig(w, r)
+				} else {
+					http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+				}
 			case http.MethodDelete:
 				handler.DeleteWidget(w, r)
 			default:
@@ -295,9 +303,9 @@ func TestE2E_WidgetLifecycle(t *testing.T) {
 	createWidgetData := []byte(`{
 		"name": "E2E Test Widget",
 		"type": "lead-form",
-		"enabled": true,
+		"isVisible": true,
 		"description": "Widget for end-to-end testing",
-		"fields": {
+		"config": {
 			"name": {"type": "text", "required": true},
 			"email": {"type": "email", "required": true}
 		}
@@ -355,10 +363,10 @@ func TestE2E_WidgetLifecycle(t *testing.T) {
 	// Step 4: Update widget
 	updateData := []byte(`{
 		"name": "Updated E2E Test Widget",
-		"enabled": false
+		"isVisible": false
 	}`)
 
-	resp, err = e2e.makeRequest("PUT", "/api/v1/widgets/"+widgetID, updateData, headers)
+	resp, err = e2e.makeRequest("POST", "/api/v1/widgets/"+widgetID, updateData, headers)
 	if err != nil {
 		t.Fatalf("Failed to update widget: %v", err)
 	}
@@ -405,9 +413,9 @@ func TestE2E_PublicSubmission(t *testing.T) {
 	createWidgetData := []byte(`{
 		"name": "Submission Test Widget",
 		"type": "lead-form",
-		"enabled": true,
+		"isVisible": true,
 		"description": "Widget for submission testing",
-		"fields": {
+		"config": {
 			"name": {"type": "text", "required": true},
 			"email": {"type": "email", "required": true},
 			"message": {"type": "textarea", "required": false}
@@ -501,8 +509,8 @@ func TestE2E_Authorization(t *testing.T) {
 	createWidgetData := []byte(`{
 		"name": "User1's Widget",
 		"type": "lead-form",
-		"enabled": true,
-		"fields": {
+		"isVisible": true,
+		"config": {
 			"name": {"type": "text", "required": true},
 			"email": {"type": "email", "required": true}
 		}
@@ -542,7 +550,7 @@ func TestE2E_Authorization(t *testing.T) {
 	// Step 3: User2 tries to update User1's widget (should fail)
 	updateData := []byte(`{"name": "Hacked Widget"}`)
 
-	resp, err = e2e.makeRequest("PUT", "/api/v1/widgets/"+widgetID, updateData, headers2)
+	resp, err = e2e.makeRequest("POST", "/api/v1/widgets/"+widgetID, updateData, headers2)
 	if err != nil {
 		t.Fatalf("Failed to update widget: %v", err)
 	}

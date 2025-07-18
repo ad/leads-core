@@ -76,7 +76,7 @@ func (r *RedisWidgetRepository) Create(ctx context.Context, widget *models.Widge
 		return fmt.Errorf("failed to update type index: %w", err)
 	}
 
-	statusKey := GenerateWidgetsByStatusKey(widget.Enabled)
+	statusKey := GenerateWidgetsByStatusKey(widget.IsVisible)
 	if err := r.client.client.SAdd(ctx, statusKey, widget.ID).Err(); err != nil {
 		return fmt.Errorf("failed to update status index: %w", err)
 	}
@@ -171,9 +171,9 @@ func (r *RedisWidgetRepository) Update(ctx context.Context, widget *models.Widge
 		r.client.client.SAdd(ctx, newTypeKey, widget.ID)
 	}
 
-	if existingWidget.Enabled != widget.Enabled {
-		oldStatusKey := GenerateWidgetsByStatusKey(existingWidget.Enabled)
-		newStatusKey := GenerateWidgetsByStatusKey(widget.Enabled)
+	if existingWidget.IsVisible != widget.IsVisible {
+		oldStatusKey := GenerateWidgetsByStatusKey(existingWidget.IsVisible)
+		newStatusKey := GenerateWidgetsByStatusKey(widget.IsVisible)
 		r.client.client.SRem(ctx, oldStatusKey, widget.ID)
 		r.client.client.SAdd(ctx, newStatusKey, widget.ID)
 	}
@@ -221,7 +221,7 @@ func (r *RedisWidgetRepository) Delete(ctx context.Context, id string) error {
 	typeKey := GenerateWidgetsByTypeKey(widget.Type)
 	r.client.client.SRem(ctx, typeKey, id)
 
-	statusKey := GenerateWidgetsByStatusKey(widget.Enabled)
+	statusKey := GenerateWidgetsByStatusKey(widget.IsVisible)
 	r.client.client.SRem(ctx, statusKey, id)
 
 	return nil

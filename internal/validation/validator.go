@@ -29,6 +29,7 @@ func NewSchemaValidator() (*SchemaValidator, error) {
 	schemaNames := []string{
 		"widget-create.json",
 		"widget-update.json",
+		"widget-config-update.json",
 		"submission.json",
 		"event.json",
 	}

@@ -21,9 +21,9 @@ func TestE2E_SimpleWidgetCreation(t *testing.T) {
 	createWidgetData := []byte(`{
 		"name": "Simple Test Widget",
 		"type": "lead-form",
-		"enabled": true,
+		"isVisible": true,
 		"description": "Simple test widget for E2E testing",
-		"fields": {
+		"config": {
 			"name": {"type": "text", "required": true},
 			"email": {"type": "email", "required": true}
 		}
@@ -106,8 +106,8 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 	widgetData1 := []byte(`{
 		"name": "Contact Widget",
 		"type": "lead-form",
-		"enabled": true,
-		"fields": {
+		"isVisible": true,
+		"config": {
 			"name": {"type": "text", "required": true},
 			"email": {"type": "email", "required": true}
 		}
@@ -116,8 +116,8 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 	widgetData2 := []byte(`{
 		"name": "Banner Widget",
 		"type": "banner",
-		"enabled": false,
-		"fields": {
+		"isVisible": false,
+		"config": {
 			"email": {"type": "email", "required": true}
 		}
 	}`)
@@ -156,12 +156,12 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 	var listResponse map[string]interface{}
 	json.NewDecoder(listResp.Body).Decode(&listResponse)
 
-	widgets := listResponse["data"].([]interface{})
+	widgets := listResponse["widgets"].([]interface{})
 	if len(widgets) != 2 {
 		t.Errorf("Expected 2 widgets, got %d", len(widgets))
 	}
 
-	// Step 3: Submit to enabled widget (should work)
+	// Step 3: Submit to visible widget (should work)
 	submissionData := []byte(`{
 		"data": {
 			"name": "Test User",
@@ -171,12 +171,12 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 
 	submitResp, err := e2e.makeRequest("POST", "/widgets/"+widget1ID+"/submit", submissionData, nil)
 	if err != nil {
-		t.Fatalf("Failed to submit to enabled widget: %v", err)
+		t.Fatalf("Failed to submit to visible widget: %v", err)
 	}
 	defer submitResp.Body.Close()
 
 	if submitResp.StatusCode != http.StatusCreated {
-		t.Errorf("Expected 201 for enabled widget submission, got %d", submitResp.StatusCode)
+		t.Errorf("Expected 201 for visible widget submission, got %d", submitResp.StatusCode)
 	}
 
 	// Step 4: Try to submit to disabled widget (should fail)
@@ -212,10 +212,10 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 	// Step 6: Update widget
 	updateData := []byte(`{
 		"name": "Updated Contact Widget",
-		"enabled": false
+		"isVisible": false
 	}`)
 
-	updateResp, err := e2e.makeRequest("PUT", "/api/v1/widgets/"+widget1ID, updateData, headers)
+	updateResp, err := e2e.makeRequest("POST", "/api/v1/widgets/"+widget1ID, updateData, headers)
 	if err != nil {
 		t.Fatalf("Failed to update widget: %v", err)
 	}
@@ -241,8 +241,8 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 	if widgetData["name"] != "Updated Contact Widget" {
 		t.Errorf("Widget name not updated correctly: expected 'Updated Contact Widget', got %v", widgetData["name"])
 	}
-	if widgetData["enabled"] != false {
-		t.Errorf("Widget enabled status not updated correctly: expected false, got %v", widgetData["enabled"])
+	if widgetData["isVisible"] != false {
+		t.Errorf("Widget isVisible status not updated correctly: expected false, got %v", widgetData["isVisible"])
 	}
 
 	t.Logf("Comprehensive flow test completed successfully")

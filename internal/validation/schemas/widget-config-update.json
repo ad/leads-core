@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Widget Config Update Request",
+  "type": "object",
+  "required": ["config"],
+  "properties": {
+    "config": {
+      "type": "object",
+      "description": "Widget configuration object - can contain any valid JSON structure"
+    }
+  },
+  "additionalProperties": false
+}

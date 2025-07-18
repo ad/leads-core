@@ -88,8 +88,8 @@ func (s *WidgetService) CreateWidget(ctx context.Context, userID string, req mod
 		OwnerID:   userID,
 		Type:      req.Type,
 		Name:      req.Name,
-		Enabled:   req.Enabled,
-		Fields:    req.Fields,
+		IsVisible: req.IsVisible,
+		Config:    req.Config,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -131,17 +131,33 @@ func (s *WidgetService) UpdateWidget(ctx context.Context, widgetID, userID strin
 	if req.Type != nil {
 		widget.Type = *req.Type
 	}
-	if req.Enabled != nil {
-		widget.Enabled = *req.Enabled
-	}
-	if req.Fields != nil {
-		widget.Fields = req.Fields
+	if req.IsVisible != nil {
+		widget.IsVisible = *req.IsVisible
 	}
 
 	widget.UpdatedAt = time.Now()
 
 	if err := s.widgetRepo.Update(ctx, widget); err != nil {
 		return nil, fmt.Errorf("failed to update widget: %w", err)
+	}
+
+	return widget, nil
+}
+
+// UpdateWidgetConfig updates the configuration of a widget
+func (s *WidgetService) UpdateWidgetConfig(ctx context.Context, widgetID, userID string, req *models.UpdateWidgetConfigRequest) (*models.Widget, error) {
+	// Check ownership first
+	widget, err := s.GetWidget(ctx, widgetID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update config
+	widget.Config = req.Config
+	widget.UpdatedAt = time.Now()
+
+	if err := s.widgetRepo.Update(ctx, widget); err != nil {
+		return nil, fmt.Errorf("failed to update widget config: %w", err)
 	}
 
 	return widget, nil
@@ -213,7 +229,7 @@ func (s *WidgetService) SubmitWidget(ctx context.Context, widgetID string, req m
 	}
 
 	// Check if widget is enabled
-	if !widget.Enabled {
+	if !widget.IsVisible {
 		return nil, errors.ErrWidgetDisabled
 	}
 
@@ -257,7 +273,7 @@ func (s *WidgetService) RegisterWidgetEvent(ctx context.Context, widgetID string
 		return fmt.Errorf("widget not found: %w", err)
 	}
 
-	if !widget.Enabled {
+	if !widget.IsVisible {
 		return fmt.Errorf("widget is disabled")
 	}
 
@@ -355,7 +371,7 @@ func (s *WidgetService) GetWidgetsSummary(ctx context.Context, userID string) (*
 
 		// Count active/disabled widgets and calculate totals
 		for _, widget := range widgets {
-			if widget.Enabled {
+			if widget.IsVisible {
 				summary.ActiveWidgets++
 			} else {
 				summary.DisabledWidgets++

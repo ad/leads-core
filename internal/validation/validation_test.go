@@ -39,19 +39,19 @@ func TestSchemaValidator_ValidateRequest(t *testing.T) {
 		{
 			name:        "valid widget creation",
 			schemaName:  "widget-create",
-			requestBody: `{"type":"lead-form","name":"Test Widget","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}`,
+			requestBody: `{"type":"lead-form","name":"Test Widget","isVisible":true,"config":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}`,
 			expectError: false,
 		},
 		{
 			name:        "invalid widget creation - missing type",
 			schemaName:  "widget-create",
-			requestBody: `{"name":"Test Widget","enabled":true,"fields":{"name":"text"}}`,
+			requestBody: `{"name":"Test Widget","isVisible":true,"config":{"name":"text"}}`,
 			expectError: true,
 		},
 		{
 			name:        "invalid widget creation - empty name",
 			schemaName:  "widget-create",
-			requestBody: `{"type":"lead-form","name":"","enabled":true,"fields":{"name":"text"}}`,
+			requestBody: `{"type":"lead-form","name":"","isVisible":true,"config":{"name":"text"}}`,
 			expectError: true,
 		},
 		{
@@ -169,13 +169,13 @@ func TestSchemaValidator_ValidateAndDecode(t *testing.T) {
 
 	// Test struct for decoding
 	type TestWidget struct {
-		Type    string                 `json:"type"`
-		Name    string                 `json:"name"`
-		Enabled bool                   `json:"enabled"`
-		Fields  map[string]interface{} `json:"fields"`
+		Type      string                 `json:"type"`
+		Name      string                 `json:"name"`
+		IsVisible bool                   `json:"isVisible"`
+		Config    map[string]interface{} `json:"config"`
 	}
 
-	requestBody := `{"type":"lead-form","name":"Test Widget","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}`
+	requestBody := `{"type":"lead-form","name":"Test Widget","isVisible":true,"config":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}`
 	req, err := http.NewRequest("POST", "/test", bytes.NewBufferString(requestBody))
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
@@ -195,7 +195,7 @@ func TestSchemaValidator_ValidateAndDecode(t *testing.T) {
 	if widget.Name != "Test Widget" {
 		t.Errorf("Expected name 'Test Widget', got '%s'", widget.Name)
 	}
-	if !widget.Enabled {
-		t.Errorf("Expected enabled to be true, got %v", widget.Enabled)
+	if !widget.IsVisible {
+		t.Errorf("Expected isVisible to be true, got %v", widget.IsVisible)
 	}
 }

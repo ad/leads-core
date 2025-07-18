@@ -3,7 +3,7 @@
   "type": "object",
   "title": "Create Widget Request",
   "description": "Schema for creating a new widget",
-  "required": ["name", "type"],
+  "required": ["name", "type", "isVisible", "config"],
   "properties": {
     "name": {
       "type": "string",
@@ -16,48 +16,14 @@
       "enum": ["lead-form", "banner", "action", "social-proof", "live-interest", "widget-tab", "sticky-bar", "quiz", "wheelOfFortune"],
       "description": "The type of the widget"
     },
-    "enabled": {
+    "isVisible": {
       "type": "boolean",
       "default": true,
-      "description": "Whether the widget is enabled"
+      "description": "Whether the widget is visible"
     },
-    "fields": {
+    "config": {
       "type": "object",
-      "description": "Widget field definitions",
-      "patternProperties": {
-        "^[a-zA-Z_][a-zA-Z0-9_]*$": {
-          "type": "object",
-          "required": ["type"],
-          "properties": {
-            "type": {
-              "type": "string",
-              "enum": ["text", "email", "tel", "textarea", "select", "checkbox", "radio", "number", "url", "date"]
-            },
-            "required": {
-              "type": "boolean",
-              "default": false
-            },
-            "placeholder": {
-              "type": "string"
-            },
-            "options": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "validation": {
-              "type": "object",
-              "properties": {
-                "minLength": {"type": "integer", "minimum": 0},
-                "maxLength": {"type": "integer", "minimum": 1},
-                "pattern": {"type": "string"}
-              }
-            }
-          }
-        }
-      },
-      "additionalProperties": false
+      "description": "Widget configuration object - can contain any valid JSON structure"
     }
   },
   "additionalProperties": false

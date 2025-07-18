@@ -175,7 +175,7 @@ echo "📝 PRIVATE WIDGET MANAGEMENT TESTS"
 echo "==============================="
 
 # Create a widget and extract its ID
-WIDGET_DATA='{"name":"Test Widget","type":"lead-form","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}'
+WIDGET_DATA='{"name":"Test Widget","type":"lead-form","isVisible":true,"config":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}'
 log_info "Creating widget and extracting ID..."
 response=$(curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$WIDGET_DATA" "$SERVER_URL/api/v1/widgets")
 CREATED_WIDGET_ID=$(echo "$response" | jq -r '.data.id // empty')
@@ -189,7 +189,7 @@ if [ -n "$CREATED_WIDGET_ID" ] && [ "$CREATED_WIDGET_ID" != "null" ]; then
     
     # Update the real widget
     UPDATE_DATA='{"name":"Updated Test Widget","type":"lead-form"}'
-    test_http "Update Real Widget" "PUT" "$SERVER_URL/api/v1/widgets/$CREATED_WIDGET_ID" "$AUTH_HEADER -H 'Content-Type: application/json'" "$UPDATE_DATA" "200"
+    test_http "Update Real Widget" "POST" "$SERVER_URL/api/v1/widgets/$CREATED_WIDGET_ID" "$AUTH_HEADER -H 'Content-Type: application/json'" "$UPDATE_DATA" "200"
     
     # Get stats for real widget
     test_http "Get Real Widget Stats" "GET" "$SERVER_URL/api/v1/widgets/$CREATED_WIDGET_ID/stats" "$AUTH_HEADER" "" "200"
@@ -236,7 +236,7 @@ test_http "Get Non-existent Widget" "GET" "$SERVER_URL/api/v1/widgets/$FAKE_WIDG
 
 # Update non-existent widget
 UPDATE_DATA='{"name":"Updated Test Widget","type":"lead-form"}'
-test_http "Update Non-existent Widget" "PUT" "$SERVER_URL/api/v1/widgets/$FAKE_WIDGET_ID" "$AUTH_HEADER -H 'Content-Type: application/json'" "$UPDATE_DATA" "404"
+test_http "Update Non-existent Widget" "POST" "$SERVER_URL/api/v1/widgets/$FAKE_WIDGET_ID" "$AUTH_HEADER -H 'Content-Type: application/json'" "$UPDATE_DATA" "404"
 
 # Get stats for non-existent widget
 test_http "Get Non-existent Widget Stats" "GET" "$SERVER_URL/api/v1/widgets/$FAKE_WIDGET_ID/stats" "$AUTH_HEADER" "" "404"
@@ -349,7 +349,8 @@ echo "📈 EVENT STATISTICS TESTS"
 echo "========================"
 
 # Create a widget specifically for statistics testing
-STATS_WIDGET_DATA='{"name":"Statistics Test Widget","type":"lead-form","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}'
+STATS_WIDGET_DATA='{"name":"Statistics Test Widget","type":"lead-form","isVisible":true,"config":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}'
+
 log_info "Creating widget for statistics testing..."
 stats_response=$(curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$STATS_WIDGET_DATA" "$SERVER_URL/api/v1/widgets")
 STATS_WIDGET_ID=$(echo "$stats_response" | jq -r '.data.id // empty')
@@ -359,25 +360,25 @@ if [ -n "$STATS_WIDGET_ID" ] && [ "$STATS_WIDGET_ID" != "null" ]; then
     
     # DEBUG: Check the actual widget data returned
     log_info "Widget creation response: $stats_response"
-    widget_enabled=$(echo "$stats_response" | jq -r '.data.enabled // "undefined"')
+    widget_enabled=$(echo "$stats_response" | jq -r '.data.isVisible // "undefined"')
     log_info "Widget enabled status after creation: $widget_enabled"
     
     # Additional check: Get the widget directly to verify its state
     log_info "Verifying widget state with direct GET..."
     direct_widget_response=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID")
-    direct_enabled=$(echo "$direct_widget_response" | jq -r '.data.enabled // "undefined"')
+    direct_enabled=$(echo "$direct_widget_response" | jq -r '.data.isVisible // "undefined"')
     log_info "Direct widget check enabled status: $direct_enabled"
     log_info "Direct widget response: $direct_widget_response"
     
     # If widget is not enabled, try to enable it
     if [ "$direct_enabled" != "true" ]; then
         log_warning "Widget is not enabled ($direct_enabled), attempting to enable it..."
-        enable_response=$(curl -s -X PUT -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"enabled":true}' "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID")
+        enable_response=$(curl -s -X POST -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"isVisible":true}' "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID")
         log_info "Enable response: $enable_response"
         
         # Check again
         recheck_response=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID")
-        recheck_enabled=$(echo "$recheck_response" | jq -r '.data.enabled // "undefined"')
+        recheck_enabled=$(echo "$recheck_response" | jq -r '.data.isVisible // "undefined"')
         log_info "After enable attempt, widget enabled status: $recheck_enabled"
         
         if [ "$recheck_enabled" != "true" ]; then
@@ -518,7 +519,7 @@ echo "🚀 LOAD TESTING FOR STATISTICS"
 echo "=============================="
 
 # Create a widget specifically for load testing
-LOAD_WIDGET_DATA='{"name":"Load Test Widget","type":"lead-form","enabled":true,"fields":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}'
+LOAD_WIDGET_DATA='{"name":"Load Test Widget","type":"lead-form","isVisible":true,"config":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}'
 log_info "Creating widget for load testing..."
 load_response=$(curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$LOAD_WIDGET_DATA" "$SERVER_URL/api/v1/widgets")
 LOAD_WIDGET_ID=$(echo "$load_response" | jq -r '.data.id // empty')

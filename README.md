@@ -98,8 +98,8 @@ curl -X POST http://localhost:8080/widgets \
   -d '{
     "name": "Contact Widget",
     "type": "lead-form",
-    "enabled": true,
-    "fields": {
+    "isVisible": true,
+    "config": {
       "name": {"type": "text", "required": true},
       "email": {"type": "email", "required": true},
       "message": {"type": "textarea", "required": false}
@@ -238,14 +238,15 @@ curl -X GET "http://localhost:8080/widgets/{widget-id}/export?format=json" \
 
 ### Private Endpoints (Require JWT Authentication)
 
-- `GET /widgets` - List user's widgets with pagination
-- `POST /widgets` - Create a new widget
-- `GET /widgets/{id}` - Get widget by ID
-- `PUT /widgets/{id}` - Update widget
-- `DELETE /widgets/{id}` - Delete widget
-- `GET /widgets/{id}/stats` - Get widget statistics
-- `GET /widgets/{id}/submissions` - Get widget submissions with pagination
-- `GET /widgets/{id}/export` - Export widget submissions in various formats
+- `GET /api/v1/widgets` - List user's widgets with pagination
+- `POST /api/v1/widgets` - Create a new widget
+- `GET /api/v1/widgets/{id}` - Get widget by ID
+- `POST /api/v1/widgets/{id}` - Update widget metadata
+- `PUT /api/v1/widgets/{id}/config` - Update widget configuration
+- `DELETE /api/v1/widgets/{id}` - Delete widget
+- `GET /api/v1/widgets/{id}/stats` - Get widget statistics
+- `GET /api/v1/widgets/{id}/submissions` - Get widget submissions with pagination
+- `GET /api/v1/widgets/{id}/export` - Export widget submissions in various formats
 
 ### Public Endpoints
 
@@ -281,7 +282,7 @@ REDKA_PORT=6379          # Port for embedded Redis server
 REDKA_DB_PATH=file:redka.db  # Database file path (:memory: for in-memory)
 
 # JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key
+JWT_SECRET=development-jwt-secret-change-in-production
 
 # Rate Limiting
 RATE_LIMIT_IP_PER_MINUTE=1
@@ -399,7 +400,7 @@ The service uses Redis with the following key patterns and TTL policies:
 ### Global Indexes (without hash tags)
 - **Widgets by Time**: `widgets:by_time` - All widgets sorted by creation time (ZSET)
 - **Widgets by Type**: `widgets:type:{type}` - Widgets grouped by type (SET)
-- **Widgets by Status**: `widgets:enabled:{0|1}` - Widgets grouped by enabled status (SET)
+- **Widgets by Visibility**: `widgets:visible:{0|1}` - Widgets grouped by visibility status (SET)
 
 ### Rate Limiting Keys
 - **IP Rate Limit**: `rate_limit:{window}:ip:{ip}` - IP-based rate limiting (INCR)

@@ -208,7 +208,7 @@
 
                                 <div class="widget-group">
                                     <label for="widget-type">Widget Type *</label>
-                                    <select id="widget-type" name="type" required>
+                                    <select id="widget-type" name="type" required disabled>
                                         <option value="">Select type</option>
                                         <option value="lead-form">Lead Form</option>
                                         <option value="banner">Banner</option>
@@ -224,8 +224,8 @@
 
                                 <div class="widget-group">
                                     <div class="checkbox-group">
-                                        <input type="checkbox" id="widget-enabled" name="enabled" checked>
-                                        <label for="widget-enabled">Widget Active</label>
+                                        <input type="checkbox" id="widget-visible" name="isVisible" checked>
+                                        <label for="widget-visible">Widget Visible</label>
                                     </div>
                                 </div>
                             </div>
@@ -233,13 +233,13 @@
 
                         <div class="widget-editor-section">
                             <div class="widget-fields-header">
-                                <h3>Widget Fields</h3>
+                                <h3>Widget Configuration</h3>
                                 <button type="button" id="add-field-btn" class="btn-add-field">
                                     ➕ Add Field
                                 </button>
                             </div>
-                            <div id="widget-fields-container" class="widget-fields-container">
-                                <!-- Dynamic widget fields will be added here -->
+                            <div id="widget-config-container" class="widget-fields-container">
+                                <!-- Dynamic widget config fields will be added here -->
                             </div>
                         </div>
                     </form>

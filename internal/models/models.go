@@ -19,8 +19,8 @@ type Widget struct {
 	OwnerID   string                 `json:"owner_id"`
 	Type      string                 `json:"type"`
 	Name      string                 `json:"name"`
-	Enabled   bool                   `json:"enabled"`
-	Fields    map[string]interface{} `json:"fields"`
+	IsVisible bool                   `json:"isVisible"`
+	Config    map[string]interface{} `json:"config"`
 	CreatedAt time.Time              `json:"created_at"`
 	UpdatedAt time.Time              `json:"updated_at"`
 	Stats     *WidgetStats           `json:"stats,omitempty"`
@@ -46,18 +46,22 @@ type WidgetStats struct {
 
 // CreateWidgetRequest represents request data for creating a widget
 type CreateWidgetRequest struct {
-	Type    string                 `json:"type"`
-	Name    string                 `json:"name"`
-	Enabled bool                   `json:"enabled"`
-	Fields  map[string]interface{} `json:"fields"`
+	Type      string                 `json:"type"`
+	Name      string                 `json:"name"`
+	IsVisible bool                   `json:"isVisible"`
+	Config    map[string]interface{} `json:"config"`
 }
 
 // UpdateWidgetRequest represents request data for updating a widget
 type UpdateWidgetRequest struct {
-	Type    *string                `json:"type,omitempty"`
-	Name    *string                `json:"name,omitempty"`
-	Enabled *bool                  `json:"enabled,omitempty"`
-	Fields  map[string]interface{} `json:"fields,omitempty"`
+	Type      *string `json:"type,omitempty"`
+	Name      *string `json:"name,omitempty"`
+	IsVisible *bool   `json:"isVisible,omitempty"`
+}
+
+// UpdateWidgetConfigRequest represents request data for updating widget config
+type UpdateWidgetConfigRequest struct {
+	Config map[string]interface{} `json:"config"`
 }
 
 // SubmissionRequest represents request data for creating a submission
@@ -90,6 +94,12 @@ type Meta struct {
 	HasMore bool `json:"has_more"`
 }
 
+// WidgetsResponse represents a response containing multiple widgets
+type WidgetsResponse struct {
+	Widgets interface{} `json:"widgets,omitempty"`
+	Meta    *Meta       `json:"meta,omitempty"`
+}
+
 // Response represents a standard API response
 type Response struct {
 	Data interface{} `json:"data,omitempty"`
@@ -113,14 +123,14 @@ type WidgetsSummary struct {
 
 // ToRedisHash converts Widget to map for Redis HSET
 func (f *Widget) ToRedisHash() map[string]interface{} {
-	fieldsJSON, _ := json.Marshal(f.Fields)
+	configJSON, _ := json.Marshal(f.Config)
 	return map[string]interface{}{
 		"id":         f.ID,
 		"owner_id":   f.OwnerID,
 		"type":       f.Type,
 		"name":       f.Name,
-		"enabled":    strconv.FormatBool(f.Enabled),
-		"fields":     string(fieldsJSON),
+		"isVisible":  strconv.FormatBool(f.IsVisible),
+		"config":     string(configJSON),
 		"created_at": f.CreatedAt.Unix(),
 		"updated_at": f.UpdatedAt.Unix(),
 	}
@@ -132,10 +142,10 @@ func (f *Widget) FromRedisHash(hash map[string]string) error {
 	f.OwnerID = hash["owner_id"]
 	f.Type = hash["type"]
 	f.Name = hash["name"]
-	f.Enabled = hash["enabled"] == "true"
+	f.IsVisible = hash["isVisible"] == "true"
 
-	if fieldsStr, ok := hash["fields"]; ok && fieldsStr != "" {
-		if err := json.Unmarshal([]byte(fieldsStr), &f.Fields); err != nil {
+	if configStr, ok := hash["config"]; ok && configStr != "" {
+		if err := json.Unmarshal([]byte(configStr), &f.Config); err != nil {
 			return err
 		}
 	}

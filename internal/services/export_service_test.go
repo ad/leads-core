@@ -64,10 +64,10 @@ func (m *MockWidgetRepository) GetWidgetsByType(ctx context.Context, widgetType 
 	return result, nil
 }
 
-func (m *MockWidgetRepository) GetWidgetsByStatus(ctx context.Context, enabled bool, opts models.PaginationOptions) ([]*models.Widget, error) {
+func (m *MockWidgetRepository) GetWidgetsByStatus(ctx context.Context, isVisible bool, opts models.PaginationOptions) ([]*models.Widget, error) {
 	var result []*models.Widget
 	for _, widget := range m.widgets {
-		if widget.Enabled == enabled {
+		if widget.IsVisible == isVisible {
 			result = append(result, widget)
 		}
 	}

@@ -52,7 +52,7 @@ func (r *MockWidgetRepository) Create(ctx context.Context, widget *models.Widget
 		"owner_id":   widget.OwnerID,
 		"name":       widget.Name,
 		"type":       widget.Type,
-		"enabled":    widget.Enabled,
+		"isVisible":  widget.IsVisible,
 		"created_at": widget.CreatedAt.Unix(),
 		"updated_at": widget.UpdatedAt.Unix(),
 	}
@@ -72,11 +72,11 @@ func (r *MockWidgetRepository) GetByID(ctx context.Context, id string) (*models.
 	}
 
 	widget := &models.Widget{
-		ID:      data["id"],
-		OwnerID: data["owner_id"],
-		Name:    data["name"],
-		Type:    data["type"],
-		Enabled: data["enabled"] == "1",
+		ID:        data["id"],
+		OwnerID:   data["owner_id"],
+		Name:      data["name"],
+		Type:      data["type"],
+		IsVisible: data["isVisible"] == "1",
 	}
 
 	return widget, nil
@@ -99,11 +99,11 @@ func (r *MockWidgetRepository) GetByUserID(ctx context.Context, userID string, o
 
 		if data["owner_id"] == userID {
 			widget := &models.Widget{
-				ID:      data["id"],
-				OwnerID: data["owner_id"],
-				Name:    data["name"],
-				Type:    data["type"],
-				Enabled: data["enabled"] == "1",
+				ID:        data["id"],
+				OwnerID:   data["owner_id"],
+				Name:      data["name"],
+				Type:      data["type"],
+				IsVisible: data["isVisible"] == "1",
 			}
 			widgets = append(widgets, widget)
 		}
@@ -131,8 +131,8 @@ func TestWidgetRepository_Create(t *testing.T) {
 		OwnerID:   "user-123",
 		Name:      "Test Widget",
 		Type:      "lead-form",
-		Enabled:   true,
-		Fields:    map[string]interface{}{"name": map[string]interface{}{"type": "text", "required": true}},
+		IsVisible: true,
+		Config:    map[string]interface{}{"name": map[string]interface{}{"type": "text", "required": true}},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -176,21 +176,21 @@ func TestWidgetRepository_GetByID(t *testing.T) {
 			widgetID: "existing-widget",
 			setup: func() {
 				widget := &models.Widget{
-					ID:      "existing-widget",
-					OwnerID: "user-123",
-					Name:    "Existing Widget",
-					Type:    "lead-form",
-					Enabled: true,
+					ID:        "existing-widget",
+					OwnerID:   "user-123",
+					Name:      "Existing Widget",
+					Type:      "lead-form",
+					IsVisible: true,
 				}
 				repo.Create(ctx, widget)
 			},
 			wantErr: false,
 			wantWidget: &models.Widget{
-				ID:      "existing-widget",
-				OwnerID: "user-123",
-				Name:    "Existing Widget",
-				Type:    "lead-form",
-				Enabled: true,
+				ID:        "existing-widget",
+				OwnerID:   "user-123",
+				Name:      "Existing Widget",
+				Type:      "lead-form",
+				IsVisible: true,
 			},
 		},
 		{
@@ -241,7 +241,7 @@ func TestWidgetRepository_GetByUserID(t *testing.T) {
 			OwnerID:   userID,
 			Name:      "Widget 1",
 			Type:      "lead-form",
-			Enabled:   true,
+			IsVisible: true,
 			CreatedAt: time.Now().Add(-2 * time.Hour),
 		},
 		{
@@ -249,7 +249,7 @@ func TestWidgetRepository_GetByUserID(t *testing.T) {
 			OwnerID:   userID,
 			Name:      "Widget 2",
 			Type:      "lead",
-			Enabled:   true,
+			IsVisible: true,
 			CreatedAt: time.Now().Add(-1 * time.Hour),
 		},
 		{
@@ -257,7 +257,7 @@ func TestWidgetRepository_GetByUserID(t *testing.T) {
 			OwnerID:   "other-user",
 			Name:      "Other User Widget",
 			Type:      "lead-form",
-			Enabled:   true,
+			IsVisible: true,
 			CreatedAt: time.Now(),
 		},
 	}
@@ -292,11 +292,11 @@ func TestWidgetRepository_Update(t *testing.T) {
 
 	// Create initial widget
 	widget := &models.Widget{
-		ID:      "update-widget",
-		OwnerID: "user-123",
-		Name:    "Original Name",
-		Type:    "lead-form",
-		Enabled: true,
+		ID:        "update-widget",
+		OwnerID:   "user-123",
+		Name:      "Original Name",
+		Type:      "lead-form",
+		IsVisible: true,
 	}
 
 	err := repo.Create(ctx, widget)
@@ -306,7 +306,7 @@ func TestWidgetRepository_Update(t *testing.T) {
 
 	// Update widget
 	widget.Name = "Updated Name"
-	widget.Enabled = false
+	widget.IsVisible = false
 	widget.UpdatedAt = time.Now()
 
 	err = repo.Update(ctx, widget)
@@ -323,8 +323,8 @@ func TestWidgetRepository_Update(t *testing.T) {
 	if updated.Name != "Updated Name" {
 		t.Errorf("Expected updated name 'Updated Name', got %s", updated.Name)
 	}
-	if updated.Enabled != false {
-		t.Errorf("Expected enabled=false, got %t", updated.Enabled)
+	if updated.IsVisible != false {
+		t.Errorf("Expected isVisible=false, got %t", updated.IsVisible)
 	}
 }
 

@@ -13,8 +13,8 @@ func TestWidgetToRedisHash(t *testing.T) {
 		OwnerID:   "user-123",
 		Type:      "lead-form",
 		Name:      "Test Widget",
-		Enabled:   true,
-		Fields:    map[string]interface{}{"name": "text", "email": "email"},
+		IsVisible: true,
+		Config:    map[string]interface{}{"name": "text", "email": "email"},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -37,8 +37,8 @@ func TestWidgetToRedisHash(t *testing.T) {
 		t.Errorf("Expected name %s, got %v", widget.Name, hash["name"])
 	}
 
-	if hash["enabled"] != fmt.Sprintf("%v", widget.Enabled) {
-		t.Errorf("Expected enabled %v, got %v", widget.Enabled, hash["enabled"])
+	if hash["isVisible"] != fmt.Sprintf("%v", widget.IsVisible) {
+		t.Errorf("Expected isVisible %v, got %v", widget.IsVisible, hash["isVisible"])
 	}
 }
 
@@ -48,8 +48,8 @@ func TestWidgetFromRedisHash(t *testing.T) {
 		"owner_id":   "user-123",
 		"type":       "lead-form",
 		"name":       "Test Widget",
-		"enabled":    "true",
-		"fields":     `{"name":"text","email":"email"}`,
+		"isVisible":  "true",
+		"config":     `{"name":"text","email":"email"}`,
 		"created_at": "1640995200", // 2022-01-01 00:00:00 UTC
 		"updated_at": "1640995200",
 	}
@@ -76,12 +76,16 @@ func TestWidgetFromRedisHash(t *testing.T) {
 		t.Errorf("Expected name %s, got %s", hash["name"], widget.Name)
 	}
 
-	if !widget.Enabled {
-		t.Errorf("Expected enabled to be true")
+	if !widget.IsVisible {
+		t.Errorf("Expected isVisible to be true")
 	}
 
-	if widget.Fields["name"] != "text" {
-		t.Errorf("Expected fields.name to be 'text', got %v", widget.Fields["name"])
+	if widget.Config["name"] != "text" {
+		t.Errorf("Expected config.name to be 'text', got %v", widget.Config["name"])
+	}
+
+	if widget.Config["email"] != "email" {
+		t.Errorf("Expected config.email to be 'email', got %v", widget.Config["email"])
 	}
 }
 
@@ -91,8 +95,8 @@ func TestWidget_JSONSerialization(t *testing.T) {
 		OwnerID:   "user-123",
 		Type:      "lead-form",
 		Name:      "Contact Widget",
-		Enabled:   true,
-		Fields:    map[string]interface{}{"name": "required", "email": "required"},
+		IsVisible: true,
+		Config:    map[string]interface{}{"name": "required", "email": "required"},
 		CreatedAt: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
 		UpdatedAt: time.Date(2024, 1, 2, 12, 0, 0, 0, time.UTC),
 	}
@@ -122,8 +126,8 @@ func TestWidget_JSONSerialization(t *testing.T) {
 	if restored.Name != original.Name {
 		t.Errorf("Expected Name %s, got %s", original.Name, restored.Name)
 	}
-	if restored.Enabled != original.Enabled {
-		t.Errorf("Expected Enabled %v, got %v", original.Enabled, restored.Enabled)
+	if restored.IsVisible != original.IsVisible {
+		t.Errorf("Expected IsVisible %v, got %v", original.IsVisible, restored.IsVisible)
 	}
 }
 

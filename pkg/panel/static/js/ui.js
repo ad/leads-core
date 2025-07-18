@@ -261,11 +261,11 @@ class UIManager {
                                     </div>
                                 </div>
                                 
-                                ${widget.fields && Object.keys(widget.fields).length > 0 ? `
+                                ${widget.config && Object.keys(widget.config).length > 0 ? `
                                 <div class="testing-section">
                                     <h5>📝 Test Widget Submission</h5>
                                     <form id="test-widget-${widget.id}" class="test-widget">
-                                        ${Object.entries(widget.fields).map(([key, field]) => this.generateTestField({name: key, ...field})).join('')}
+                                        ${Object.entries(widget.config).map(([key, field]) => this.generateTestField({name: key, ...field})).join('')}
                                         <div class="test-widget-actions">
                                             <button type="submit" class="btn btn-sm btn-primary">
                                                 🚀 Submit Test Data
@@ -327,11 +327,11 @@ class UIManager {
                         </div>
                         ` : ''}
                         
-                        ${widget.fields && widget.fields.length > 0 ? `
+                        ${widget.config && widget.config.length > 0 ? `
                         <div class="detail-section">
-                            <h4>📝 Widget Fields</h4>
+                            <h4>📝 Widget Config</h4>
                             <div class="fields-list">
-                                ${widget.fields.map(field => `
+                                ${widget.config.map(field => `
                                     <div class="field-item">
                                         <div class="field-header">
                                             <span class="field-name">${field.name}</span>

@@ -123,10 +123,9 @@ paths:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/Response'
                   - type: object
                     properties:
-                      data:
+                      widgets:
                         type: array
                         items:
                           $ref: '#/components/schemas/Widget'
@@ -148,26 +147,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateWidgetRequest'
-            examples:
-              contactForm:
-                summary: Форма обратной связи
-                value:
-                  type: "lead-form"
-                  name: "Форма обратной связи"
-                  enabled: true
-                  fields:
-                    title: "Свяжитесь с нами"
-                    description: "Оставьте ваши контакты"
-                    required_fields: ["name", "email"]
-              newsletter:
-                summary: Баннер подписки
-                value:
-                  type: "banner"
-                  name: "Баннер подписки на новости"
-                  enabled: true
-                  fields:
-                    title: "Подпишитесь на новости"
-                    placeholder: "Введите ваш email"
       responses:
         '201':
           description: Виджет создан
@@ -175,11 +154,7 @@ paths:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/Response'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/Widget'
+                  - $ref: '#/components/schemas/Widget'
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':
@@ -205,17 +180,13 @@ paths:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/Response'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/Widget'
+                  - $ref: '#/components/schemas/Widget'
         '404':
           $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-    put:
+    post:
       tags:
         - Widgets
       summary: Обновить виджет
@@ -233,18 +204,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UpdateWidgetRequest'
-            examples:
-              enableWidget:
-                summary: Включить виджет
-                value:
-                  enabled: true
-              updateTitle:
-                summary: Обновить название и настройки
-                value:
-                  name: "Новое название виджета"
-                  fields:
-                    title: "Обновленный заголовок"
-                    required_fields: ["name", "email", "phone"]
       responses:
         '200':
           description: Виджет обновлен
@@ -252,11 +211,7 @@ paths:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/Response'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/Widget'
+                  - $ref: '#/components/schemas/Widget'
         '400':
           $ref: '#/components/responses/ValidationError'
         '404':
@@ -284,6 +239,41 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/v1/widgets/{id}/config:
+    put:
+      tags:
+        - Widgets
+      summary: Обновить конфигурацию виджета
+      description: Обновляет конфигурацию существующего виджета
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор виджета
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWidgetConfigRequest'
+
+      responses:
+        '200':
+          description: Виджет обновлен
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Widget'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/v1/widgets/{id}/stats:
     get:
       tags:
@@ -304,11 +294,7 @@ paths:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/Response'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/WidgetStats'
+                  - $ref: '#/components/schemas/WidgetStats'
         '404':
           $ref: '#/components/responses/NotFound'
         '401':
@@ -349,10 +335,9 @@ paths:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/Response'
                   - type: object
                     properties:
-                      data:
+                      submissions:
                         type: array
                         items:
                           $ref: '#/components/schemas/Submission'
@@ -656,7 +641,7 @@ components:
         id:
           type: string
           description: Уникальный идентификатор виджета
-          example: "widget_123abc"
+          example: "4be0643f-1d98-573b-97cd-ca98a65347dd"
         owner_id:
           type: string
           description: ID владельца виджета
@@ -670,18 +655,12 @@ components:
           type: string
           description: Название виджета
           example: "Форма обратной связи"
-        enabled:
+        isVisible:
           type: boolean
           description: Активен ли виджет
           example: true
-        fields:
-          type: object
-          description: Настройки полей виджета
-          example:
-            title: "Свяжитесь с нами"
-            description: "Оставьте ваши контакты"
-            required_fields: ["name", "email"]
-            optional_fields: ["phone", "message"]
+        config:
+           $ref: '#/components/schemas/WidgetConfig'
         created_at:
           type: string
           format: date-time
@@ -695,6 +674,9 @@ components:
         stats:
           $ref: '#/components/schemas/WidgetStats'
 
+    WidgetConfig:
+      type: object
+
     Submission:
       type: object
       properties:
@@ -705,7 +687,7 @@ components:
         widget_id:
           type: string
           description: ID виджета
-          example: "widget_123abc"
+          example: "4be0643f-1d98-573b-97cd-ca98a65347dd"
         data:
           type: object
           description: Данные отправки
@@ -727,10 +709,6 @@ components:
     WidgetStats:
       type: object
       properties:
-        widget_id:
-          type: string
-          description: ID виджета
-          example: "widget_123abc"
         views:
           type: integer
           format: int64
@@ -799,8 +777,8 @@ components:
       required:
         - type
         - name
-        - enabled
-        - fields
+        - isVisible
+        - config
       properties:
         type:
           type: string
@@ -813,42 +791,34 @@ components:
           example: "Форма обратной связи"
           minLength: 1
           maxLength: 255
-        enabled:
+        isVisible:
           type: boolean
           description: Активен ли виджет
           example: true
-        fields:
+        config:
           type: object
           description: Настройки полей виджета
-          example:
-            title: "Свяжитесь с нами"
-            description: "Оставьте ваши контакты"
-            required_fields: ["name", "email"]
 
     UpdateWidgetRequest:
       type: object
       properties:
-        type:
-          type: string
-          description: Тип виджета
-          example: "lead-form"
-          enum: ["lead-form", "banner", "action", "social-proof", "live-interest", "widget-tab", "sticky-bar", "quiz", "wheelOfFortune"]
         name:
           type: string
           description: Название виджета
           example: "Новое название"
           minLength: 1
           maxLength: 100
-        enabled:
+        isVisible:
           type: boolean
           description: Активен ли виджет
           example: false
-        fields:
+
+    UpdateWidgetConfigRequest:
+      type: object
+      properties:
+        config:
           type: object
           description: Настройки полей виджета
-          example:
-            title: "Обновленный заголовок"
-            required_fields: ["name", "email", "phone"]
 
     SubmissionRequest:
       type: object

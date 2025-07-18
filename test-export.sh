@@ -19,8 +19,8 @@ WIDGET_RESPONSE=$(curl -s -X POST "${API_BASE}/api/v1/widgets" \
   -d '{
     "name": "Export Test Widget",
     "type": "lead-form",
-    "enabled": true,
-    "fields": {
+    "isVisible": true,
+    "config": {
       "name": {"type": "text", "required": true},
       "email": {"type": "email", "required": true},
       "message": {"type": "textarea", "required": false}

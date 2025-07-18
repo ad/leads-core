@@ -120,7 +120,7 @@ func (h *WidgetHandler) GetWidgets(w http.ResponseWriter, r *http.Request) {
 		"user_id": user.ID,
 		"count":   len(widgets),
 	})
-	writeJSONResponse(w, http.StatusOK, models.Response{Data: widgets, Meta: meta})
+	writeJSONResponse(w, http.StatusOK, models.WidgetsResponse{Widgets: widgets, Meta: meta})
 }
 
 // GetWidget handles GET /widgets/{id}
@@ -166,12 +166,12 @@ func (h *WidgetHandler) GetWidget(w http.ResponseWriter, r *http.Request) {
 		"user_id":   user.ID,
 		"widget_id": widgetID,
 	})
-	writeJSONResponse(w, http.StatusOK, models.Response{Data: widget})
+	writeJSONResponse(w, http.StatusOK, widget)
 }
 
-// UpdateWidget handles PUT /widgets/{id}
+// UpdateWidget handles POST /widgets/{id}
 func (h *WidgetHandler) UpdateWidget(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPut {
+	if r.Method != http.MethodPost {
 		writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
@@ -223,7 +223,72 @@ func (h *WidgetHandler) UpdateWidget(w http.ResponseWriter, r *http.Request) {
 		"user_id":   user.ID,
 		"widget_id": widgetID,
 	})
-	writeJSONResponse(w, http.StatusOK, models.Response{Data: widget})
+	writeJSONResponse(w, http.StatusOK, widget)
+}
+
+// UpdateWidgetConfig handles PUT /widgets/{id}/config
+func (h *WidgetHandler) UpdateWidgetConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// Get user from context
+	user, ok := auth.GetUserFromContext(r.Context())
+	if !ok {
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found in context")
+		return
+	}
+
+	// Extract widget ID from URL path
+	widgetID := extractWidgetConfigID(r.URL.Path)
+	if widgetID == "" {
+		writeErrorResponse(w, http.StatusBadRequest, "Widget ID is required")
+		return
+	}
+
+	// Parse and validate request
+	var req models.UpdateWidgetConfigRequest
+	if err := h.validator.ValidateAndDecode(r, "widget-config-update", &req); err != nil {
+		if valErr, ok := err.(*validation.ValidationError); ok {
+			writeValidationErrors(w, valErr.Errors)
+			return
+		}
+		logger.Error("Failed to decode widget config update request", map[string]interface{}{
+			"action":    "update_widget_config",
+			"user_id":   user.ID,
+			"widget_id": widgetID,
+			"error":     err.Error(),
+		})
+
+		// Return 400 Bad Request for invalid JSON
+		writeErrorResponse(w, http.StatusBadRequest, "Invalid JSON")
+		return
+	}
+
+	// Update widget config
+	widget, err := h.widgetService.UpdateWidgetConfig(r.Context(), widgetID, user.ID, &req)
+	if err != nil {
+		logger.Error("Failed to update widget config", map[string]interface{}{
+			"action":    "update_widget_config",
+			"user_id":   user.ID,
+			"widget_id": widgetID,
+			"error":     err.Error(),
+		})
+		if errors.Is(err, customErrors.ErrNotFound) || errors.Is(err, customErrors.ErrAccessDenied) {
+			writeErrorResponse(w, http.StatusNotFound, "Widget not found")
+		} else {
+			writeErrorResponse(w, http.StatusInternalServerError, "Failed to update widget config")
+		}
+		return
+	}
+
+	logger.Debug("Updated widget config successfully", map[string]interface{}{
+		"action":    "update_widget_config",
+		"user_id":   user.ID,
+		"widget_id": widgetID,
+	})
+	writeJSONResponse(w, http.StatusOK, widget)
 }
 
 // DeleteWidget handles DELETE /widgets/{id}
@@ -557,6 +622,17 @@ func extractWidgetID(path string) string {
 	trimmedPath := strings.TrimPrefix(path, "/widgets/")
 	parts := strings.SplitN(trimmedPath, "/", 2)
 	if len(parts) > 0 {
+		return parts[0]
+	}
+	return ""
+}
+
+// extractWidgetConfigID extracts widget ID from config URL path
+func extractWidgetConfigID(path string) string {
+	// Extract from /api/v1/widgets/{id}/config
+	trimmedPath := strings.TrimPrefix(path, "/api/v1/widgets/")
+	parts := strings.SplitN(trimmedPath, "/", 2)
+	if len(parts) > 0 && parts[0] != "" {
 		return parts[0]
 	}
 	return ""

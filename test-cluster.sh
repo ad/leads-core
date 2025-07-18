@@ -118,8 +118,8 @@ if [ -f "./bin/jwt-gen" ]; then
     widget_data='{
         "name": "Test Cluster Widget",
         "type": "lead-form",
-        "enabled": true,
-        "fields": {
+        "isVisible": true,
+        "config": {
             "name": {"type": "text", "required": true},
             "email": {"type": "email", "required": true}
         }
