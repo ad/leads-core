@@ -36,8 +36,12 @@ jobs:
 
       - name: Deploy
         env:
-          KO_DOCKER_REPO: ${{ steps.set_var.outputs.docker_image }}
+          KO_DOCKER_REPO: ${{ secrets.DOCKER_USER }}
           BUILD_VERSION: ${{ steps.set_var.outputs.version }}
         run: |
           echo "Building with version: $BUILD_VERSION"
-          ko build ./cmd/server --base-import-paths --sbom=none --tags="$BUILD_VERSION,latest"
+          ko build ./cmd/server --base-import-paths --sbom=none --tags="$BUILD_VERSION,latest" --local
+          docker tag ${{ secrets.DOCKER_USER }}/server:$BUILD_VERSION ${{ steps.set_var.outputs.docker_image }}:$BUILD_VERSION
+          docker tag ${{ secrets.DOCKER_USER }}/server:latest ${{ steps.set_var.outputs.docker_image }}:latest
+          docker push ${{ steps.set_var.outputs.docker_image }}:$BUILD_VERSION
+          docker push ${{ steps.set_var.outputs.docker_image }}:latest
