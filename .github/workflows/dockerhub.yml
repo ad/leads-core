@@ -36,7 +36,7 @@ jobs:
 
       - name: Deploy
         env:
-          KO_DOCKER_REPO: ${{ steps.set_var.outputs.repo_name }}
+          KO_DOCKER_REPO: "${{ secrets.DOCKER_USER }}/${{ steps.set_var.outputs.repo_name }}"
           BUILD_VERSION: ${{ steps.set_var.outputs.version }}
         run: |
           echo "Building with version: $BUILD_VERSION"
