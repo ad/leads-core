@@ -28,8 +28,12 @@ func NewEmbeddedRedisServer(port, dbPath string) (*EmbeddedRedisServer, error) {
 		"db_path": dbPath,
 	})
 
+	opts := redka.Options{
+		DriverName: "sqlite",
+	}
+
 	// Открываем базу данных Redka
-	db, err := redka.Open(dbPath, nil)
+	db, err := redka.Open(dbPath, &opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open Redka database: %w", err)
 	}
