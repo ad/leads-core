@@ -65,7 +65,7 @@ func Load(args []string) (*Config, error) {
 			WriteTimeout: getEnvDuration("WRITE_TIMEOUT", 30*time.Second),
 		},
 		Redis: RedisConfig{
-			Addresses:      getEnvStringSlice("ADDRESSES", []string{"redka"}),
+			Addresses:      getEnvStringSlice("ADDRESSES", []string{"localhost:6379"}),
 			Password:       getEnv("PASSWORD", ""),
 			DB:             getEnvInt("DB", 0),
 			UseEmbedded:    false,
