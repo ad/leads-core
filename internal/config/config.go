@@ -43,7 +43,8 @@ type RedisConfig struct {
 
 // JWTConfig holds JWT token validation configuration
 type JWTConfig struct {
-	Secret string `json:"SECRET"`
+	Secret    string `json:"SECRET"`
+	AllowDemo bool   `json:"ALLOW_DEMO"` // Allow demo mode for JWT
 }
 
 // RateLimitConfig holds rate limiting configuration
@@ -54,6 +55,7 @@ type RateLimitConfig struct {
 
 // TTLConfig holds TTL settings for different user plans
 type TTLConfig struct {
+	DemoDays int `json:"DEMO_DAYS"`
 	FreeDays int `json:"FREE_DAYS"`
 	ProDays  int `json:"PRO_DAYS"`
 }
@@ -76,13 +78,15 @@ func Load(args []string) (*Config, error) {
 			EmbeddedDBPath: getEnv("REDKA_DB_PATH", "file:redka.db"),
 		},
 		JWT: JWTConfig{
-			Secret: getEnv("JWT_SECRET", ""),
+			Secret:    getEnv("JWT_SECRET", ""),
+			AllowDemo: getEnv("JWT_ALLOW_DEMO", "false") == "true",
 		},
 		RateLimit: RateLimitConfig{
 			IPPerMinute:     getEnvInt("IP_PER_MINUTE", 1),
 			GlobalPerMinute: getEnvInt("GLOBAL_PER_MINUTE", 1000),
 		},
 		TTL: TTLConfig{
+			DemoDays: getEnvInt("DEMO_DAYS", 7),
 			FreeDays: getEnvInt("TTL_FREE_DAYS", 30),
 			ProDays:  getEnvInt("TTL_PRO_DAYS", 365),
 		},
@@ -115,8 +119,10 @@ func Load(args []string) (*Config, error) {
 		flags.StringVar(&config.Redis.EmbeddedPort, "redisEmbeddedPort", lookupEnvOrString("REDKA_PORT", config.Redis.EmbeddedPort), "REDKA_PORT")
 		flags.StringVar(&config.Redis.EmbeddedDBPath, "redisEmbeddedDBPath", lookupEnvOrString("REDKA_DB_PATH", config.Redis.EmbeddedDBPath), "REDKA_DB_PATH")
 		flags.StringVar(&config.JWT.Secret, "jwtSecret", lookupEnvOrString("JWT_SECRET", config.JWT.Secret), "JWT_SECRET")
+		flags.BoolVar(&config.JWT.AllowDemo, "jwtAllowDemo", lookupEnvOrBool("JWT_ALLOW_DEMO", config.JWT.AllowDemo), "JWT_ALLOW_DEMO")
 		flags.IntVar(&config.RateLimit.IPPerMinute, "rateLimitIPPerMinute", lookupEnvOrInt("IP_PER_MINUTE", config.RateLimit.IPPerMinute), "IP_PER_MINUTE")
 		flags.IntVar(&config.RateLimit.GlobalPerMinute, "rateLimitGlobalPerMinute", lookupEnvOrInt("GLOBAL_PER_MINUTE", config.RateLimit.GlobalPerMinute), "GLOBAL_PER_MINUTE")
+		flags.IntVar(&config.TTL.DemoDays, "ttlDemoDays", lookupEnvOrInt("DEMO_DAYS", config.TTL.DemoDays), "DEMO_DAYS")
 		flags.IntVar(&config.TTL.FreeDays, "ttlFreeDays", lookupEnvOrInt("FREE_DAYS", config.TTL.FreeDays), "FREE_DAYS")
 		flags.IntVar(&config.TTL.ProDays, "ttlProDays", lookupEnvOrInt("PRO_DAYS", config.TTL.ProDays), "PRO_DAYS")
 

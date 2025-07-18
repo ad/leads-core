@@ -22,6 +22,7 @@ type WidgetService struct {
 
 // TTLConfig holds TTL configuration
 type TTLConfig struct {
+	DemoDays int
 	FreeDays int
 	ProDays  int
 }
@@ -298,6 +299,8 @@ func (s *WidgetService) RegisterWidgetEvent(ctx context.Context, widgetID string
 func (s *WidgetService) UpdateUserTTL(ctx context.Context, userID string, plan string) error {
 	var newTTL time.Duration
 	switch plan {
+	case "demo":
+		newTTL = time.Duration(s.config.DemoDays) * 24 * time.Hour
 	case "pro":
 		newTTL = time.Duration(s.config.ProDays) * 24 * time.Hour
 	default:

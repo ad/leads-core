@@ -139,6 +139,7 @@ func main() {
 
 	// Initialize services
 	ttlConfig := services.TTLConfig{
+		DemoDays: cfg.TTL.DemoDays,
 		FreeDays: cfg.TTL.FreeDays,
 		ProDays:  cfg.TTL.ProDays,
 	}
@@ -151,7 +152,7 @@ func main() {
 	jwtValidator := auth.NewJWTValidator(cfg.JWT.Secret)
 
 	// Initialize middleware
-	authMiddleware := middleware.NewAuthMiddleware(jwtValidator)
+	authMiddleware := middleware.NewAuthMiddleware(jwtValidator, cfg.JWT.AllowDemo)
 	rateLimiter := middleware.NewRateLimiter(redisClient, cfg.RateLimit)
 
 	// Initialize validator

@@ -60,6 +60,7 @@ func setupTestEnvironment(t *testing.T) *TestEnvironment {
 			GlobalPerMinute: 1000,
 		},
 		TTL: config.TTLConfig{
+			DemoDays: 1,
 			FreeDays: 30,
 			ProDays:  365,
 		},
@@ -117,7 +118,7 @@ func TestJWTAuthentication_Integration(t *testing.T) {
 	userID := "test-user-123"
 
 	// Create auth middleware
-	authMiddleware := middleware.NewAuthMiddleware(env.JWTValidator)
+	authMiddleware := middleware.NewAuthMiddleware(env.JWTValidator, false)
 
 	// Test handler that requires authentication
 	protectedHandler := authMiddleware.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

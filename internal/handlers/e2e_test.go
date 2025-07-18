@@ -148,6 +148,7 @@ func setupE2EServer(t *testing.T) *E2ETestServer {
 			GlobalPerMinute: 10000,
 		},
 		TTL: config.TTLConfig{
+			DemoDays: 1,
 			FreeDays: 30,
 			ProDays:  365,
 		},
@@ -163,7 +164,7 @@ func setupE2EServer(t *testing.T) *E2ETestServer {
 	jwtValidator := auth.NewJWTValidator(cfg.JWT.Secret)
 
 	// Create middleware
-	authMiddleware := middleware.NewAuthMiddleware(jwtValidator)
+	authMiddleware := middleware.NewAuthMiddleware(jwtValidator, false)
 
 	// Create a RedisClient wrapper for the repositories
 	wrappedRedisClient := storage.NewRedisClientWithUniversal(redisClient)
@@ -175,6 +176,7 @@ func setupE2EServer(t *testing.T) *E2ETestServer {
 
 	// Initialize services
 	ttlConfig := services.TTLConfig{
+		DemoDays: cfg.TTL.DemoDays,
 		FreeDays: cfg.TTL.FreeDays,
 		ProDays:  cfg.TTL.ProDays,
 	}

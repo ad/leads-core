@@ -37,13 +37,15 @@
       "REDKA_DB_PATH": "file:redka.db"
     },
     "JWT": {
-      "SECRET": ""
+      "SECRET": "",
+      "ALLOW_DEMO": false
     },
     "RATE_LIMIT": {
       "IP_PER_MINUTE": 100,
       "GLOBAL_PER_MINUTE": 1000
     },
     "TTL": {
+      "DEMO_DAYS": 1,
       "FREE_DAYS": 7,
       "PRO_DAYS": 365
     }
@@ -63,13 +65,15 @@
       "REDKA_DB_PATH": "str"
     },
     "JWT": {
-      "SECRET": "str"
+      "SECRET": "str",
+      "ALLOW_DEMO": "bool"
     },
     "RATE_LIMIT": {
       "IP_PER_MINUTE": "int",
       "GLOBAL_PER_MINUTE": "int"
     },
     "TTL": {
+      "DEMO_DAYS": "int",
       "FREE_DAYS": "int",
       "PRO_DAYS": "int"
     }

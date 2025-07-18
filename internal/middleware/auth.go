@@ -5,18 +5,21 @@ import (
 	"strings"
 
 	"github.com/ad/leads-core/internal/auth"
+	"github.com/ad/leads-core/internal/models"
 	"github.com/ad/leads-core/pkg/logger"
 )
 
 // AuthMiddleware provides JWT authentication middleware
 type AuthMiddleware struct {
 	validator *auth.JWTValidator
+	allowDemo bool
 }
 
 // NewAuthMiddleware creates a new auth middleware
-func NewAuthMiddleware(validator *auth.JWTValidator) *AuthMiddleware {
+func NewAuthMiddleware(validator *auth.JWTValidator, allowDemo bool) *AuthMiddleware {
 	return &AuthMiddleware{
 		validator: validator,
+		allowDemo: allowDemo,
 	}
 }
 
@@ -25,20 +28,38 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Extract Authorization header
 		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			writeErrorResponse(w, http.StatusUnauthorized, "Authorization header is required")
-			return
-		}
 
-		// Validate token
-		user, err := m.validator.ValidateToken(authHeader)
-		if err != nil {
-			logger.Debug("Authentication failed", map[string]interface{}{
-				"action": "authenticate",
-				"error":  err.Error(),
-			})
-			writeErrorResponse(w, http.StatusUnauthorized, "Invalid or expired token")
-			return
+		var user *models.User
+		var err error
+
+		if authHeader == "" {
+			// If no auth header and demo mode is enabled, create demo user
+			if m.allowDemo {
+				user = &models.User{
+					ID:       "demo",
+					Username: "demo",
+					Plan:     "demo",
+					// Add other demo user fields as needed
+				}
+				logger.Debug("Using demo user", map[string]interface{}{
+					"action": "authenticate",
+					"user":   "demo",
+				})
+			} else {
+				writeErrorResponse(w, http.StatusUnauthorized, "Authorization header is required")
+				return
+			}
+		} else {
+			// Validate token
+			user, err = m.validator.ValidateToken(authHeader)
+			if err != nil {
+				logger.Debug("Authentication failed", map[string]interface{}{
+					"action": "authenticate",
+					"error":  err.Error(),
+				})
+				writeErrorResponse(w, http.StatusUnauthorized, "Invalid or expired token")
+				return
+			}
 		}
 
 		// Add user to context

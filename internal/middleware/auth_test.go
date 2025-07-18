@@ -51,7 +51,7 @@ func TestAuthMiddleware_Integration(t *testing.T) {
 	// Use real JWT validator for integration test
 	secret := "test-secret-for-middleware"
 	validator := auth.NewJWTValidator(secret)
-	middleware := NewAuthMiddleware(validator)
+	middleware := NewAuthMiddleware(validator, false)
 
 	// Create a valid JWT token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -99,7 +99,7 @@ func TestAuthMiddleware_Integration(t *testing.T) {
 func TestAuthMiddleware_InvalidTokenIntegration(t *testing.T) {
 	secret := "test-secret-for-middleware"
 	validator := auth.NewJWTValidator(secret)
-	middleware := NewAuthMiddleware(validator)
+	middleware := NewAuthMiddleware(validator, false)
 
 	// Create a test handler
 	called := false
@@ -127,7 +127,7 @@ func TestAuthMiddleware_InvalidTokenIntegration(t *testing.T) {
 func TestAuthMiddleware_MissingTokenIntegration(t *testing.T) {
 	secret := "test-secret-for-middleware"
 	validator := auth.NewJWTValidator(secret)
-	middleware := NewAuthMiddleware(validator)
+	middleware := NewAuthMiddleware(validator, false)
 
 	// Create a test handler
 	called := false

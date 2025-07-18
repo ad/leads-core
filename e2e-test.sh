@@ -360,13 +360,13 @@ if [ -n "$STATS_WIDGET_ID" ] && [ "$STATS_WIDGET_ID" != "null" ]; then
     
     # DEBUG: Check the actual widget data returned
     log_info "Widget creation response: $stats_response"
-    widget_enabled=$(echo "$stats_response" | jq -r '.data.isVisible // "undefined"')
+    widget_enabled=$(echo "$stats_response" | jq -r '.isVisible // "undefined"')
     log_info "Widget enabled status after creation: $widget_enabled"
     
     # Additional check: Get the widget directly to verify its state
     log_info "Verifying widget state with direct GET..."
     direct_widget_response=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID")
-    direct_enabled=$(echo "$direct_widget_response" | jq -r '.data.isVisible // "undefined"')
+    direct_enabled=$(echo "$direct_widget_response" | jq -r '.isVisible // "undefined"')
     log_info "Direct widget check enabled status: $direct_enabled"
     log_info "Direct widget response: $direct_widget_response"
     
@@ -378,7 +378,7 @@ if [ -n "$STATS_WIDGET_ID" ] && [ "$STATS_WIDGET_ID" != "null" ]; then
         
         # Check again
         recheck_response=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID")
-        recheck_enabled=$(echo "$recheck_response" | jq -r '.data.isVisible // "undefined"')
+        recheck_enabled=$(echo "$recheck_response" | jq -r '.isVisible // "undefined"')
         log_info "After enable attempt, widget enabled status: $recheck_enabled"
         
         if [ "$recheck_enabled" != "true" ]; then

@@ -232,17 +232,14 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 	}
 	defer getResp.Body.Close()
 
-	var updatedWidget struct {
-		Data map[string]interface{} `json:"data"`
-	}
-	json.NewDecoder(getResp.Body).Decode(&updatedWidget)
+	var widgetData models.Widget
+	json.NewDecoder(getResp.Body).Decode(&widgetData)
 
-	widgetData := updatedWidget.Data
-	if widgetData["name"] != "Updated Contact Widget" {
-		t.Errorf("Widget name not updated correctly: expected 'Updated Contact Widget', got %v", widgetData["name"])
+	if widgetData.Name != "Updated Contact Widget" {
+		t.Errorf("Widget name not updated correctly: expected 'Updated Contact Widget', got %v", widgetData.Name)
 	}
-	if widgetData["isVisible"] != false {
-		t.Errorf("Widget isVisible status not updated correctly: expected false, got %v", widgetData["isVisible"])
+	if widgetData.IsVisible != false {
+		t.Errorf("Widget isVisible status not updated correctly: expected false, got %v", widgetData.IsVisible)
 	}
 
 	t.Logf("Comprehensive flow test completed successfully")

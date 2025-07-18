@@ -71,17 +71,20 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SERVER_PORT=8080
-      - SERVER_READ_TIMEOUT=30s
-      - SERVER_WRITE_TIMEOUT=30s
+      - HOST=0.0.0.0
+      - PORT=8080
+      - READ_TIMEOUT=30s
+      - WRITE_TIMEOUT=30s
       - REDIS_ADDRESSES=redis-node-0:6379,redis-node-1:6379,redis-node-2:6379
       - REDIS_PASSWORD=
       - REDIS_DB=0
       - JWT_SECRET=development-jwt-secret-change-in-production
-      - RATE_LIMIT_IP_PER_MINUTE=10000
-      - RATE_LIMIT_GLOBAL_PER_MINUTE=50000
-      - TTL_FREE_DAYS=30
-      - TTL_PRO_DAYS=365
+      - IP_PER_MINUTE=10000
+      - GLOBAL_PER_MINUTE=50000
+      - DEMO_DAYS=1
+      - FREE_DAYS=30
+      - PRO_DAYS=365
+      - LOG_LEVEL=DEBUG
     depends_on:
       redis-node-0:
         condition: service_healthy
