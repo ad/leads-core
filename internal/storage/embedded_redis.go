@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/ad/leads-core/pkg/logger"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/nalgeon/redka"
 	"github.com/nalgeon/redka/redsrv"
+	_ "modernc.org/sqlite"
 )
 
 // EmbeddedRedisServer управляет встроенным Redis сервером на основе Redka
