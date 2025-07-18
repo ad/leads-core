@@ -1,5 +1,5 @@
 {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "name": "leads-core",
   "slug": "leads-core",
   "description": "",
@@ -23,33 +23,53 @@
   "homeassistant_api": true,
   "host_network": false,
   "options": {
-		"SERVER_PORT": "7891",
-    "SERVER_READ_TIMEOUT": "30s",
-    "SERVER_WRITE_TIMEOUT": "30s",
-    "REDIS_ADDRESSES": "redka",
-    "REDIS_PASSWORD": "",
-    "REDIS_DB": 0,
-    "REDKA_PORT": "6379",
-    "REDKA_DB_PATH": "file:redka.db",
-    "JWT_SECRET": "",
-    "RATE_LIMIT_IP_PER_MINUTE": 100,
-    "RATE_LIMIT_GLOBAL_PER_MINUTE": 1000,
-    "TTL_FREE_DAYS": 7,
-    "TTL_PRO_DAYS": 365
-	},
+    "SERVER": {
+      "PORT": "7891",
+      "READ_TIMEOUT": "30s",
+      "WRITE_TIMEOUT": "30s"
+    },
+    "REDIS": {
+      "ADDRESSES": "redka",
+      "PASSWORD": "",
+      "DB": 0,
+      "REDKA_PORT": "6379",
+      "REDKA_DB_PATH": "file:redka.db"
+    },
+    "JWT": {
+      "SECRET": ""
+    },
+    "RATE_LIMIT": {
+      "IP_PER_MINUTE": 100,
+      "GLOBAL_PER_MINUTE": 1000
+    },
+    "TTL": {
+      "FREE_DAYS": 7,
+      "PRO_DAYS": 365
+    }
+  },
   "schema": {
-    "SERVER_PORT": "str",
-    "SERVER_READ_TIMEOUT": "str",
-    "SERVER_WRITE_TIMEOUT": "str",
-    "REDIS_ADDRESSES": "str",
-    "REDIS_PASSWORD": "str",
-    "REDIS_DB": "int",
-    "REDKA_PORT": "str",
-    "REDKA_DB_PATH": "str",
-    "JWT_SECRET": "str",
-    "RATE_LIMIT_IP_PER_MINUTE": "int",
-    "RATE_LIMIT_GLOBAL_PER_MINUTE": "int",
-    "TTL_FREE_DAYS": "int",
-    "TTL_PRO_DAYS": "int"
+    "SERVER": {
+      "PORT": "str",
+      "READ_TIMEOUT": "str",
+      "WRITE_TIMEOUT": "str"
+    },
+    "REDIS": {
+      "ADDRESSES": "str",
+      "PASSWORD": "str",
+      "DB": "int",
+      "REDKA_PORT": "str",
+      "REDKA_DB_PATH": "str"
+    },
+    "JWT": {
+      "SECRET": "str"
+    },
+    "RATE_LIMIT": {
+      "IP_PER_MINUTE": "int",
+      "GLOBAL_PER_MINUTE": "int"
+    },
+    "TTL": {
+      "FREE_DAYS": "int",
+      "PRO_DAYS": "int"
+    }
   }
 }

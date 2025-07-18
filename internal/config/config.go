@@ -15,59 +15,59 @@ const ConfigFileName = "/data/options.json"
 
 // Config holds all configuration for the application
 type Config struct {
-	Server    ServerConfig
-	Redis     RedisConfig
-	JWT       JWTConfig
-	RateLimit RateLimitConfig
-	TTL       TTLConfig
+	Server    ServerConfig    `json:"SERVER"`
+	Redis     RedisConfig     `json:"REDIS"`
+	JWT       JWTConfig       `json:"JWT"`
+	RateLimit RateLimitConfig `json:"RATE_LIMIT"`
+	TTL       TTLConfig       `json:"TTL"`
 }
 
 // ServerConfig holds HTTP server configuration
 type ServerConfig struct {
-	Port         string
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
+	Port         string        `json:"PORT"`
+	ReadTimeout  time.Duration `json:"READ_TIMEOUT"`
+	WriteTimeout time.Duration `json:"WRITE_TIMEOUT"`
 }
 
 // RedisConfig holds Redis cluster configuration
 type RedisConfig struct {
-	Addresses      []string
-	Password       string
-	DB             int
+	Addresses      []string `json:"ADDRESSES"`
+	Password       string   `json:"PASSWORD"`
+	DB             int      `json:"DB"`
 	UseEmbedded    bool
-	EmbeddedPort   string
-	EmbeddedDBPath string
+	EmbeddedPort   string `json:"REDKA_PORT"`
+	EmbeddedDBPath string `json:"REDKA_DB_PATH"`
 }
 
 // JWTConfig holds JWT token validation configuration
 type JWTConfig struct {
-	Secret string
+	Secret string `json:"SECRET"`
 }
 
 // RateLimitConfig holds rate limiting configuration
 type RateLimitConfig struct {
-	IPPerMinute     int
-	GlobalPerMinute int
+	IPPerMinute     int `json:"IP_PER_MINUTE"`
+	GlobalPerMinute int `json:"GLOBAL_PER_MINUTE"`
 }
 
 // TTLConfig holds TTL settings for different user plans
 type TTLConfig struct {
-	FreeDays int
-	ProDays  int
+	FreeDays int `json:"FREE_DAYS"`
+	ProDays  int `json:"PRO_DAYS"`
 }
 
 // Load loads configuration from environment variables
 func Load(args []string) (*Config, error) {
 	config := &Config{
 		Server: ServerConfig{
-			Port:         getEnv("SERVER_PORT", "8080"),
-			ReadTimeout:  getEnvDuration("SERVER_READ_TIMEOUT", 30*time.Second),
-			WriteTimeout: getEnvDuration("SERVER_WRITE_TIMEOUT", 30*time.Second),
+			Port:         getEnv("PORT", "8080"),
+			ReadTimeout:  getEnvDuration("READ_TIMEOUT", 30*time.Second),
+			WriteTimeout: getEnvDuration("WRITE_TIMEOUT", 30*time.Second),
 		},
 		Redis: RedisConfig{
-			Addresses:      getEnvStringSlice("REDIS_ADDRESSES", []string{"localhost:6379"}),
-			Password:       getEnv("REDIS_PASSWORD", ""),
-			DB:             getEnvInt("REDIS_DB", 0),
+			Addresses:      getEnvStringSlice("ADDRESSES", []string{"localhost:6379"}),
+			Password:       getEnv("PASSWORD", ""),
+			DB:             getEnvInt("DB", 0),
 			UseEmbedded:    false, // будет установлено ниже
 			EmbeddedPort:   getEnv("REDKA_PORT", "6379"),
 			EmbeddedDBPath: getEnv("REDKA_DB_PATH", "file:redka.db"),
@@ -76,8 +76,8 @@ func Load(args []string) (*Config, error) {
 			Secret: getEnv("JWT_SECRET", ""),
 		},
 		RateLimit: RateLimitConfig{
-			IPPerMinute:     getEnvInt("RATE_LIMIT_IP_PER_MINUTE", 1),
-			GlobalPerMinute: getEnvInt("RATE_LIMIT_GLOBAL_PER_MINUTE", 1000),
+			IPPerMinute:     getEnvInt("IP_PER_MINUTE", 1),
+			GlobalPerMinute: getEnvInt("GLOBAL_PER_MINUTE", 1000),
 		},
 		TTL: TTLConfig{
 			FreeDays: getEnvInt("TTL_FREE_DAYS", 30),
@@ -114,10 +114,10 @@ func Load(args []string) (*Config, error) {
 		flags.StringVar(&config.Redis.EmbeddedPort, "redisEmbeddedPort", lookupEnvOrString("REDKA_PORT", config.Redis.EmbeddedPort), "REDKA_PORT")
 		flags.StringVar(&config.Redis.EmbeddedDBPath, "redisEmbeddedDBPath", lookupEnvOrString("REDKA_DB_PATH", config.Redis.EmbeddedDBPath), "REDKA_DB_PATH")
 		flags.StringVar(&config.JWT.Secret, "jwtSecret", lookupEnvOrString("JWT_SECRET", config.JWT.Secret), "JWT_SECRET")
-		flags.IntVar(&config.RateLimit.IPPerMinute, "rateLimitIPPerMinute", lookupEnvOrInt("RATE_LIMIT_IP_PER_MINUTE", config.RateLimit.IPPerMinute), "RATE_LIMIT_IP_PER_MINUTE")
-		flags.IntVar(&config.RateLimit.GlobalPerMinute, "rateLimitGlobalPerMinute", lookupEnvOrInt("RATE_LIMIT_GLOBAL_PER_MINUTE", config.RateLimit.GlobalPerMinute), "RATE_LIMIT_GLOBAL_PER_MINUTE")
-		flags.IntVar(&config.TTL.FreeDays, "ttlFreeDays", lookupEnvOrInt("TTL_FREE_DAYS", config.TTL.FreeDays), "TTL_FREE_DAYS")
-		flags.IntVar(&config.TTL.ProDays, "ttlProDays", lookupEnvOrInt("TTL_PRO_DAYS", config.TTL.ProDays), "TTL_PRO_DAYS")
+		flags.IntVar(&config.RateLimit.IPPerMinute, "rateLimitIPPerMinute", lookupEnvOrInt("IP_PER_MINUTE", config.RateLimit.IPPerMinute), "IP_PER_MINUTE")
+		flags.IntVar(&config.RateLimit.GlobalPerMinute, "rateLimitGlobalPerMinute", lookupEnvOrInt("GLOBAL_PER_MINUTE", config.RateLimit.GlobalPerMinute), "GLOBAL_PER_MINUTE")
+		flags.IntVar(&config.TTL.FreeDays, "ttlFreeDays", lookupEnvOrInt("FREE_DAYS", config.TTL.FreeDays), "FREE_DAYS")
+		flags.IntVar(&config.TTL.ProDays, "ttlProDays", lookupEnvOrInt("PRO_DAYS", config.TTL.ProDays), "PRO_DAYS")
 
 		if err := flags.Parse(args[1:]); err != nil {
 			return config, fmt.Errorf("error parsing flags: %w", err)
