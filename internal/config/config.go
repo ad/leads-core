@@ -65,10 +65,10 @@ func Load(args []string) (*Config, error) {
 			WriteTimeout: getEnvDuration("WRITE_TIMEOUT", 30*time.Second),
 		},
 		Redis: RedisConfig{
-			Addresses:      getEnvStringSlice("ADDRESSES", []string{"localhost:6379"}),
+			Addresses:      getEnvStringSlice("ADDRESSES", []string{"redka"}),
 			Password:       getEnv("PASSWORD", ""),
 			DB:             getEnvInt("DB", 0),
-			UseEmbedded:    false, // будет установлено ниже
+			UseEmbedded:    false,
 			EmbeddedPort:   getEnv("REDKA_PORT", "6379"),
 			EmbeddedDBPath: getEnv("REDKA_DB_PATH", "file:redka.db"),
 		},
