@@ -175,7 +175,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	// System endpoints (no rate limiting)
-	mux.HandleFunc("/health", healthHandler.Health)
+	mux.Handle("/health", middleware.CORS(http.HandlerFunc(healthHandler.Health)))
 	mux.HandleFunc("/metrics", metrics.Handler())
 
 	// Admin panel (no authentication required as it handles auth internally)
@@ -184,12 +184,13 @@ func main() {
 
 	// Public endpoints (with logging, metrics, and rate limiting)
 	// These handle /widgets/{id}/submit and /widgets/{id}/events
-	publicChain := middleware.LogRequests(metrics.HTTPMiddleware(rateLimiter.RateLimit(http.HandlerFunc(routePublicWidgetEndpoints(publicHandler)))))
+	publicChain := middleware.CORS(middleware.LogRequests(metrics.HTTPMiddleware(rateLimiter.RateLimit(http.HandlerFunc(routePublicWidgetEndpoints(publicHandler))))))
 	mux.Handle("/widgets/", publicChain)
 
 	// Private API endpoints (with logging, metrics, and authentication only - no rate limiting)
 	// API v1 endpoints for authenticated users
-	privateWidgetsChain := middleware.LogRequests(metrics.HTTPMiddleware(authMiddleware.Authenticate(http.HandlerFunc(routePrivateWidgetEndpoints(widgetHandler)))))
+	privateWidgetsChain := middleware.CORS(middleware.LogRequests(metrics.HTTPMiddleware(authMiddleware.Authenticate(http.HandlerFunc(routePrivateWidgetEndpoints(widgetHandler))))))
+
 	privateUsersChain := middleware.LogRequests(metrics.HTTPMiddleware(authMiddleware.Authenticate(http.HandlerFunc(routeUserEndpoints(userHandler)))))
 
 	mux.Handle("/api/v1/widgets/", privateWidgetsChain)
