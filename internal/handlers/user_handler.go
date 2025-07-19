@@ -26,6 +26,30 @@ func NewUserHandler(widgetService *services.WidgetService, validator *validation
 	}
 }
 
+// GetUser handles GET /api/v1/user - returns current user information
+func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeErrorResponse(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// Get user from context
+	user, ok := auth.GetUserFromContext(r.Context())
+	if !ok {
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found")
+		return
+	}
+
+	logger.Debug("Retrieved user information", map[string]interface{}{
+		"action":  "get_user",
+		"user_id": user.ID,
+		"plan":    user.Plan,
+	})
+
+	// Return user information
+	writeJSONResponse(w, http.StatusOK, user)
+}
+
 // UpdateUserTTL handles PUT /users/{id}/ttl
 func (h *UserHandler) UpdateUserTTL(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPut {
@@ -36,7 +60,7 @@ func (h *UserHandler) UpdateUserTTL(w http.ResponseWriter, r *http.Request) {
 	// Get user from context
 	user, ok := auth.GetUserFromContext(r.Context())
 	if !ok {
-		writeErrorResponse(w, http.StatusUnauthorized, "User not found in context")
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 

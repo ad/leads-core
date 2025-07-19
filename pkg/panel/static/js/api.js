@@ -47,6 +47,13 @@ class APIClient {
     }
 
     /**
+     * Check if in demo mode
+     */
+    isDemoMode() {
+        return window.AuthManager && window.AuthManager.isDemoMode();
+    }
+
+    /**
      * Make HTTP request with proper error handling
      */
     async makeRequest(url, options = {}) {
@@ -117,6 +124,15 @@ class APIClient {
         const url = `${this.baseURL}/api/v1/widgets/summary`;
         const response = await this.makeRequest(url);
         return response.data;
+    }
+
+    /**
+     * Get current user information
+     */
+    async getCurrentUser() {
+        const url = `${this.baseURL}/api/v1/user`;
+        const response = await this.makeRequest(url);
+        return response;
     }
 
     /**

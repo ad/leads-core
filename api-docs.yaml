@@ -563,6 +563,24 @@ paths:
               schema:
                 type: string
 
+  # User information Endpoints
+  /api/v1/user:
+    get:
+      tags:
+        - Users
+      summary: Получить информацию о текущем пользователе
+      description: Возвращает информацию о текущем пользователе, включая тарифный план и виджеты
+      responses:
+        '200':
+          description: Информация о пользователе
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   # User Management Endpoints
   /api/v1/users/{id}/ttl:
     put:
@@ -763,13 +781,13 @@ components:
           example: "user_456def"
         username:
           type: string
-          description: Имя пользователя
-          example: "ivan_user"
+          description: Email пользователя
+          example: "ivan@example.com"
         plan:
           type: string
           description: Тарифный план
-          example: "pro"
-          enum: ["free", "pro", "enterprise"]
+          example: "demo"
+          enum: ["demo", "free", "pro"]
 
     # Request Models
     CreateWidgetRequest:
@@ -968,7 +986,7 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
-            error: "User not found in context"
+            error: "User not found"
 
     NotFound:
       description: Ресурс не найден

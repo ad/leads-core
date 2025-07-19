@@ -192,11 +192,12 @@ func main() {
 	// API v1 endpoints for authenticated users
 	privateWidgetsChain := middleware.CORS(middleware.LogRequests(metrics.HTTPMiddleware(authMiddleware.Authenticate(http.HandlerFunc(routePrivateWidgetEndpoints(widgetHandler))))))
 
-	privateUsersChain := middleware.LogRequests(metrics.HTTPMiddleware(authMiddleware.Authenticate(http.HandlerFunc(routeUserEndpoints(userHandler)))))
+	privateUsersChain := middleware.CORS(middleware.LogRequests(metrics.HTTPMiddleware(authMiddleware.Authenticate(http.HandlerFunc(routeUserEndpoints(userHandler))))))
 
 	mux.Handle("/api/v1/widgets/", privateWidgetsChain)
 	mux.Handle("/api/v1/widgets", privateWidgetsChain)
 	mux.Handle("/api/v1/users/", privateUsersChain)
+	mux.Handle("/api/v1/user", privateUsersChain)
 
 	// Create HTTP server
 	server := &http.Server{
@@ -324,16 +325,23 @@ func routePublicWidgetEndpoints(handler *handlers.PublicHandler) http.HandlerFun
 	}
 }
 
-// routeUserEndpoints routes user endpoints for /api/v1/users/*
+// routeUserEndpoints routes user endpoints for /api/v1/users/* and /api/v1/user
 func routeUserEndpoints(handler *handlers.UserHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/api/v1/users")
+		path := r.URL.Path
 
 		switch {
-		case strings.HasSuffix(path, "/ttl"):
+		case path == "/api/v1/user":
+			// GET /api/v1/user
+			if r.Method == http.MethodGet {
+				handler.GetUser(w, r)
+			} else {
+				http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			}
+		case strings.HasPrefix(path, "/api/v1/users/") && strings.HasSuffix(path, "/ttl"):
 			// PUT /api/v1/users/{id}/ttl
-			// Reconstruct URL as /users/{id}/ttl for handler
-			r.URL.Path = "/users" + path
+			// Remove the /api/v1 prefix and reconstruct URL as /users/{id}/ttl for handler
+			r.URL.Path = strings.TrimPrefix(path, "/api/v1")
 			if r.Method == http.MethodPut {
 				handler.UpdateUserTTL(w, r)
 			} else {

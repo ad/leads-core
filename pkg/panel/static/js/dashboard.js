@@ -41,12 +41,8 @@ class DashboardManager {
             if (loginSection) loginSection.style.display = 'none';
             if (dashboardSection) dashboardSection.style.display = 'block';
             
-            // Update user info
-            const user = window.AuthManager.getUser();
-            const userInfoElement = document.getElementById('user-info');
-            if (userInfoElement && user) {
-                userInfoElement.textContent = `User: ${user.id}`;
-            }
+            // Load and update user info
+            await this.updateUserInfo();
             
             // Load dashboard data
             await this.loadData();
@@ -61,6 +57,46 @@ class DashboardManager {
             window.UI.showToast('Error loading dashboard: ' + error.message, 'error');
         } finally {
             window.UI.hideLoading();
+        }
+    }
+
+    /**
+     * Update user information in header
+     */
+    async updateUserInfo() {
+        try {
+            const user = await window.APIClient.getCurrentUser();
+            
+            const userDisplay = document.getElementById('user-display');
+            const userPlan = document.getElementById('user-plan');
+            
+            if (userDisplay && user) {
+                const displayName = user.username || user.id;
+                userDisplay.textContent = `${displayName}`;
+            }
+            
+            if (userPlan && user) {
+                userPlan.textContent = user.plan || 'free';
+                userPlan.className = `user-plan ${user.plan || 'free'}`;
+            }
+            
+        } catch (error) {
+            console.error('Error loading user info:', error);
+            
+            // Fallback to stored user data
+            const user = window.AuthManager.getUser();
+            const userDisplay = document.getElementById('user-display');
+            const userPlan = document.getElementById('user-plan');
+            
+            if (userDisplay && user) {
+                const displayName = user.username || user.id;
+                userDisplay.textContent = `${displayName}`;
+            }
+            
+            if (userPlan && user) {
+                userPlan.textContent = user.plan || 'free';
+                userPlan.className = `user-plan ${user.plan || 'free'}`;
+            }
         }
     }
 
@@ -318,7 +354,10 @@ class DashboardManager {
     async refreshData() {
         try {
             window.UI.showLoading();
-            await this.loadData();
+            await Promise.all([
+                this.updateUserInfo(),
+                this.loadData()
+            ]);
             window.UI.showToast('Data refreshed successfully', 'success');
         } catch (error) {
             console.error('Error refreshing data:', error);

@@ -42,7 +42,7 @@ func (h *WidgetHandler) CreateWidget(w http.ResponseWriter, r *http.Request) {
 	// Get user from context
 	user, ok := auth.GetUserFromContext(r.Context())
 	if !ok {
-		writeErrorResponse(w, http.StatusUnauthorized, "User not found in context")
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 
@@ -88,7 +88,7 @@ func (h *WidgetHandler) GetWidgets(w http.ResponseWriter, r *http.Request) {
 	// Get user from context
 	user, ok := auth.GetUserFromContext(r.Context())
 	if !ok {
-		writeErrorResponse(w, http.StatusUnauthorized, "User not found in context")
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 
@@ -133,7 +133,7 @@ func (h *WidgetHandler) GetWidget(w http.ResponseWriter, r *http.Request) {
 	// Get user from context
 	user, ok := auth.GetUserFromContext(r.Context())
 	if !ok {
-		writeErrorResponse(w, http.StatusUnauthorized, "User not found in context")
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 
@@ -179,7 +179,7 @@ func (h *WidgetHandler) UpdateWidget(w http.ResponseWriter, r *http.Request) {
 	// Get user from context
 	user, ok := auth.GetUserFromContext(r.Context())
 	if !ok {
-		writeErrorResponse(w, http.StatusUnauthorized, "User not found in context")
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 
@@ -236,7 +236,7 @@ func (h *WidgetHandler) UpdateWidgetConfig(w http.ResponseWriter, r *http.Reques
 	// Get user from context
 	user, ok := auth.GetUserFromContext(r.Context())
 	if !ok {
-		writeErrorResponse(w, http.StatusUnauthorized, "User not found in context")
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 
@@ -301,7 +301,7 @@ func (h *WidgetHandler) DeleteWidget(w http.ResponseWriter, r *http.Request) {
 	// Get user from context
 	user, ok := auth.GetUserFromContext(r.Context())
 	if !ok {
-		writeErrorResponse(w, http.StatusUnauthorized, "User not found in context")
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 
@@ -346,7 +346,7 @@ func (h *WidgetHandler) GetWidgetStats(w http.ResponseWriter, r *http.Request) {
 	// Get user from context
 	user, ok := auth.GetUserFromContext(r.Context())
 	if !ok {
-		writeErrorResponse(w, http.StatusUnauthorized, "User not found in context")
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 
@@ -392,7 +392,7 @@ func (h *WidgetHandler) GetWidgetSubmissions(w http.ResponseWriter, r *http.Requ
 	// Get user from context
 	user, ok := auth.GetUserFromContext(r.Context())
 	if !ok {
-		writeErrorResponse(w, http.StatusUnauthorized, "User not found in context")
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 
@@ -450,7 +450,7 @@ func (h *WidgetHandler) ExportWidgetSubmissions(w http.ResponseWriter, r *http.R
 	// Get user from context
 	user, ok := auth.GetUserFromContext(r.Context())
 	if !ok {
-		writeErrorResponse(w, http.StatusUnauthorized, "User not found in context")
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 
@@ -562,7 +562,7 @@ func (h *WidgetHandler) GetWidgetsSummary(w http.ResponseWriter, r *http.Request
 	// Get user from context
 	user, ok := auth.GetUserFromContext(r.Context())
 	if !ok {
-		writeErrorResponse(w, http.StatusUnauthorized, "User not found in context")
+		writeErrorResponse(w, http.StatusUnauthorized, "User not found")
 		return
 	}
 

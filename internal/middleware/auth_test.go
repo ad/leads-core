@@ -72,7 +72,7 @@ func TestAuthMiddleware_Integration(t *testing.T) {
 		// Check if user was added to context
 		contextUser, ok := auth.GetUserFromContext(r.Context())
 		if !ok {
-			t.Error("User not found in context")
+			t.Error("User not found")
 		}
 		if contextUser.ID != "test-user-123" {
 			t.Errorf("Expected user ID test-user-123, got %s", contextUser.ID)

@@ -6,12 +6,18 @@ class AuthManager {
     constructor() {
         this.tokenKey = 'leads-core-token';
         this.userKey = 'leads-core-user';
+        this.demoModeKey = 'leads-core-demo-mode';
     }
 
     /**
      * Check if user is authenticated
      */
     isAuthenticated() {
+        // Check if demo mode is enabled
+        if (this.isDemoMode()) {
+            return true;
+        }
+
         const token = this.getToken();
         if (!token) return false;
 
@@ -21,6 +27,33 @@ class AuthManager {
         } catch {
             return false;
         }
+    }
+
+    /**
+     * Check if in demo mode
+     */
+    isDemoMode() {
+        return localStorage.getItem(this.demoModeKey) === 'true';
+    }
+
+    /**
+     * Enable demo mode
+     */
+    enableDemoMode() {
+        localStorage.setItem(this.demoModeKey, 'true');
+        localStorage.setItem(this.userKey, JSON.stringify({
+            id: 'demo',
+            username: 'demo',
+            plan: 'demo',
+            loginTime: new Date().toISOString()
+        }));
+    }
+
+    /**
+     * Disable demo mode
+     */
+    disableDemoMode() {
+        localStorage.removeItem(this.demoModeKey);
     }
 
     /**
@@ -103,6 +136,7 @@ class AuthManager {
     logout() {
         localStorage.removeItem(this.tokenKey);
         localStorage.removeItem(this.userKey);
+        localStorage.removeItem(this.demoModeKey);
     }
 
     /**
@@ -145,6 +179,11 @@ class AuthManager {
      * Get authorization header for API requests
      */
     getAuthHeader() {
+        // In demo mode, don't send Authorization header
+        if (this.isDemoMode()) {
+            return null;
+        }
+        
         const token = this.getToken();
         return token ? `Bearer ${token}` : null;
     }

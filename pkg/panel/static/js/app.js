@@ -17,6 +17,7 @@ class AdminPanel {
      */
     async init() {
         this.bindEvents();
+        await this.checkDemoModeAvailability();
         window.UI.hideLoading();
         
         // Check if already authenticated
@@ -28,6 +29,32 @@ class AdminPanel {
     }
 
     /**
+     * Check if demo mode is available from server
+     */
+    async checkDemoModeAvailability() {
+        try {
+            // Try to make a request without auth to see if demo mode is enabled
+            const response = await fetch('/api/v1/user', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                // Demo mode is enabled - show demo section
+                const demoSection = document.getElementById('demo-section');
+                if (demoSection) {
+                    demoSection.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            // Demo mode not available, keep demo section hidden
+            console.log('Demo mode not available');
+        }
+    }
+
+    /**
      * Bind event listeners
      */
     bindEvents() {
@@ -35,6 +62,12 @@ class AdminPanel {
         const loginWidget = document.getElementById('login-widget');
         if (loginWidget) {
             loginWidget.addEventListener('submit', (e) => this.handleLogin(e));
+        }
+
+        // Demo login button
+        const demoLoginBtn = document.getElementById('demo-login-btn');
+        if (demoLoginBtn) {
+            demoLoginBtn.addEventListener('click', () => this.handleDemoLogin());
         }
 
         // Logout button
@@ -155,6 +188,27 @@ class AdminPanel {
             window.UI.showError('Authentication failed: ' + error.message);
         } finally {
             window.UI.setButtonLoading(submitBtn, false);
+        }
+    }
+
+    /**
+     * Handle demo login
+     */
+    async handleDemoLogin() {
+        try {
+            // Enable demo mode
+            window.AuthManager.enableDemoMode();
+            
+            // Test demo authentication
+            await window.APIClient.testAuth();
+            
+            window.UI.showToast('Demo mode activated!', 'success');
+            await window.Dashboard.showDashboard();
+            
+        } catch (error) {
+            console.error('Demo login error:', error);
+            window.UI.showError('Demo mode failed: ' + error.message);
+            window.AuthManager.disableDemoMode();
         }
     }
 

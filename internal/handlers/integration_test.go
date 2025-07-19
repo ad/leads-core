@@ -124,7 +124,7 @@ func TestJWTAuthentication_Integration(t *testing.T) {
 	protectedHandler := authMiddleware.RequireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, exists := auth.GetUserFromContext(r.Context())
 		if !exists {
-			http.Error(w, "User not found in context", http.StatusInternalServerError)
+			http.Error(w, "User not found", http.StatusInternalServerError)
 			return
 		}
 

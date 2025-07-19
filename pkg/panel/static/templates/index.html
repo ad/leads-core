@@ -41,6 +41,17 @@
                     </button>
                 </form>
 
+                <!-- Demo Access Button (will be shown/hidden based on demo mode availability) -->
+                <div id="demo-section" class="demo-section" style="display: none;">
+                    <div class="demo-divider">
+                        <span>or</span>
+                    </div>
+                    <button id="demo-login-btn" class="btn btn-outline demo-btn">
+                        <span>🎯 Try Demo Mode</span>
+                    </button>
+                    <p class="demo-note">Demo mode allows you to explore the panel without providing credentials</p>
+                </div>
+
                 <div id="login-error" class="error-message" style="display: none;"></div>
             </div>
         </div>
@@ -52,7 +63,10 @@
                 <div class="header-content">
                     <div class="header-left">
                         <h1>📊 Dashboard</h1>
-                        <span id="user-info" class="user-info"></span>
+                        <div id="user-info" class="user-info">
+                            <span id="user-display" class="user-display">Loading...</span>
+                            <span id="user-plan" class="user-plan"></span>
+                        </div>
                     </div>
                     <div class="header-right">
                         <button id="create-widget-btn" class="btn btn-primary btn-sm">
