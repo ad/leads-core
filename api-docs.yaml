@@ -138,6 +138,17 @@ paths:
         - `meta.has_more` устанавливается в false
         - HTTP статус остается 200 (успешный запрос)
         
+        ## Статистика типов виджетов
+        
+        В метаданных ответа всегда включается поле `type_stats`, которое содержит статистику по всем типам виджетов пользователя, независимо от примененных фильтров. Это позволяет:
+        - Показывать корректные счетчики в фильтрах интерфейса
+        - Предоставлять пользователю полную картину его виджетов
+        - Избегать "прыгающих" счетчиков при переключении фильтров
+        
+        Пример использования:
+        - При запросе `?type=banner` в ответе будут только баннеры (`total: 2`)
+        - Но `type_stats` покажет полную статистику: `[{type: "banner", count: 2}, {type: "lead-form", count: 5}]`
+        
         ## Производительность
         
         Фильтрация оптимизирована для минимального влияния на производительность:
@@ -262,6 +273,13 @@ paths:
                       per_page: 20
                       total: 2
                       has_more: false
+                      type_stats:
+                        - type: lead-form
+                          count: 3
+                        - type: banner
+                          count: 2
+                        - type: quiz
+                          count: 1
                 filtered_by_type:
                   summary: Фильтрация по типу lead-form
                   value:
@@ -278,6 +296,13 @@ paths:
                       per_page: 20
                       total: 1
                       has_more: false
+                      type_stats:
+                        - type: lead-form
+                          count: 3
+                        - type: banner
+                          count: 2
+                        - type: quiz
+                          count: 1
                 filtered_by_visibility:
                   summary: Только активные виджеты
                   value:
@@ -294,6 +319,13 @@ paths:
                       per_page: 20
                       total: 1
                       has_more: false
+                      type_stats:
+                        - type: lead-form
+                          count: 3
+                        - type: banner
+                          count: 2
+                        - type: quiz
+                          count: 1
                 search_results:
                   summary: Поиск по названию "форма"
                   value:
@@ -310,6 +342,13 @@ paths:
                       per_page: 20
                       total: 1
                       has_more: false
+                      type_stats:
+                        - type: lead-form
+                          count: 3
+                        - type: banner
+                          count: 2
+                        - type: quiz
+                          count: 1
                 combined_filters:
                   summary: Комбинированные фильтры (type=lead-form&isVisible=true&search=форма)
                   value:
@@ -326,6 +365,13 @@ paths:
                       per_page: 20
                       total: 1
                       has_more: false
+                      type_stats:
+                        - type: lead-form
+                          count: 3
+                        - type: banner
+                          count: 2
+                        - type: quiz
+                          count: 1
                 multiple_types:
                   summary: Фильтрация по нескольким типам (type=banner,quiz)
                   value:
@@ -349,6 +395,13 @@ paths:
                       per_page: 20
                       total: 2
                       has_more: false
+                      type_stats:
+                        - type: lead-form
+                          count: 3
+                        - type: banner
+                          count: 2
+                        - type: quiz
+                          count: 1
                 inactive_widgets:
                   summary: Только неактивные виджеты (isVisible=false)
                   value:
@@ -372,6 +425,13 @@ paths:
                       per_page: 20
                       total: 2
                       has_more: false
+                      type_stats:
+                        - type: lead-form
+                          count: 3
+                        - type: banner
+                          count: 2
+                        - type: quiz
+                          count: 1
                 case_insensitive_search:
                   summary: Регистронезависимый поиск (search=ФОРМА)
                   value:
@@ -411,6 +471,13 @@ paths:
                       per_page: 20
                       total: 1
                       has_more: false
+                      type_stats:
+                        - type: lead-form
+                          count: 3
+                        - type: banner
+                          count: 2
+                        - type: quiz
+                          count: 1
                 pagination_with_filters:
                   summary: Пагинация с фильтрами (type=lead-form&page=2&per_page=1)
                   value:
@@ -427,6 +494,13 @@ paths:
                       per_page: 1
                       total: 3
                       has_more: true
+                      type_stats:
+                        - type: lead-form
+                          count: 3
+                        - type: banner
+                          count: 2
+                        - type: quiz
+                          count: 1
                 no_results:
                   summary: Фильтры не дали результатов
                   value:
@@ -436,6 +510,13 @@ paths:
                       per_page: 20
                       total: 0
                       has_more: false
+                      type_stats:
+                        - type: lead-form
+                          count: 3
+                        - type: banner
+                          count: 2
+                        - type: quiz
+                          count: 1
                 no_results_search:
                   summary: Поиск не дал результатов (search=несуществующий)
                   value:
@@ -445,6 +526,13 @@ paths:
                       per_page: 20
                       total: 0
                       has_more: false
+                      type_stats:
+                        - type: lead-form
+                          count: 3
+                        - type: banner
+                          count: 2
+                        - type: quiz
+                          count: 1
                 no_results_type:
                   summary: Фильтр по несуществующему типу (type=nonexistent)
                   value:
@@ -454,6 +542,13 @@ paths:
                       per_page: 20
                       total: 0
                       has_more: false
+                      type_stats:
+                        - type: lead-form
+                          count: 3
+                        - type: banner
+                          count: 2
+                        - type: quiz
+                          count: 1
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -1249,12 +1344,30 @@ components:
           example: 20
         total:
           type: integer
-          description: Общее количество элементов
+          description: Общее количество элементов (с учетом фильтров)
           example: 156
         has_more:
           type: boolean
           description: Есть ли еще страницы
           example: true
+        type_stats:
+          type: array
+          description: Статистика по типам виджетов (для всех виджетов пользователя)
+          items:
+            $ref: '#/components/schemas/TypeStats'
+
+    TypeStats:
+      type: object
+      description: Статистика для определенного типа виджета
+      properties:
+        type:
+          type: string
+          description: Тип виджета
+          example: banner
+        count:
+          type: integer
+          description: Количество виджетов этого типа
+          example: 5
 
     ErrorResponse:
       type: object

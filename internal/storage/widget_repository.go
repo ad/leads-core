@@ -22,6 +22,8 @@ type WidgetRepository interface {
 	Delete(ctx context.Context, id string) error
 	GetWidgetsByType(ctx context.Context, widgetType string, opts models.PaginationOptions) ([]*models.Widget, error)
 	GetWidgetsByStatus(ctx context.Context, enabled bool, opts models.PaginationOptions) ([]*models.Widget, error)
+	GetTypeStats(ctx context.Context, userID string) ([]*models.TypeStats, error)
+	RebuildIndexes(ctx context.Context) error
 }
 
 // RedisWidgetRepository implements WidgetRepository for Redis
@@ -628,4 +630,130 @@ func (r *RedisWidgetRepository) batchLoadWidgets(ctx context.Context, widgetIDs 
 	}
 
 	return widgets, nil
+}
+
+// RebuildIndexes rebuilds all Redis indexes for widgets
+// This method should be called during application startup or when index corruption is detected
+func (r *RedisWidgetRepository) RebuildIndexes(ctx context.Context) error {
+	// Get all widget keys
+	pattern := "{*}:widget"
+	widgetKeys, err := r.client.client.Keys(ctx, pattern).Result()
+	if err != nil {
+		return fmt.Errorf("failed to get widget keys: %w", err)
+	}
+
+	// Clear existing index keys using a transaction for atomicity
+	pipe := r.client.client.TxPipeline()
+
+	// Clear visibility indexes
+	pipe.Del(ctx, GenerateWidgetsByStatusKey(true))
+	pipe.Del(ctx, GenerateWidgetsByStatusKey(false))
+
+	// Clear type indexes for all known types
+	supportedTypes := models.AllWidgetTypes()
+	for _, widgetType := range supportedTypes {
+		pipe.Del(ctx, GenerateWidgetsByTypeKey(widgetType))
+	}
+
+	// Execute the cleanup
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to clear existing indexes: %w", err)
+	}
+
+	// Rebuild indexes from widget data
+	rebuiltCount := 0
+	for _, widgetKey := range widgetKeys {
+		// Get widget data
+		widgetData, err := r.client.client.HGetAll(ctx, widgetKey).Result()
+		if err != nil {
+			continue // Skip this widget, but continue with others
+		}
+
+		widgetID, ok := widgetData["id"]
+		if !ok || widgetID == "" {
+			continue
+		}
+
+		widgetType, ok := widgetData["type"]
+		if !ok || widgetType == "" {
+			continue
+		}
+
+		isVisibleStr, ok := widgetData["isVisible"]
+		if !ok {
+			continue
+		}
+
+		isVisible := isVisibleStr == "true"
+
+		// Add to indexes using a transaction for consistency
+		indexPipe := r.client.client.TxPipeline()
+
+		// Add to type index
+		typeKey := GenerateWidgetsByTypeKey(widgetType)
+		indexPipe.SAdd(ctx, typeKey, widgetID)
+
+		// Add to visibility index
+		statusKey := GenerateWidgetsByStatusKey(isVisible)
+		indexPipe.SAdd(ctx, statusKey, widgetID)
+
+		// Execute the index updates
+		_, err = indexPipe.Exec(ctx)
+		if err != nil {
+			// Log error but continue with other widgets
+			continue
+		}
+
+		rebuiltCount++
+	}
+
+	return nil
+}
+
+// GetTypeStats returns statistics about widget types for a specific user
+func (r *RedisWidgetRepository) GetTypeStats(ctx context.Context, userID string) ([]*models.TypeStats, error) {
+	// Get all user widgets without pagination
+	userWidgetsKey := GenerateUserWidgetsKey(userID)
+	widgetIDs, err := r.client.client.ZRange(ctx, userWidgetsKey, 0, -1).Result()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user widgets: %w", err)
+	}
+
+	if len(widgetIDs) == 0 {
+		return []*models.TypeStats{}, nil
+	}
+
+	// Count widgets by type
+	typeCounts := make(map[string]int)
+
+	// Load widgets in batches to count by type
+	widgets, err := r.batchLoadWidgets(ctx, widgetIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load widgets for stats: %w", err)
+	}
+
+	// Count by type
+	for _, widget := range widgets {
+		if widget != nil {
+			typeCounts[widget.Type]++
+		}
+	}
+
+	// Convert to TypeStats slice, ordered by the types defined in models
+	var stats []*models.TypeStats
+	allTypes := models.AllWidgetTypes()
+
+	for _, widgetType := range allTypes {
+		typeStr := string(widgetType)
+		count := typeCounts[typeStr]
+		if count > 0 { // Only include types that have widgets
+			stats = append(stats, &models.TypeStats{
+				Type:  typeStr,
+				Count: count,
+			})
+		}
+	}
+
+	return stats, nil
 }

@@ -195,6 +195,23 @@ func (s *WidgetService) GetUserWidgets(ctx context.Context, userID string, opts 
 	return widgets, total, nil
 }
 
+// GetUserWidgetsWithStats retrieves widgets for a user with pagination, filtering and type statistics
+func (s *WidgetService) GetUserWidgetsWithStats(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Widget, int, []*models.TypeStats, error) {
+	// Get widgets
+	widgets, total, err := s.GetUserWidgets(ctx, userID, opts)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+
+	// Get type statistics
+	typeStats, err := s.widgetRepo.GetTypeStats(ctx, userID)
+	if err != nil {
+		return nil, 0, nil, fmt.Errorf("failed to get type stats: %w", err)
+	}
+
+	return widgets, total, typeStats, nil
+}
+
 // GetWidgetStats retrieves statistics for a widget
 func (s *WidgetService) GetWidgetStats(ctx context.Context, widgetID, userID string) (*models.WidgetStats, error) {
 	// Check ownership

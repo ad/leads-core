@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/ad/leads-core/internal/models"
 )
 
 // WidgetTypeCache provides caching for widget type metadata
@@ -101,10 +103,7 @@ func (c *WidgetTypeCache) InvalidateCache() {
 
 // WarmUp pre-loads cache with commonly used widget types
 func (c *WidgetTypeCache) WarmUp(ctx context.Context) error {
-	commonTypes := []string{
-		"lead-form", "banner", "quiz", "survey",
-		"popup", "sticky-bar", "action", "social-proof",
-	}
+	commonTypes := models.AllWidgetTypes()
 
 	for _, widgetType := range commonTypes {
 		if _, err := c.refreshTypeCache(ctx, widgetType); err != nil {

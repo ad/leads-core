@@ -148,7 +148,12 @@ class APIClient {
             }
         });
 
-        return await this.makeRequest(url.toString());
+        console.log('API Request URL:', url.toString()); // Debug log
+
+        const response = await this.makeRequest(url.toString());
+        console.log('API Response:', response); // Debug log
+        
+        return response;
     }
 
     /**

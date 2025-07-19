@@ -21,10 +21,19 @@ class AdminPanel {
         window.UI.hideLoading();
         
         // Check if already authenticated
+        console.log('Checking authentication. Dashboard available:', !!window.Dashboard);
         if (window.AuthManager.isAuthenticated()) {
-            await window.Dashboard.showDashboard();
+            if (window.Dashboard && typeof window.Dashboard.showDashboard === 'function') {
+                await window.Dashboard.showDashboard();
+            } else {
+                console.error('Dashboard not available or showDashboard method missing');
+            }
         } else {
-            window.Dashboard.showLogin();
+            if (window.Dashboard && typeof window.Dashboard.showLogin === 'function') {
+                window.Dashboard.showLogin();
+            } else {
+                console.error('Dashboard not available or showLogin method missing');
+            }
         }
     }
 
@@ -203,7 +212,12 @@ class AdminPanel {
             await window.APIClient.testAuth();
             
             window.UI.showToast('Demo mode activated!', 'success');
-            await window.Dashboard.showDashboard();
+            
+            if (window.Dashboard && typeof window.Dashboard.showDashboard === 'function') {
+                await window.Dashboard.showDashboard();
+            } else {
+                throw new Error("can't access property \"showDashboard\", window.Dashboard is undefined");
+            }
             
         } catch (error) {
             console.error('Demo login error:', error);
@@ -218,10 +232,17 @@ class AdminPanel {
     handleLogout() {
         window.AuthManager.logout();
         window.APIClient.clearAuth();
-        window.Dashboard.clearAutoRefresh();
+        
+        if (window.Dashboard && typeof window.Dashboard.clearAutoRefresh === 'function') {
+            window.Dashboard.clearAutoRefresh();
+        }
+        
         window.UI.closeAllModals();
         window.UI.showToast('Logged out successfully', 'info');
-        window.Dashboard.showLogin();
+        
+        if (window.Dashboard && typeof window.Dashboard.showLogin === 'function') {
+            window.Dashboard.showLogin();
+        }
     }
 }
 

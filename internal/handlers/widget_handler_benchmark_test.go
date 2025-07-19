@@ -175,7 +175,11 @@ func setupBenchmarkHandler(b *testing.B, widgetCount int) (*WidgetHandler, strin
 	userID := "benchmark-user-123"
 
 	// Create test widgets with varied data
-	widgetTypes := []string{"lead-form", "banner", "quiz", "survey", "popup"}
+	allTypes := models.AllWidgetTypes()
+	widgetTypes := make([]string, len(allTypes))
+	for i, wt := range allTypes {
+		widgetTypes[i] = string(wt)
+	}
 
 	for i := 0; i < widgetCount; i++ {
 		widgetID := fmt.Sprintf("widget-%d", i)
@@ -385,6 +389,30 @@ func (m *MockWidgetRepository) GetWidgetsByStatus(ctx context.Context, enabled b
 		}
 	}
 	return widgets, nil
+}
+
+func (m *MockWidgetRepository) GetTypeStats(ctx context.Context, userID string) ([]*models.TypeStats, error) {
+	// Simple mock implementation for benchmarks
+	typeCounts := make(map[string]int)
+	for _, widget := range m.widgets {
+		typeCounts[widget.Type]++
+	}
+
+	var stats []*models.TypeStats
+	for widgetType, count := range typeCounts {
+		if count > 0 {
+			stats = append(stats, &models.TypeStats{
+				Type:  widgetType,
+				Count: count,
+			})
+		}
+	}
+	return stats, nil
+}
+
+func (m *MockWidgetRepository) RebuildIndexes(ctx context.Context) error {
+	// Mock implementation - no-op for benchmarks
+	return nil
 }
 
 // MockSubmissionRepository for benchmarking

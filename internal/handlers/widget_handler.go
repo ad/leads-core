@@ -95,8 +95,8 @@ func (h *WidgetHandler) GetWidgets(w http.ResponseWriter, r *http.Request) {
 	// Parse pagination and filter parameters
 	opts := parsePaginationWithFilters(r)
 
-	// Get widgets with filtering support
-	widgets, total, err := h.widgetService.GetUserWidgets(r.Context(), user.ID, opts)
+	// Get widgets with filtering support and type statistics
+	widgets, total, typeStats, err := h.widgetService.GetUserWidgetsWithStats(r.Context(), user.ID, opts)
 	if err != nil {
 		logger.Error("Failed to get widgets", map[string]interface{}{
 			"action":  "get_widgets",
@@ -109,10 +109,11 @@ func (h *WidgetHandler) GetWidgets(w http.ResponseWriter, r *http.Request) {
 
 	// Calculate pagination metadata
 	meta := &models.Meta{
-		Page:    opts.Page,
-		PerPage: opts.PerPage,
-		Total:   total, // This now reflects the filtered total count
-		HasMore: len(widgets) == opts.PerPage,
+		Page:      opts.Page,
+		PerPage:   opts.PerPage,
+		Total:     total, // This now reflects the filtered total count
+		HasMore:   len(widgets) == opts.PerPage,
+		TypeStats: typeStats, // Always include type statistics
 	}
 
 	logger.Debug("Retrieved widgets successfully", map[string]interface{}{

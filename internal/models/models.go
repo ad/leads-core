@@ -7,6 +7,56 @@ import (
 	"time"
 )
 
+// WidgetType represents supported widget types
+type WidgetType string
+
+// Supported widget types
+const (
+	WidgetTypeLeadForm       WidgetType = "lead-form"
+	WidgetTypeBanner         WidgetType = "banner"
+	WidgetTypeAction         WidgetType = "action"
+	WidgetTypeSocialProof    WidgetType = "social-proof"
+	WidgetTypeLiveInterest   WidgetType = "live-interest"
+	WidgetTypeWidgetTab      WidgetType = "widget-tab"
+	WidgetTypeStickyBar      WidgetType = "sticky-bar"
+	WidgetTypeQuiz           WidgetType = "quiz"
+	WidgetTypeWheelOfFortune WidgetType = "wheelOfFortune"
+	WidgetTypeSurvey         WidgetType = "survey"
+	WidgetTypePopup          WidgetType = "popup"
+)
+
+// AllWidgetTypes returns slice of all supported widget types
+func AllWidgetTypes() []string {
+	return []string{
+		string(WidgetTypeLeadForm),
+		string(WidgetTypeBanner),
+		string(WidgetTypeAction),
+		string(WidgetTypeSocialProof),
+		string(WidgetTypeLiveInterest),
+		string(WidgetTypeWidgetTab),
+		string(WidgetTypeStickyBar),
+		string(WidgetTypeQuiz),
+		string(WidgetTypeWheelOfFortune),
+		string(WidgetTypeSurvey),
+		string(WidgetTypePopup),
+	}
+}
+
+// ValidWidgetTypes returns map of valid widget types for quick lookup
+func ValidWidgetTypes() map[string]bool {
+	validTypes := make(map[string]bool)
+	for _, widgetType := range AllWidgetTypes() {
+		validTypes[widgetType] = true
+	}
+	return validTypes
+}
+
+// IsValidWidgetType checks if a widget type is valid
+func IsValidWidgetType(widgetType string) bool {
+	validTypes := ValidWidgetTypes()
+	return validTypes[widgetType]
+}
+
 // User represents user data extracted from JWT token
 type User struct {
 	ID       string `json:"id"`
@@ -95,12 +145,19 @@ type PaginatedResponse struct {
 	Meta Meta        `json:"meta"`
 }
 
+// TypeStats represents statistics for a specific widget type
+type TypeStats struct {
+	Type  string `json:"type"`
+	Count int    `json:"count"`
+}
+
 // Meta represents pagination metadata
 type Meta struct {
-	Page    int  `json:"page"`
-	PerPage int  `json:"per_page"`
-	Total   int  `json:"total"`
-	HasMore bool `json:"has_more"`
+	Page      int          `json:"page"`
+	PerPage   int          `json:"per_page"`
+	Total     int          `json:"total"`
+	HasMore   bool         `json:"has_more"`
+	TypeStats []*TypeStats `json:"type_stats,omitempty"` // Statistics by widget types
 }
 
 // WidgetsResponse represents a response containing multiple widgets
@@ -261,17 +318,11 @@ func ValidateFilterOptions(filters *FilterOptions) *FilterOptions {
 		Search:    strings.TrimSpace(filters.Search),
 	}
 
-	// Validate and clean widget types
-	validTypes := map[string]bool{
-		"lead-form": true,
-		"banner":    true,
-		"quiz":      true,
-		"survey":    true,
-		"popup":     true,
-	}
+	// Validate and clean widget types using centralized validation
+	validTypes := ValidWidgetTypes()
 
 	for _, widgetType := range filters.Types {
-		cleanType := strings.TrimSpace(strings.ToLower(widgetType))
+		cleanType := strings.TrimSpace(widgetType)
 		if cleanType != "" && validTypes[cleanType] {
 			validated.Types = append(validated.Types, cleanType)
 		}

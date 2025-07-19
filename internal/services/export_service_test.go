@@ -39,6 +39,30 @@ func (m *MockWidgetRepository) GetByID(ctx context.Context, id string) (*models.
 	return widget, nil
 }
 
+func (m *MockWidgetRepository) RebuildIndexes(ctx context.Context) error {
+	// Mock implementation - no-op for benchmarks
+	return nil
+}
+
+func (m *MockWidgetRepository) GetTypeStats(ctx context.Context, userID string) ([]*models.TypeStats, error) {
+	// Simple mock implementation for benchmarks
+	typeCounts := make(map[string]int)
+	for _, widget := range m.widgets {
+		typeCounts[widget.Type]++
+	}
+
+	var stats []*models.TypeStats
+	for widgetType, count := range typeCounts {
+		if count > 0 {
+			stats = append(stats, &models.TypeStats{
+				Type:  widgetType,
+				Count: count,
+			})
+		}
+	}
+	return stats, nil
+}
+
 func (m *MockWidgetRepository) GetByUserID(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Widget, int, error) {
 	m.getByUserIDCalled = true
 	m.lastUserID = userID

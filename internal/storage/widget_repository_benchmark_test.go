@@ -243,6 +243,30 @@ func (m *MockBenchmarkWidgetRepository) GetByUserID(ctx context.Context, userID 
 	return m.GetByUserIDWithFilters(ctx, userID, opts)
 }
 
+func (m *MockBenchmarkWidgetRepository) RebuildIndexes(ctx context.Context) error {
+	// Mock implementation - no-op for benchmarks
+	return nil
+}
+
+func (m *MockBenchmarkWidgetRepository) GetTypeStats(ctx context.Context, userID string) ([]*models.TypeStats, error) {
+	// Simple mock implementation for benchmarks
+	typeCounts := make(map[string]int)
+	for _, widget := range m.widgets {
+		typeCounts[widget.Type]++
+	}
+
+	var stats []*models.TypeStats
+	for widgetType, count := range typeCounts {
+		if count > 0 {
+			stats = append(stats, &models.TypeStats{
+				Type:  widgetType,
+				Count: count,
+			})
+		}
+	}
+	return stats, nil
+}
+
 func (m *MockBenchmarkWidgetRepository) GetByUserIDWithFilters(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Widget, int, error) {
 	// Simulate Redis operations
 

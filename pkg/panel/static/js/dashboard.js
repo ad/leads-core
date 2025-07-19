@@ -156,16 +156,36 @@ class DashboardManager {
         try {
             const options = {
                 page: this.currentPage,
-                per_page: this.perPage,
-                ...this.currentFilters
+                per_page: this.perPage
             };
+            
+            // Add search filter
+            if (this.currentFilters.search && this.currentFilters.search.trim()) {
+                options.search = this.currentFilters.search.trim();
+            }
+            
+            // Add type filter
+            if (this.currentFilters.type && this.currentFilters.type !== '') {
+                options.type = this.currentFilters.type;
+            }
+            
+            // Add visibility filter (convert status to isVisible)
+            if (this.currentFilters.status && this.currentFilters.status !== '') {
+                if (this.currentFilters.status === 'enabled') {
+                    options.isVisible = true;
+                } else if (this.currentFilters.status === 'disabled') {
+                    options.isVisible = false;
+                }
+            }
+            
+            console.log('Loading widgets with options:', options); // Debug log
             
             const response = await window.APIClient.getWidgets(options);
             this.totalWidgets = response.meta?.total || 0;
             
             this.renderWidgetsTable(response.widgets || []);
             this.updatePagination();
-            this.populateFilterOptions(response.widgets || []);
+            this.populateFilterOptions(response.meta?.type_stats || []);
             
         } catch (error) {
             console.error('Error loading widgets:', error);
@@ -210,16 +230,18 @@ class DashboardManager {
                     </div>
                 </td>
                 <td class="widget-type">
-                    <span class="type-badge type-${widget.type || 'other'}">${widget.type || 'other'}</span>
+                    <span class="type-badge type-${(widget.type || 'other').replace(/([A-Z])/g, '-$1').toLowerCase()}">
+                        ${this.formatWidgetTypeName(widget.type) || 'Other'}
+                    </span>
                 </td>
                 <td class="widget-status">
                     <span class="status-badge ${widget.isVisible ? 'enabled' : 'disabled'}">
                         ${widget.isVisible ? '✅ Active' : '❌ Disabled'}
                     </span>
                 </td>
-                <td class="widget-created">${window.UI.formatDate(widget.created_at)}</td>
-                <td class="widget-views">${window.UI.formatNumber(widget.stats.views || 0)}</td>
-                <td class="widget-submissions">${window.UI.formatNumber(widget.stats.submits || 0)}</td>
+                <td class="widget-created">${window.UI.formatDate(widget.createdAt || widget.created_at)}</td>
+                <td class="widget-views">${window.UI.formatNumber(widget.stats?.views || 0)}</td>
+                <td class="widget-submissions">${window.UI.formatNumber(widget.stats?.submits || 0)}</td>
                 <td class="widget-actions">
                     <div class="table-actions">
                         <button class="btn-icon" onclick="window.UI.showWidgetDetails('${widget.id}')" title="View Details">
@@ -290,23 +312,54 @@ class DashboardManager {
     /**
      * Populate filter options
      */
-    populateFilterOptions(widgets) {
+    populateFilterOptions(typeStats) {
         const typeFilter = document.getElementById('filter-type');
         if (!typeFilter) return;
         
-        // Get unique types
-        const types = [...new Set(widgets.map(widget => widget.type).filter(Boolean))];
+        // Define all available widget types - synchronized with backend models
+        const availableTypes = [
+            { value: 'lead-form', label: 'Lead Form' },
+            { value: 'banner', label: 'Banner' },
+            { value: 'action', label: 'Action' },
+            { value: 'social-proof', label: 'Social Proof' },
+            { value: 'live-interest', label: 'Live Interest' },
+            { value: 'widget-tab', label: 'Widget Tab' },
+            { value: 'sticky-bar', label: 'Sticky Bar' },
+            { value: 'quiz', label: 'Quiz' },
+            { value: 'wheelOfFortune', label: 'Wheel of Fortune' },
+            { value: 'survey', label: 'Survey' },
+            { value: 'coupon', label: 'Coupon' }
+        ];
+        
+        // Create a map of type counts from statistics
+        const typeCountMap = {};
+        typeStats.forEach(stat => {
+            typeCountMap[stat.type] = stat.count;
+        });
         
         // Clear current options (except "All Types")
         typeFilter.innerHTML = '<option value="">All Types</option>';
         
-        // Add type options
-        types.forEach(type => {
+        // Add type options (show all types with counts from statistics)
+        availableTypes.forEach(typeInfo => {
             const option = document.createElement('option');
-            option.value = type;
-            option.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+            option.value = typeInfo.value;
+            const count = typeCountMap[typeInfo.value] || 0;
+            
+            if (count > 0) {
+                option.textContent = `${typeInfo.label} (${count})`;
+            } else {
+                option.textContent = `${typeInfo.label} (0)`;
+                option.style.color = '#999';
+            }
+            
             typeFilter.appendChild(option);
         });
+        
+        // Restore current selection if it exists
+        if (this.currentFilters.type) {
+            typeFilter.value = this.currentFilters.type;
+        }
     }
 
     /**
@@ -418,7 +471,32 @@ class DashboardManager {
         
         this.loadWidgets();
     }
+
+    /**
+     * Format widget type name for display
+     */
+    formatWidgetTypeName(type) {
+        const typeMap = {
+            'lead-form': 'Lead Form',
+            'banner': 'Banner',
+            'action': 'Action',
+            'social-proof': 'Social Proof',
+            'live-interest': 'Live Interest',
+            'widget-tab': 'Widget Tab',
+            'sticky-bar': 'Sticky Bar',
+            'quiz': 'Quiz',
+            'wheelOfFortune': 'Wheel of Fortune'
+        };
+        
+        return typeMap[type] || type;
+    }
 }
 
 // Create global instance
-window.Dashboard = new DashboardManager();
+console.log('Creating Dashboard instance...');
+try {
+    window.Dashboard = new DashboardManager();
+    console.log('Dashboard instance created successfully:', window.Dashboard);
+} catch (error) {
+    console.error('Error creating Dashboard instance:', error);
+}
