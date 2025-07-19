@@ -25,6 +25,7 @@ import (
 	"github.com/ad/leads-core/pkg/metrics"
 	"github.com/ad/leads-core/pkg/monitoring"
 	"github.com/ad/leads-core/pkg/panel"
+	"github.com/ad/leads-core/pkg/settings"
 )
 
 var version = "dev"
@@ -172,6 +173,9 @@ func main() {
 	// Panel handler
 	panelHandler := panel.NewHandler()
 
+	// Settings handler
+	settingsHandler := settings.NewHandler()
+
 	// Setup HTTP server with routes
 	mux := http.NewServeMux()
 
@@ -182,6 +186,10 @@ func main() {
 	// Admin panel (no authentication required as it handles auth internally)
 	mux.Handle("/panel/", panelHandler)
 	mux.Handle("/panel", panelHandler)
+
+	// Settings handler
+	mux.Handle("/settings/", settingsHandler)
+	mux.Handle("/settings", settingsHandler)
 
 	// Public endpoints (with logging, metrics, and rate limiting)
 	// These handle /widgets/{id}/submit and /widgets/{id}/events
