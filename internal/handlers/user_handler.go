@@ -71,6 +71,11 @@ func (h *UserHandler) UpdateUserTTL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if userID == "demo" {
+		writeErrorResponse(w, http.StatusForbidden, "Cannot update TTL for demo user")
+		return
+	}
+
 	// Check if user can update TTL for this user (only self or admin)
 	if user.ID != userID {
 		writeErrorResponse(w, http.StatusForbidden, "Cannot update TTL for other users")
