@@ -82,12 +82,12 @@ func (r *MockWidgetRepository) GetByID(ctx context.Context, id string) (*models.
 	return widget, nil
 }
 
-func (r *MockWidgetRepository) GetByUserID(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Widget, error) {
+func (r *MockWidgetRepository) GetByUserID(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Widget, int, error) {
 	// Simplified implementation for testing
 	pattern := "widget:*"
 	keys, err := r.client.client.Keys(ctx, pattern).Result()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	var widgets []*models.Widget
@@ -109,7 +109,23 @@ func (r *MockWidgetRepository) GetByUserID(ctx context.Context, userID string, o
 		}
 	}
 
-	return widgets, nil
+	return widgets, len(widgets), nil
+}
+
+func (r *MockWidgetRepository) GetByUserIDWithFilters(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Widget, int, error) {
+	// Simple mock implementation - just delegate to GetByUserID for now
+	// In a real test, you might want to implement actual filtering logic
+	return r.GetByUserID(ctx, userID, opts)
+}
+
+func (r *MockWidgetRepository) GetWidgetsByType(ctx context.Context, widgetType string, opts models.PaginationOptions) ([]*models.Widget, error) {
+	// Mock implementation for interface compliance
+	return []*models.Widget{}, nil
+}
+
+func (r *MockWidgetRepository) GetWidgetsByStatus(ctx context.Context, enabled bool, opts models.PaginationOptions) ([]*models.Widget, error) {
+	// Mock implementation for interface compliance
+	return []*models.Widget{}, nil
 }
 
 func (r *MockWidgetRepository) Update(ctx context.Context, widget *models.Widget) error {
@@ -275,13 +291,17 @@ func TestWidgetRepository_GetByUserID(t *testing.T) {
 		PerPage: 10,
 	}
 
-	userWidgets, err := repo.GetByUserID(ctx, userID, opts)
+	userWidgets, total, err := repo.GetByUserID(ctx, userID, opts)
 	if err != nil {
 		t.Fatalf("Failed to get widgets by user ID: %v", err)
 	}
 
 	if len(userWidgets) != 2 {
 		t.Errorf("Expected 2 widgets for user %s, got %d", userID, len(userWidgets))
+	}
+
+	if total != 2 {
+		t.Errorf("Expected total count of 2, got %d", total)
 	}
 }
 

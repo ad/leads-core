@@ -34,7 +34,7 @@ info:
     - `404` - Ресурс не найден
     - `405` - Метод не поддерживается
     - `500` - Внутренняя ошибка сервера
-  version: 1.2.2
+  version: 1.2.4
   contact:
     name: API Support
     url: https://github.com/ad/leads-core
@@ -103,7 +103,47 @@ paths:
       tags:
         - Widgets
       summary: Получить список виджетов пользователя
-      description: Возвращает список виджетов текущего пользователя с поддержкой пагинации
+      description: |
+        Возвращает список виджетов текущего пользователя с поддержкой пагинации и фильтрации.
+        
+        ## Фильтрация
+        
+        Поддерживаются следующие типы фильтров:
+        - **type** - фильтрация по типу виджета. Можно указать один тип или несколько через запятую
+        - **isVisible** - фильтрация по состоянию видимости (true/false)
+        - **search** - поиск по названию виджета (регистронезависимый, поиск по подстроке)
+        
+        ## Комбинирование фильтров
+        
+        Все фильтры применяются одновременно (логическое И). Примеры запросов:
+        
+        **Простые фильтры:**
+        - `GET /api/v1/widgets?type=lead-form` - только формы
+        - `GET /api/v1/widgets?isVisible=true` - только активные виджеты
+        - `GET /api/v1/widgets?search=форма` - поиск по названию
+        
+        **Комбинированные фильтры:**
+        - `GET /api/v1/widgets?type=lead-form&isVisible=true` - только активные формы
+        - `GET /api/v1/widgets?type=banner,quiz&search=тест` - баннеры или викторины с "тест" в названии
+        - `GET /api/v1/widgets?type=lead-form,banner&isVisible=true&search=форма` - активные формы и баннеры с "форма" в названии
+        
+        **С пагинацией:**
+        - `GET /api/v1/widgets?type=lead-form&page=2&per_page=10` - вторая страница форм по 10 элементов
+        
+        ## Поведение при отсутствии результатов
+        
+        Если фильтры не дают результатов:
+        - Возвращается пустой массив `widgets: []`
+        - `meta.total` устанавливается в 0
+        - `meta.has_more` устанавливается в false
+        - HTTP статус остается 200 (успешный запрос)
+        
+        ## Производительность
+        
+        Фильтрация оптимизирована для минимального влияния на производительность:
+        - Используются существующие Redis индексы для фильтрации по типу и видимости
+        - Поиск по названию применяется только к уже отфильтрованным результатам
+        - Пагинация применяется после фильтрации
       parameters:
         - name: page
           in: query
@@ -120,6 +160,69 @@ paths:
             minimum: 1
             maximum: 100
             default: 20
+        - name: type
+          in: query
+          description: Фильтр по типу виджета. Можно указать несколько типов через запятую
+          schema:
+            type: string
+            enum:
+              - lead-form
+              - banner
+              - action
+              - social-proof
+              - live-interest
+              - widget-tab
+              - sticky-bar
+              - quiz
+              - wheelOfFortune
+          examples:
+            single:
+              summary: Один тип
+              value: lead-form
+            multiple:
+              summary: Несколько типов
+              value: lead-form,banner,quiz
+            all_forms:
+              summary: Все типы форм
+              value: lead-form,quiz,wheelOfFortune
+            banners_only:
+              summary: Только баннеры и уведомления
+              value: banner,sticky-bar
+        - name: isVisible
+          in: query
+          description: Фильтр по состоянию видимости виджета
+          schema:
+            type: boolean
+          examples:
+            active:
+              summary: Только активные виджеты
+              value: true
+            inactive:
+              summary: Только неактивные виджеты
+              value: false
+        - name: search
+          in: query
+          description: Поиск по названию виджета (регистронезависимый)
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+          examples:
+            simple:
+              summary: Простой поиск
+              value: форма
+            complex:
+              summary: Поиск с пробелами
+              value: форма обратной связи
+            partial_match:
+              summary: Частичное совпадение
+              value: банн
+            case_insensitive:
+              summary: Регистронезависимый поиск
+              value: ФОРМА
+            special_chars:
+              summary: Поиск со спецсимволами
+              value: "форма №1"
       responses:
         '200':
           description: Список виджетов
@@ -135,6 +238,222 @@ paths:
                           $ref: '#/components/schemas/Widget'
                       meta:
                         $ref: '#/components/schemas/Meta'
+              examples:
+                all_widgets:
+                  summary: Все виджеты без фильтров
+                  value:
+                    widgets:
+                      - id: 4be0643f-1d98-573b-97cd-ca98a65347dd
+                        owner_id: user_456def
+                        type: lead-form
+                        name: Форма обратной связи
+                        isVisible: true
+                        created_at: '2024-01-15T10:30:00Z'
+                        updated_at: '2024-01-16T14:20:00Z'
+                      - id: 5cf1754g-2e09-684c-08de-db09b76458ee
+                        owner_id: user_456def
+                        type: banner
+                        name: Рекламный баннер
+                        isVisible: false
+                        created_at: '2024-01-14T09:15:00Z'
+                        updated_at: '2024-01-15T11:30:00Z'
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 2
+                      has_more: false
+                filtered_by_type:
+                  summary: Фильтрация по типу lead-form
+                  value:
+                    widgets:
+                      - id: 4be0643f-1d98-573b-97cd-ca98a65347dd
+                        owner_id: user_456def
+                        type: lead-form
+                        name: Форма обратной связи
+                        isVisible: true
+                        created_at: '2024-01-15T10:30:00Z'
+                        updated_at: '2024-01-16T14:20:00Z'
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 1
+                      has_more: false
+                filtered_by_visibility:
+                  summary: Только активные виджеты
+                  value:
+                    widgets:
+                      - id: 4be0643f-1d98-573b-97cd-ca98a65347dd
+                        owner_id: user_456def
+                        type: lead-form
+                        name: Форма обратной связи
+                        isVisible: true
+                        created_at: '2024-01-15T10:30:00Z'
+                        updated_at: '2024-01-16T14:20:00Z'
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 1
+                      has_more: false
+                search_results:
+                  summary: Поиск по названию "форма"
+                  value:
+                    widgets:
+                      - id: 4be0643f-1d98-573b-97cd-ca98a65347dd
+                        owner_id: user_456def
+                        type: lead-form
+                        name: Форма обратной связи
+                        isVisible: true
+                        created_at: '2024-01-15T10:30:00Z'
+                        updated_at: '2024-01-16T14:20:00Z'
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 1
+                      has_more: false
+                combined_filters:
+                  summary: Комбинированные фильтры (type=lead-form&isVisible=true&search=форма)
+                  value:
+                    widgets:
+                      - id: 4be0643f-1d98-573b-97cd-ca98a65347dd
+                        owner_id: user_456def
+                        type: lead-form
+                        name: Форма обратной связи
+                        isVisible: true
+                        created_at: '2024-01-15T10:30:00Z'
+                        updated_at: '2024-01-16T14:20:00Z'
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 1
+                      has_more: false
+                multiple_types:
+                  summary: Фильтрация по нескольким типам (type=banner,quiz)
+                  value:
+                    widgets:
+                      - id: 5cf1754g-2e09-684c-08de-db09b76458ee
+                        owner_id: user_456def
+                        type: banner
+                        name: Рекламный баннер
+                        isVisible: false
+                        created_at: '2024-01-14T09:15:00Z'
+                        updated_at: '2024-01-15T11:30:00Z'
+                      - id: 6dg2865h-3f10-795d-19ef-ec10c87569ff
+                        owner_id: user_456def
+                        type: quiz
+                        name: Викторина о продукте
+                        isVisible: true
+                        created_at: '2024-01-13T08:00:00Z'
+                        updated_at: '2024-01-14T12:45:00Z'
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 2
+                      has_more: false
+                inactive_widgets:
+                  summary: Только неактивные виджеты (isVisible=false)
+                  value:
+                    widgets:
+                      - id: 5cf1754g-2e09-684c-08de-db09b76458ee
+                        owner_id: user_456def
+                        type: banner
+                        name: Рекламный баннер
+                        isVisible: false
+                        created_at: '2024-01-14T09:15:00Z'
+                        updated_at: '2024-01-15T11:30:00Z'
+                      - id: 7eh3976i-4g21-806e-20fg-fd21d98670gg
+                        owner_id: user_456def
+                        type: sticky-bar
+                        name: Отключенная полоса
+                        isVisible: false
+                        created_at: '2024-01-12T16:30:00Z'
+                        updated_at: '2024-01-13T10:15:00Z'
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 2
+                      has_more: false
+                case_insensitive_search:
+                  summary: Регистронезависимый поиск (search=ФОРМА)
+                  value:
+                    widgets:
+                      - id: 4be0643f-1d98-573b-97cd-ca98a65347dd
+                        owner_id: user_456def
+                        type: lead-form
+                        name: Форма обратной связи
+                        isVisible: true
+                        created_at: '2024-01-15T10:30:00Z'
+                        updated_at: '2024-01-16T14:20:00Z'
+                      - id: 8fi4087j-5h32-917f-31gh-ge32e09781hh
+                        owner_id: user_456def
+                        type: lead-form
+                        name: Контактная форма
+                        isVisible: true
+                        created_at: '2024-01-11T14:20:00Z'
+                        updated_at: '2024-01-12T09:30:00Z'
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 2
+                      has_more: false
+                complex_combination:
+                  summary: Сложная комбинация фильтров (type=lead-form,banner&isVisible=true&search=форма)
+                  value:
+                    widgets:
+                      - id: 4be0643f-1d98-573b-97cd-ca98a65347dd
+                        owner_id: user_456def
+                        type: lead-form
+                        name: Форма обратной связи
+                        isVisible: true
+                        created_at: '2024-01-15T10:30:00Z'
+                        updated_at: '2024-01-16T14:20:00Z'
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 1
+                      has_more: false
+                pagination_with_filters:
+                  summary: Пагинация с фильтрами (type=lead-form&page=2&per_page=1)
+                  value:
+                    widgets:
+                      - id: 8fi4087j-5h32-917f-31gh-ge32e09781hh
+                        owner_id: user_456def
+                        type: lead-form
+                        name: Контактная форма
+                        isVisible: true
+                        created_at: '2024-01-11T14:20:00Z'
+                        updated_at: '2024-01-12T09:30:00Z'
+                    meta:
+                      page: 2
+                      per_page: 1
+                      total: 3
+                      has_more: true
+                no_results:
+                  summary: Фильтры не дали результатов
+                  value:
+                    widgets: []
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 0
+                      has_more: false
+                no_results_search:
+                  summary: Поиск не дал результатов (search=несуществующий)
+                  value:
+                    widgets: []
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 0
+                      has_more: false
+                no_results_type:
+                  summary: Фильтр по несуществующему типу (type=nonexistent)
+                  value:
+                    widgets: []
+                    meta:
+                      page: 1
+                      per_page: 20
+                      total: 0
+                      has_more: false
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':

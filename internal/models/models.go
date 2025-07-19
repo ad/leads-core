@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -74,10 +75,18 @@ type EventRequest struct {
 	Type string `json:"type"` // "view", "close"
 }
 
+// FilterOptions represents filtering parameters for widgets
+type FilterOptions struct {
+	Types     []string `json:"types,omitempty"`     // Filter by widget types
+	IsVisible *bool    `json:"isVisible,omitempty"` // Filter by visibility status (nil = all)
+	Search    string   `json:"search,omitempty"`    // Search by widget name
+}
+
 // PaginationOptions represents pagination parameters
 type PaginationOptions struct {
-	Page    int `json:"page"`
-	PerPage int `json:"per_page"`
+	Page    int            `json:"page"`
+	PerPage int            `json:"per_page"`
+	Filters *FilterOptions `json:"filters,omitempty"` // Optional filtering parameters
 }
 
 // PaginatedResponse represents a paginated response
@@ -238,4 +247,58 @@ type ExportOptions struct {
 	Format string
 	From   *time.Time
 	To     *time.Time
+}
+
+// ValidateFilterOptions validates filter options and returns cleaned version
+func ValidateFilterOptions(filters *FilterOptions) *FilterOptions {
+	if filters == nil {
+		return nil
+	}
+
+	validated := &FilterOptions{
+		Types:     make([]string, 0),
+		IsVisible: filters.IsVisible,
+		Search:    strings.TrimSpace(filters.Search),
+	}
+
+	// Validate and clean widget types
+	validTypes := map[string]bool{
+		"lead-form": true,
+		"banner":    true,
+		"quiz":      true,
+		"survey":    true,
+		"popup":     true,
+	}
+
+	for _, widgetType := range filters.Types {
+		cleanType := strings.TrimSpace(strings.ToLower(widgetType))
+		if cleanType != "" && validTypes[cleanType] {
+			validated.Types = append(validated.Types, cleanType)
+		}
+	}
+
+	return validated
+}
+
+// HasFilters returns true if any filters are applied
+func (f *FilterOptions) HasFilters() bool {
+	if f == nil {
+		return false
+	}
+	return len(f.Types) > 0 || f.IsVisible != nil || f.Search != ""
+}
+
+// HasTypeFilter returns true if type filter is applied
+func (f *FilterOptions) HasTypeFilter() bool {
+	return f != nil && len(f.Types) > 0
+}
+
+// HasVisibilityFilter returns true if visibility filter is applied
+func (f *FilterOptions) HasVisibilityFilter() bool {
+	return f != nil && f.IsVisible != nil
+}
+
+// HasSearchFilter returns true if search filter is applied
+func (f *FilterOptions) HasSearchFilter() bool {
+	return f != nil && f.Search != ""
 }

@@ -179,9 +179,15 @@ func (s *WidgetService) DeleteWidget(ctx context.Context, widgetID, userID strin
 	return nil
 }
 
-// GetUserWidgets retrieves widgets for a user with pagination
+// GetUserWidgets retrieves widgets for a user with pagination and optional filtering
 func (s *WidgetService) GetUserWidgets(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Widget, int, error) {
-	widgets, total, err := s.widgetRepo.GetByUserID(ctx, userID, opts)
+	// Validate and clean filter options if provided
+	if opts.Filters != nil {
+		opts.Filters = models.ValidateFilterOptions(opts.Filters)
+	}
+
+	// Use the filtering-capable repository method
+	widgets, total, err := s.widgetRepo.GetByUserIDWithFilters(ctx, userID, opts)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get user widgets: %w", err)
 	}

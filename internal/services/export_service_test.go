@@ -12,7 +12,12 @@ import (
 
 // MockWidgetRepository is a mock implementation of WidgetRepository
 type MockWidgetRepository struct {
-	widgets map[string]*models.Widget
+	widgets                      map[string]*models.Widget
+	getByUserIDWithFiltersCalled bool
+	getByUserIDCalled            bool
+	lastFilters                  *models.FilterOptions
+	lastUserID                   string
+	lastOpts                     models.PaginationOptions
 }
 
 func NewMockWidgetRepository() *MockWidgetRepository {
@@ -35,6 +40,9 @@ func (m *MockWidgetRepository) GetByID(ctx context.Context, id string) (*models.
 }
 
 func (m *MockWidgetRepository) GetByUserID(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Widget, int, error) {
+	m.getByUserIDCalled = true
+	m.lastUserID = userID
+	m.lastOpts = opts
 	var result []*models.Widget
 	for _, widget := range m.widgets {
 		if widget.OwnerID == userID {
@@ -42,6 +50,16 @@ func (m *MockWidgetRepository) GetByUserID(ctx context.Context, userID string, o
 		}
 	}
 	return result, len(result), nil
+}
+
+func (m *MockWidgetRepository) GetByUserIDWithFilters(ctx context.Context, userID string, opts models.PaginationOptions) ([]*models.Widget, int, error) {
+	m.getByUserIDWithFiltersCalled = true
+	m.lastUserID = userID
+	m.lastOpts = opts
+	m.lastFilters = opts.Filters
+	// Simple mock implementation - just delegate to GetByUserID for now
+	// In a real test, you might want to implement actual filtering logic
+	return m.GetByUserID(ctx, userID, opts)
 }
 
 func (m *MockWidgetRepository) Update(ctx context.Context, widget *models.Widget) error {

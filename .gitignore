@@ -69,3 +69,4 @@ test_export_range.csv
 test_export.csv
 test_export.xlsx
 test_export.json
+benchmark_results/

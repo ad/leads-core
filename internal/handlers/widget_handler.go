@@ -92,10 +92,10 @@ func (h *WidgetHandler) GetWidgets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse pagination parameters
-	opts := parsePaginationOptions(r)
+	// Parse pagination and filter parameters
+	opts := parsePaginationWithFilters(r)
 
-	// Get widgets
+	// Get widgets with filtering support
 	widgets, total, err := h.widgetService.GetUserWidgets(r.Context(), user.ID, opts)
 	if err != nil {
 		logger.Error("Failed to get widgets", map[string]interface{}{
@@ -111,7 +111,7 @@ func (h *WidgetHandler) GetWidgets(w http.ResponseWriter, r *http.Request) {
 	meta := &models.Meta{
 		Page:    opts.Page,
 		PerPage: opts.PerPage,
-		Total:   total,
+		Total:   total, // This now reflects the filtered total count
 		HasMore: len(widgets) == opts.PerPage,
 	}
 
@@ -119,6 +119,8 @@ func (h *WidgetHandler) GetWidgets(w http.ResponseWriter, r *http.Request) {
 		"action":  "get_widgets",
 		"user_id": user.ID,
 		"count":   len(widgets),
+		"total":   total,
+		"filters": opts.Filters != nil && opts.Filters.HasFilters(),
 	})
 	writeJSONResponse(w, http.StatusOK, models.WidgetsResponse{Widgets: widgets, Meta: meta})
 }
@@ -585,6 +587,43 @@ func (h *WidgetHandler) GetWidgetsSummary(w http.ResponseWriter, r *http.Request
 	writeJSONResponse(w, http.StatusOK, models.Response{Data: summary})
 }
 
+// parseFilterOptions parses filter parameters from request
+func parseFilterOptions(r *http.Request) *models.FilterOptions {
+	filters := &models.FilterOptions{}
+
+	// Parse type filter - handle comma-separated values
+	if typeParam := r.URL.Query().Get("type"); typeParam != "" {
+		// Split by comma and trim whitespace
+		typeStrings := strings.Split(typeParam, ",")
+		for _, t := range typeStrings {
+			trimmed := strings.TrimSpace(t)
+			if trimmed != "" {
+				filters.Types = append(filters.Types, trimmed)
+			}
+		}
+	}
+
+	// Parse visibility filter - validate boolean values
+	if visibleParam := r.URL.Query().Get("isVisible"); visibleParam != "" {
+		if visible, err := strconv.ParseBool(visibleParam); err == nil {
+			filters.IsVisible = &visible
+		}
+		// If parsing fails, we ignore the parameter (as per requirements)
+	}
+
+	// Parse search filter - sanitize input
+	if searchParam := r.URL.Query().Get("search"); searchParam != "" {
+		// Trim whitespace and sanitize the search string
+		sanitized := strings.TrimSpace(searchParam)
+		// Remove any null bytes or other control characters that could cause issues
+		sanitized = strings.ReplaceAll(sanitized, "\x00", "")
+		filters.Search = sanitized
+	}
+
+	// Validate and clean the filter options
+	return models.ValidateFilterOptions(filters)
+}
+
 // parsePaginationOptions parses pagination parameters from request
 func parsePaginationOptions(r *http.Request) models.PaginationOptions {
 	page := 1
@@ -613,6 +652,13 @@ func parsePaginationOptions(r *http.Request) models.PaginationOptions {
 		Page:    page,
 		PerPage: perPage,
 	}
+}
+
+// parsePaginationWithFilters parses both pagination and filter parameters from request
+func parsePaginationWithFilters(r *http.Request) models.PaginationOptions {
+	opts := parsePaginationOptions(r)
+	opts.Filters = parseFilterOptions(r)
+	return opts
 }
 
 // extractWidgetID extracts widget ID from URL path

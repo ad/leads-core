@@ -160,11 +160,11 @@ func (r *RedisClient) GetClient() redis.UniversalClient {
 // Redis key patterns with hash tags for cluster compatibility
 const (
 	// Widgets - use {widgetID} hash tag to ensure related keys are in same slot
-	WidgetKey          = "{%s}:widget"        // HASH - widget data
-	WidgetsByTimeKey   = "widgets:by_time"    // ZSET - all widgets by timestamp (global)
-	UserWidgetsKey     = "{%s}:user:widgets"  // SET - user's widgets
-	WidgetsByTypeKey   = "widgets:type:%s"    // SET - widgets by type (global)
-	WidgetsByStatusKey = "widgets:enabled:%s" // SET - widgets by status (0|1) (global)
+	WidgetKey          = "{%s}:widget"          // HASH - widget data
+	WidgetsByTimeKey   = "widgets:by_time"      // ZSET - all widgets by timestamp (global)
+	UserWidgetsKey     = "{%s}:user:widgets"    // SET - user's widgets
+	WidgetsByTypeKey   = "widgets:type:%s"      // SET - widgets by type (global)
+	WidgetsByStatusKey = "widgets:isVisible:%s" // SET - widgets by status (0|1) (global)
 
 	// Submissions - use {widgetID} hash tag to group with widget data
 	SubmissionKey        = "{%s}:submission:%s" // HASH - submission data

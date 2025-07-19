@@ -246,3 +246,290 @@ func TestPaginationOptions_Calculate(t *testing.T) {
 		})
 	}
 }
+func TestValidateFilterOptions(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *FilterOptions
+		expected *FilterOptions
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "valid types",
+			input: &FilterOptions{
+				Types: []string{"lead-form", "banner", "quiz"},
+			},
+			expected: &FilterOptions{
+				Types:  []string{"lead-form", "banner", "quiz"},
+				Search: "",
+			},
+		},
+		{
+			name: "mixed valid and invalid types",
+			input: &FilterOptions{
+				Types: []string{"lead-form", "invalid-type", "banner", ""},
+			},
+			expected: &FilterOptions{
+				Types:  []string{"lead-form", "banner"},
+				Search: "",
+			},
+		},
+		{
+			name: "case insensitive types",
+			input: &FilterOptions{
+				Types: []string{"LEAD-FORM", "Banner", "QUIZ"},
+			},
+			expected: &FilterOptions{
+				Types:  []string{"lead-form", "banner", "quiz"},
+				Search: "",
+			},
+		},
+		{
+			name: "visibility filter",
+			input: &FilterOptions{
+				IsVisible: boolPtr(true),
+			},
+			expected: &FilterOptions{
+				Types:     []string{},
+				IsVisible: boolPtr(true),
+				Search:    "",
+			},
+		},
+		{
+			name: "search filter with whitespace",
+			input: &FilterOptions{
+				Search: "  test search  ",
+			},
+			expected: &FilterOptions{
+				Types:  []string{},
+				Search: "test search",
+			},
+		},
+		{
+			name: "combined filters",
+			input: &FilterOptions{
+				Types:     []string{"lead-form", "invalid"},
+				IsVisible: boolPtr(false),
+				Search:    " contact form ",
+			},
+			expected: &FilterOptions{
+				Types:     []string{"lead-form"},
+				IsVisible: boolPtr(false),
+				Search:    "contact form",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ValidateFilterOptions(tt.input)
+
+			if tt.expected == nil {
+				if result != nil {
+					t.Errorf("Expected nil, got %+v", result)
+				}
+				return
+			}
+
+			if result == nil {
+				t.Errorf("Expected %+v, got nil", tt.expected)
+				return
+			}
+
+			// Check types
+			if len(result.Types) != len(tt.expected.Types) {
+				t.Errorf("Expected %d types, got %d", len(tt.expected.Types), len(result.Types))
+			} else {
+				for i, expectedType := range tt.expected.Types {
+					if result.Types[i] != expectedType {
+						t.Errorf("Expected type[%d] %s, got %s", i, expectedType, result.Types[i])
+					}
+				}
+			}
+
+			// Check visibility
+			if (result.IsVisible == nil) != (tt.expected.IsVisible == nil) {
+				t.Errorf("IsVisible pointer mismatch: expected %v, got %v", tt.expected.IsVisible, result.IsVisible)
+			} else if result.IsVisible != nil && tt.expected.IsVisible != nil {
+				if *result.IsVisible != *tt.expected.IsVisible {
+					t.Errorf("Expected IsVisible %v, got %v", *tt.expected.IsVisible, *result.IsVisible)
+				}
+			}
+
+			// Check search
+			if result.Search != tt.expected.Search {
+				t.Errorf("Expected search '%s', got '%s'", tt.expected.Search, result.Search)
+			}
+		})
+	}
+}
+
+func TestFilterOptions_HasFilters(t *testing.T) {
+	tests := []struct {
+		name     string
+		filters  *FilterOptions
+		expected bool
+	}{
+		{
+			name:     "nil filters",
+			filters:  nil,
+			expected: false,
+		},
+		{
+			name:     "empty filters",
+			filters:  &FilterOptions{},
+			expected: false,
+		},
+		{
+			name: "has type filter",
+			filters: &FilterOptions{
+				Types: []string{"lead-form"},
+			},
+			expected: true,
+		},
+		{
+			name: "has visibility filter",
+			filters: &FilterOptions{
+				IsVisible: boolPtr(true),
+			},
+			expected: true,
+		},
+		{
+			name: "has search filter",
+			filters: &FilterOptions{
+				Search: "test",
+			},
+			expected: true,
+		},
+		{
+			name: "has all filters",
+			filters: &FilterOptions{
+				Types:     []string{"banner"},
+				IsVisible: boolPtr(false),
+				Search:    "contact",
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.filters.HasFilters()
+			if result != tt.expected {
+				t.Errorf("Expected %v, got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestFilterOptions_HasTypeFilter(t *testing.T) {
+	tests := []struct {
+		name     string
+		filters  *FilterOptions
+		expected bool
+	}{
+		{
+			name:     "nil filters",
+			filters:  nil,
+			expected: false,
+		},
+		{
+			name:     "empty types",
+			filters:  &FilterOptions{Types: []string{}},
+			expected: false,
+		},
+		{
+			name:     "has types",
+			filters:  &FilterOptions{Types: []string{"lead-form"}},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.filters.HasTypeFilter()
+			if result != tt.expected {
+				t.Errorf("Expected %v, got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestFilterOptions_HasVisibilityFilter(t *testing.T) {
+	tests := []struct {
+		name     string
+		filters  *FilterOptions
+		expected bool
+	}{
+		{
+			name:     "nil filters",
+			filters:  nil,
+			expected: false,
+		},
+		{
+			name:     "nil visibility",
+			filters:  &FilterOptions{IsVisible: nil},
+			expected: false,
+		},
+		{
+			name:     "has visibility true",
+			filters:  &FilterOptions{IsVisible: boolPtr(true)},
+			expected: true,
+		},
+		{
+			name:     "has visibility false",
+			filters:  &FilterOptions{IsVisible: boolPtr(false)},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.filters.HasVisibilityFilter()
+			if result != tt.expected {
+				t.Errorf("Expected %v, got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestFilterOptions_HasSearchFilter(t *testing.T) {
+	tests := []struct {
+		name     string
+		filters  *FilterOptions
+		expected bool
+	}{
+		{
+			name:     "nil filters",
+			filters:  nil,
+			expected: false,
+		},
+		{
+			name:     "empty search",
+			filters:  &FilterOptions{Search: ""},
+			expected: false,
+		},
+		{
+			name:     "has search",
+			filters:  &FilterOptions{Search: "test"},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.filters.HasSearchFilter()
+			if result != tt.expected {
+				t.Errorf("Expected %v, got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+// Helper function to create bool pointer
+func boolPtr(b bool) *bool {
+	return &b
+}
