@@ -5,7 +5,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/ad/leads-core/internal/models"
 	"github.com/ad/leads-core/internal/storage"
 )
 
@@ -80,5 +79,5 @@ func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
 		statusCode = http.StatusServiceUnavailable
 	}
 
-	writeJSONResponse(w, statusCode, models.Response{Data: response})
+	writeJSONResponse(w, statusCode, response)
 }
