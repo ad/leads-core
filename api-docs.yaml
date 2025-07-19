@@ -1,30 +1,30 @@
-openapi: 3.0.0
+openapi: 3.0.1
 info:
   title: Leads Core API
   description: |
     Комплексное API для управления виджетами лидогенерации.
-    
+
     Сервис предоставляет возможности для:
     - Создания и управления виджетами
     - Сбора форм и событий от виджетов
     - Получения статистики и аналитики
     - Мониторинга состояния системы
-    
+
     ## Аутентификация
-    
+
     API использует JWT токены для аутентификации. Токен должен быть передан в заголовке Authorization:
     ```
     Authorization: Bearer <jwt_token>
     ```
-    
+
     ## Пагинация
-    
+
     Многие эндпоинты поддерживают пагинацию с параметрами:
     - `page` - номер страницы (по умолчанию 1)
     - `per_page` или `limit` - количество элементов на странице (по умолчанию 20, максимум 100)
-    
+
     ## Коды ответов
-    
+
     - `200` - Успешный запрос
     - `201` - Ресурс создан
     - `204` - Успешный запрос без содержимого
@@ -34,7 +34,7 @@ info:
     - `404` - Ресурс не найден
     - `405` - Метод не поддерживается
     - `500` - Внутренняя ошибка сервера
-  version: 1.0.0
+  version: 1.2.2
   contact:
     name: API Support
     url: https://github.com/ad/leads-core
@@ -43,9 +43,12 @@ info:
     url: https://opensource.org/licenses/MIT
 
 servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/adsky6/Leads/1.2.2
   - url: http://localhost:8080
     description: Development server
-  - url: https://api.leads.example.com
+  - url: https://adsky.tplinkdns.com
     description: Production server
 
 security:
@@ -79,7 +82,8 @@ paths:
       tags:
         - Monitoring
       summary: Системные метрики
-      description: Возвращает метрики производительности и использования ресурсов в формате Prometheus
+      description: Возвращает метрики производительности и использования ресурсов в
+        формате Prometheus
       security: []
       responses:
         '200':
@@ -168,8 +172,8 @@ paths:
       description: Возвращает информацию о конкретном виджете
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
           description: Уникальный идентификатор виджета
           schema:
             type: string
@@ -181,10 +185,10 @@ paths:
               schema:
                 allOf:
                   - $ref: '#/components/schemas/Widget'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
     post:
       tags:
@@ -193,8 +197,8 @@ paths:
       description: Обновляет настройки существующего виджета
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
           description: Уникальный идентификатор виджета
           schema:
             type: string
@@ -214,10 +218,10 @@ paths:
                   - $ref: '#/components/schemas/Widget'
         '400':
           $ref: '#/components/responses/ValidationError'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
     delete:
       tags:
@@ -226,18 +230,18 @@ paths:
       description: Удаляет виджет и все связанные с ним данные
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
           description: Уникальный идентификатор виджета
           schema:
             type: string
       responses:
         '204':
           description: Виджет удален
-        '404':
-          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/v1/widgets/{id}/config:
     put:
@@ -247,8 +251,8 @@ paths:
       description: Обновляет конфигурацию существующего виджета
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
           description: Уникальный идентификатор виджета
           schema:
             type: string
@@ -269,10 +273,10 @@ paths:
                   - $ref: '#/components/schemas/Widget'
         '400':
           $ref: '#/components/responses/ValidationError'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/v1/widgets/{id}/stats:
     get:
@@ -282,8 +286,8 @@ paths:
       description: Возвращает статистику просмотров, отправок и других событий для виджета
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
           description: Уникальный идентификатор виджета
           schema:
             type: string
@@ -295,21 +299,22 @@ paths:
               schema:
                 allOf:
                   - $ref: '#/components/schemas/WidgetStats'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/v1/widgets/{id}/submissions:
     get:
       tags:
         - Analytics
       summary: Получить отправки виджета
-      description: Возвращает список всех отправок для конкретного виджета с поддержкой пагинации
+      description: Возвращает список всех отправок для конкретного виджета с
+        поддержкой пагинации
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
           description: Уникальный идентификатор виджета
           schema:
             type: string
@@ -343,21 +348,22 @@ paths:
                           $ref: '#/components/schemas/Submission'
                       meta:
                         $ref: '#/components/schemas/Meta'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/v1/widgets/{id}/export:
     get:
       tags:
         - Analytics
       summary: Экспорт отправок виджета
-      description: Экспортирует отправки конкретного виджета в различных форматах (CSV, JSON, XLSX)
+      description: Экспортирует отправки конкретного виджета в различных форматах
+        (CSV, JSON, XLSX)
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
           description: Уникальный идентификатор виджета
           schema:
             type: string
@@ -366,22 +372,25 @@ paths:
           description: Формат экспорта
           schema:
             type: string
-            enum: ["csv", "json", "xlsx"]
-            default: "json"
+            enum:
+              - csv
+              - json
+              - xlsx
+            default: json
         - name: from
           in: query
           description: Начальная дата для фильтрации (RFC3339 формат)
           schema:
             type: string
             format: date-time
-            example: "2024-01-01T00:00:00Z"
+            example: '2024-01-01T00:00:00Z'
         - name: to
           in: query
           description: Конечная дата для фильтрации (RFC3339 формат)
           schema:
             type: string
             format: date-time
-            example: "2024-12-31T23:59:59Z"
+            example: '2024-12-31T23:59:59Z'
       responses:
         '200':
           description: Файл экспорта
@@ -403,17 +412,17 @@ paths:
               description: Имя файла для скачивания
               schema:
                 type: string
-                example: 'attachment; filename="widget_submissions_2024-01-15.csv"'
+                example: attachment; filename="widget_submissions_2024-01-15.csv"
         '400':
           description: Неверные параметры экспорта
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/v1/widgets/summary:
     get:
@@ -443,13 +452,13 @@ paths:
         - Public
       summary: Отправить данные в виджет
       description: |
-        Публичный эндпоинт для отправки данных в виджет. 
+        Публичный эндпоинт для отправки данных в виджет.
         Не требует аутентификации и используется виджетами на внешних сайтах.
       security: []
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
           description: Уникальный идентификатор виджета
           schema:
             type: string
@@ -464,15 +473,15 @@ paths:
                 summary: Отправка формы обратной связи
                 value:
                   data:
-                    name: "Иван Иванов"
-                    email: "ivan@example.com"
-                    phone: "+7 (900) 123-45-67"
-                    message: "Интересует ваш продукт"
+                    name: Иван Иванов
+                    email: ivan@example.com
+                    phone: +7 (900) 123-45-67
+                    message: Интересует ваш продукт
               newsletter:
                 summary: Подписка через баннер
                 value:
                   data:
-                    email: "user@example.com"
+                    email: user@example.com
       responses:
         '201':
           description: Данные отправлены
@@ -487,14 +496,14 @@ paths:
                         $ref: '#/components/schemas/Submission'
         '400':
           $ref: '#/components/responses/ValidationError'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '403':
           description: Виджет отключен
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /widgets/{id}/events:
     post:
@@ -507,8 +516,8 @@ paths:
       security: []
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
           description: Уникальный идентификатор виджета
           schema:
             type: string
@@ -522,11 +531,11 @@ paths:
               view:
                 summary: Регистрация просмотра
                 value:
-                  type: "view"
+                  type: view
               close:
                 summary: Регистрация закрытия
                 value:
-                  type: "close"
+                  type: close
       responses:
         '204':
           description: Событие зарегистрировано
@@ -536,14 +545,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '403':
           description: Виджет отключен
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # Admin Panel
   /panel:
@@ -552,7 +561,7 @@ paths:
         - Admin
       summary: Панель администратора
       description: |
-        Веб-интерфейс для управления виджетами. 
+        Веб-интерфейс для управления виджетами.
         Предоставляет пользовательский интерфейс для создания, просмотра и управления виджетами.
       security: []
       responses:
@@ -569,7 +578,8 @@ paths:
       tags:
         - Users
       summary: Получить информацию о текущем пользователе
-      description: Возвращает информацию о текущем пользователе, включая тарифный план и виджеты
+      description: Возвращает информацию о текущем пользователе, включая тарифный план
+        и виджеты
       responses:
         '200':
           description: Информация о пользователе
@@ -592,8 +602,8 @@ paths:
         Пользователь может обновлять TTL только для своих собственных данных.
       parameters:
         - name: id
-          in: path
           required: true
+          in: path
           description: Уникальный идентификатор пользователя
           schema:
             type: string
@@ -623,7 +633,7 @@ paths:
                         properties:
                           message:
                             type: string
-                            example: "TTL updated successfully"
+                            example: TTL updated successfully
                           user_id:
                             type: string
                           ttl_days:
@@ -634,14 +644,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           description: Нельзя обновлять TTL для других пользователей
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
 
 components:
   securitySchemes:
@@ -659,36 +669,45 @@ components:
         id:
           type: string
           description: Уникальный идентификатор виджета
-          example: "4be0643f-1d98-573b-97cd-ca98a65347dd"
+          example: 4be0643f-1d98-573b-97cd-ca98a65347dd
         owner_id:
           type: string
           description: ID владельца виджета
-          example: "user_456def"
+          example: user_456def
         type:
           type: string
           description: Тип виджета
-          example: "lead-form"
-          enum: ["lead-form", "banner", "action", "social-proof", "live-interest", "widget-tab", "sticky-bar", "quiz", "wheelOfFortune"]
+          example: lead-form
+          enum:
+            - lead-form
+            - banner
+            - action
+            - social-proof
+            - live-interest
+            - widget-tab
+            - sticky-bar
+            - quiz
+            - wheelOfFortune
         name:
           type: string
           description: Название виджета
-          example: "Форма обратной связи"
+          example: Форма обратной связи
         isVisible:
           type: boolean
           description: Активен ли виджет
           example: true
         config:
-           $ref: '#/components/schemas/WidgetConfig'
+          $ref: '#/components/schemas/WidgetConfig'
         created_at:
           type: string
           format: date-time
           description: Время создания
-          example: "2024-01-15T10:30:00Z"
+          example: '2024-01-15T10:30:00Z'
         updated_at:
           type: string
           format: date-time
           description: Время последнего обновления
-          example: "2024-01-16T14:20:00Z"
+          example: '2024-01-16T14:20:00Z'
         stats:
           $ref: '#/components/schemas/WidgetStats'
 
@@ -701,28 +720,28 @@ components:
         id:
           type: string
           description: Уникальный идентификатор отправки
-          example: "submission_789ghi"
+          example: submission_789ghi
         widget_id:
           type: string
           description: ID виджета
-          example: "4be0643f-1d98-573b-97cd-ca98a65347dd"
+          example: 4be0643f-1d98-573b-97cd-ca98a65347dd
         data:
           type: object
           description: Данные отправки
           example:
-            name: "Иван Иванов"
-            email: "ivan@example.com"
-            phone: "+7 (900) 123-45-67"
-            message: "Интересует ваш продукт"
+            name: Иван Иванов
+            email: ivan@example.com
+            phone: +7 (900) 123-45-67
+            message: Интересует ваш продукт
         created_at:
           type: string
           format: date-time
           description: Время отправки
-          example: "2024-01-16T15:45:00Z"
+          example: '2024-01-16T15:45:00Z'
         ttl:
           type: string
           description: Время жизни записи
-          example: "2160h0m0s"
+          example: 2160h0m0s
 
     WidgetStats:
       type: object
@@ -746,7 +765,7 @@ components:
           type: string
           format: date-time
           description: Время последнего просмотра
-          example: "2024-01-16T15:30:00Z"
+          example: '2024-01-16T15:30:00Z'
 
     WidgetsSummary:
       type: object
@@ -778,16 +797,19 @@ components:
         id:
           type: string
           description: Уникальный идентификатор пользователя
-          example: "user_456def"
+          example: user_456def
         username:
           type: string
           description: Email пользователя
-          example: "ivan@example.com"
+          example: ivan@example.com
         plan:
           type: string
           description: Тарифный план
-          example: "demo"
-          enum: ["demo", "free", "pro"]
+          example: demo
+          enum:
+            - demo
+            - free
+            - pro
 
     # Request Models
     CreateWidgetRequest:
@@ -801,12 +823,21 @@ components:
         type:
           type: string
           description: Тип виджета
-          example: "lead-form"
-          enum: ["lead-form", "banner", "action", "social-proof", "live-interest", "widget-tab", "sticky-bar", "quiz", "wheelOfFortune"]
+          example: lead-form
+          enum:
+            - lead-form
+            - banner
+            - action
+            - social-proof
+            - live-interest
+            - widget-tab
+            - sticky-bar
+            - quiz
+            - wheelOfFortune
         name:
           type: string
           description: Название виджета
-          example: "Форма обратной связи"
+          example: Форма обратной связи
           minLength: 1
           maxLength: 255
         isVisible:
@@ -823,7 +854,7 @@ components:
         name:
           type: string
           description: Название виджета
-          example: "Новое название"
+          example: Новое название
           minLength: 1
           maxLength: 100
         isVisible:
@@ -847,10 +878,10 @@ components:
           type: object
           description: Данные для отправки
           example:
-            name: "Иван Иванов"
-            email: "ivan@example.com"
-            phone: "+7 (900) 123-45-67"
-            message: "Интересует ваш продукт"
+            name: Иван Иванов
+            email: ivan@example.com
+            phone: +7 (900) 123-45-67
+            message: Интересует ваш продукт
 
     EventRequest:
       type: object
@@ -860,8 +891,10 @@ components:
         type:
           type: string
           description: Тип события
-          example: "view"
-          enum: ["view", "close"]
+          example: view
+          enum:
+            - view
+            - close
 
     UpdateTTLRequest:
       type: object
@@ -910,19 +943,19 @@ components:
         error:
           type: string
           description: Описание ошибки
-          example: "Validation failed"
+          example: Validation failed
         details:
           description: Дополнительные детали ошибки
           example:
-            field: "email"
-            message: "Invalid email format"
+            field: email
+            message: Invalid email format
 
     ValidationError:
       type: object
       properties:
         error:
           type: string
-          example: "Validation error"
+          example: Validation error
         details:
           type: array
           items:
@@ -930,10 +963,10 @@ components:
             properties:
               field:
                 type: string
-                example: "email"
+                example: email
               message:
                 type: string
-                example: "Invalid email format"
+                example: Invalid email format
 
     # Health & Metrics
     HealthResponse:
@@ -941,22 +974,24 @@ components:
       properties:
         status:
           type: string
-          example: "ok"
-          enum: ["ok", "error"]
+          example: ok
+          enum:
+            - ok
+            - error
         timestamp:
           type: string
           format: date-time
-          example: "2024-01-16T10:30:00Z"
+          example: '2024-01-16T10:30:00Z'
         uptime:
           type: string
           description: Время работы сервиса
-          example: "72h30m15s"
+          example: 72h30m15s
         services:
           type: object
           description: Состояние зависимых сервисов
           example:
-            redis: "ok"
-            database: "ok"
+            redis: ok
+            database: ok
         metrics:
           $ref: '#/components/schemas/HealthMetrics'
 
@@ -986,7 +1021,7 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
-            error: "User not found"
+            error: User not found
 
     NotFound:
       description: Ресурс не найден
@@ -995,7 +1030,7 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
-            error: "Widget not found"
+            error: Widget not found
 
     ValidationError:
       description: Ошибка валидации
@@ -1004,12 +1039,12 @@ components:
           schema:
             $ref: '#/components/schemas/ValidationError'
           example:
-            error: "Validation error"
+            error: Validation error
             details:
-              - field: "email"
-                message: "Invalid email format"
-              - field: "name"
-                message: "Name is required"
+              - field: email
+                message: Invalid email format
+              - field: name
+                message: Name is required
 
     InternalError:
       description: Внутренняя ошибка сервера
@@ -1018,7 +1053,7 @@ components:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
           example:
-            error: "Internal server error"
+            error: Internal server error
 
 tags:
   - name: Widgets

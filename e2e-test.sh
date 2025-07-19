@@ -178,7 +178,7 @@ echo "==============================="
 WIDGET_DATA='{"name":"Test Widget","type":"lead-form","isVisible":true,"config":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}'
 log_info "Creating widget and extracting ID..."
 response=$(curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$WIDGET_DATA" "$SERVER_URL/api/v1/widgets")
-CREATED_WIDGET_ID=$(echo "$response" | jq -r '.data.id // empty')
+CREATED_WIDGET_ID=$(echo "$response" | jq -r '.id // empty')
 
 if [ -n "$CREATED_WIDGET_ID" ] && [ "$CREATED_WIDGET_ID" != "null" ]; then
     log_info "Widget created with ID: $CREATED_WIDGET_ID"
@@ -188,7 +188,7 @@ if [ -n "$CREATED_WIDGET_ID" ] && [ "$CREATED_WIDGET_ID" != "null" ]; then
     test_http "Get Real Widget" "GET" "$SERVER_URL/api/v1/widgets/$CREATED_WIDGET_ID" "$AUTH_HEADER" "" "200"
     
     # Update the real widget
-    UPDATE_DATA='{"name":"Updated Test Widget","type":"lead-form"}'
+    UPDATE_DATA='{"name":"Updated Test Widget","isVisible":true}'
     test_http "Update Real Widget" "POST" "$SERVER_URL/api/v1/widgets/$CREATED_WIDGET_ID" "$AUTH_HEADER -H 'Content-Type: application/json'" "$UPDATE_DATA" "200"
     
     # Get stats for real widget
@@ -235,7 +235,7 @@ FAKE_WIDGET_ID="test-widget-123"
 test_http "Get Non-existent Widget" "GET" "$SERVER_URL/api/v1/widgets/$FAKE_WIDGET_ID" "$AUTH_HEADER" "" "404"
 
 # Update non-existent widget
-UPDATE_DATA='{"name":"Updated Test Widget","type":"lead-form"}'
+UPDATE_DATA='{"name":"Updated Test Widget","isVisible":false}'
 test_http "Update Non-existent Widget" "POST" "$SERVER_URL/api/v1/widgets/$FAKE_WIDGET_ID" "$AUTH_HEADER -H 'Content-Type: application/json'" "$UPDATE_DATA" "404"
 
 # Get stats for non-existent widget
@@ -353,7 +353,7 @@ STATS_WIDGET_DATA='{"name":"Statistics Test Widget","type":"lead-form","isVisibl
 
 log_info "Creating widget for statistics testing..."
 stats_response=$(curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$STATS_WIDGET_DATA" "$SERVER_URL/api/v1/widgets")
-STATS_WIDGET_ID=$(echo "$stats_response" | jq -r '.data.id // empty')
+STATS_WIDGET_ID=$(echo "$stats_response" | jq -r '.id // empty')
 
 if [ -n "$STATS_WIDGET_ID" ] && [ "$STATS_WIDGET_ID" != "null" ]; then
     log_info "Statistics test widget created with ID: $STATS_WIDGET_ID"
@@ -411,7 +411,7 @@ if [ -n "$STATS_WIDGET_ID" ] && [ "$STATS_WIDGET_ID" != "null" ]; then
     
     # Check stats after view events
     view_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID/stats")
-    view_count=$(echo "$view_stats" | jq -r '.data.views // 0')
+    view_count=$(echo "$view_stats" | jq -r '.views // 0')
     
     if [ "$view_count" = "3" ]; then
         log_info "View events correctly counted: $view_count views"
@@ -434,7 +434,7 @@ if [ -n "$STATS_WIDGET_ID" ] && [ "$STATS_WIDGET_ID" != "null" ]; then
     
     # Check stats after submission
     submit_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID/stats")
-    submit_count=$(echo "$submit_stats" | jq -r '.data.submits // 0')
+    submit_count=$(echo "$submit_stats" | jq -r '.submits // 0')
     
     if [ "$submit_count" = "1" ]; then
         log_info "Submission correctly counted: $submit_count submission"
@@ -458,9 +458,9 @@ if [ -n "$STATS_WIDGET_ID" ] && [ "$STATS_WIDGET_ID" != "null" ]; then
     
     # Check final comprehensive stats
     final_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID/stats")
-    final_views=$(echo "$final_stats" | jq -r '.data.views // 0')
-    final_submits=$(echo "$final_stats" | jq -r '.data.submits // 0')
-    final_closes=$(echo "$final_stats" | jq -r '.data.closes // 0')
+    final_views=$(echo "$final_stats" | jq -r '.views // 0')
+    final_submits=$(echo "$final_stats" | jq -r '.submits // 0')
+    final_closes=$(echo "$final_stats" | jq -r '.closes // 0')
     
     log_info "Final comprehensive statistics check..."
     echo "📊 Final Statistics Summary:"
@@ -494,7 +494,7 @@ if [ -n "$STATS_WIDGET_ID" ] && [ "$STATS_WIDGET_ID" != "null" ]; then
     # Test 4: Check if statistics persist across requests
     log_info "Testing statistics persistence..."
     persistence_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$STATS_WIDGET_ID/stats")
-    persistence_views=$(echo "$persistence_stats" | jq -r '.data.views // 0')
+    persistence_views=$(echo "$persistence_stats" | jq -r '.views // 0')
     
     if [ "$persistence_views" = "3" ]; then
         log_success "Statistics persist correctly across requests"
@@ -522,7 +522,7 @@ echo "=============================="
 LOAD_WIDGET_DATA='{"name":"Load Test Widget","type":"lead-form","isVisible":true,"config":{"name":{"type":"text","required":true},"email":{"type":"email","required":true}}}'
 log_info "Creating widget for load testing..."
 load_response=$(curl -s -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d "$LOAD_WIDGET_DATA" "$SERVER_URL/api/v1/widgets")
-LOAD_WIDGET_ID=$(echo "$load_response" | jq -r '.data.id // empty')
+LOAD_WIDGET_ID=$(echo "$load_response" | jq -r '.id // empty')
 
 if [ -n "$LOAD_WIDGET_ID" ] && [ "$LOAD_WIDGET_ID" != "null" ]; then
     log_info "Load test widget created with ID: $LOAD_WIDGET_ID"
@@ -530,7 +530,7 @@ if [ -n "$LOAD_WIDGET_ID" ] && [ "$LOAD_WIDGET_ID" != "null" ]; then
     # Get initial stats
     log_info "Getting initial statistics before load test..."
     initial_load_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$LOAD_WIDGET_ID/stats")
-    initial_views=$(echo "$initial_load_stats" | jq -r '.data.views // 0')
+    initial_views=$(echo "$initial_load_stats" | jq -r '.views // 0')
     log_info "Initial views: $initial_views"
     
     # Load Test 1: 1000 view events in smaller batches for comprehensive testing
@@ -639,7 +639,7 @@ if [ -n "$LOAD_WIDGET_ID" ] && [ "$LOAD_WIDGET_ID" != "null" ]; then
     # Check final statistics
     log_info "Checking final statistics after load test..."
     final_load_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$LOAD_WIDGET_ID/stats")
-    final_load_views=$(echo "$final_load_stats" | jq -r '.data.views // 0')
+    final_load_views=$(echo "$final_load_stats" | jq -r '.views // 0')
     expected_views=$((initial_views + 1000))
     
     echo "📊 Load Test Results:"
@@ -668,9 +668,9 @@ if [ -n "$LOAD_WIDGET_ID" ] && [ "$LOAD_WIDGET_ID" != "null" ]; then
     
     # Get current stats before mixed test
     pre_mixed_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$LOAD_WIDGET_ID/stats")
-    pre_mixed_views=$(echo "$pre_mixed_stats" | jq -r '.data.views // 0')
-    pre_mixed_submits=$(echo "$pre_mixed_stats" | jq -r '.data.submits // 0')
-    pre_mixed_closes=$(echo "$pre_mixed_stats" | jq -r '.data.closes // 0')
+    pre_mixed_views=$(echo "$pre_mixed_stats" | jq -r '.views // 0')
+    pre_mixed_submits=$(echo "$pre_mixed_stats" | jq -r '.submits // 0')
+    pre_mixed_closes=$(echo "$pre_mixed_stats" | jq -r '.closes // 0')
     
     # Start mixed load test timing
     mixed_start_time=$(date +%s)
@@ -856,9 +856,9 @@ if [ -n "$LOAD_WIDGET_ID" ] && [ "$LOAD_WIDGET_ID" != "null" ]; then
     
     # Check final mixed statistics
     final_mixed_stats=$(curl -s -H "Authorization: Bearer $TOKEN" "$SERVER_URL/api/v1/widgets/$LOAD_WIDGET_ID/stats")
-    final_mixed_views=$(echo "$final_mixed_stats" | jq -r '.data.views // 0')
-    final_mixed_submits=$(echo "$final_mixed_stats" | jq -r '.data.submits // 0')
-    final_mixed_closes=$(echo "$final_mixed_stats" | jq -r '.data.closes // 0')
+    final_mixed_views=$(echo "$final_mixed_stats" | jq -r '.views // 0')
+    final_mixed_submits=$(echo "$final_mixed_stats" | jq -r '.submits // 0')
+    final_mixed_closes=$(echo "$final_mixed_stats" | jq -r '.closes // 0')
     
     expected_mixed_views=$((pre_mixed_views + 500))
     expected_mixed_submits=$((pre_mixed_submits + 300))

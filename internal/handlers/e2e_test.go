@@ -324,19 +324,12 @@ func TestE2E_WidgetLifecycle(t *testing.T) {
 		t.Fatalf("Expected status 201, got %d. Body: %s", resp.StatusCode, body)
 	}
 
-	var createdWidgetResponse models.Response
-	if err := json.NewDecoder(resp.Body).Decode(&createdWidgetResponse); err != nil {
+	var widgetData models.Widget
+	if err := json.NewDecoder(resp.Body).Decode(&widgetData); err != nil {
 		t.Fatalf("Failed to decode created widget: %v", err)
 	}
 
-	// Extract widget from response data
-	widgetData, ok := createdWidgetResponse.Data.(map[string]interface{})
-	if !ok {
-		t.Fatal("Widget data is not a map")
-	}
-
-	widgetID, ok := widgetData["id"].(string)
-	if !ok || widgetID == "" {
+	if widgetData.ID == "" {
 		t.Fatal("Widget ID is empty or not a string")
 	}
 
@@ -352,7 +345,7 @@ func TestE2E_WidgetLifecycle(t *testing.T) {
 	}
 
 	// Step 3: Get specific widget
-	resp, err = e2e.makeRequest("GET", "/api/v1/widgets/"+widgetID, nil, headers)
+	resp, err = e2e.makeRequest("GET", "/api/v1/widgets/"+widgetData.ID, nil, headers)
 	if err != nil {
 		t.Fatalf("Failed to get widget: %v", err)
 	}
@@ -368,7 +361,7 @@ func TestE2E_WidgetLifecycle(t *testing.T) {
 		"isVisible": false
 	}`)
 
-	resp, err = e2e.makeRequest("POST", "/api/v1/widgets/"+widgetID, updateData, headers)
+	resp, err = e2e.makeRequest("POST", "/api/v1/widgets/"+widgetData.ID, updateData, headers)
 	if err != nil {
 		t.Fatalf("Failed to update widget: %v", err)
 	}
@@ -379,7 +372,7 @@ func TestE2E_WidgetLifecycle(t *testing.T) {
 	}
 
 	// Step 5: Delete widget
-	resp, err = e2e.makeRequest("DELETE", "/api/v1/widgets/"+widgetID, nil, headers)
+	resp, err = e2e.makeRequest("DELETE", "/api/v1/widgets/"+widgetData.ID, nil, headers)
 	if err != nil {
 		t.Fatalf("Failed to delete widget: %v", err)
 	}
@@ -390,7 +383,7 @@ func TestE2E_WidgetLifecycle(t *testing.T) {
 	}
 
 	// Step 6: Verify widget is deleted
-	resp, err = e2e.makeRequest("GET", "/api/v1/widgets/"+widgetID, nil, headers)
+	resp, err = e2e.makeRequest("GET", "/api/v1/widgets/"+widgetData.ID, nil, headers)
 	if err != nil {
 		t.Fatalf("Failed to check deleted widget: %v", err)
 	}
@@ -430,17 +423,10 @@ func TestE2E_PublicSubmission(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var response models.Response
-	json.NewDecoder(resp.Body).Decode(&response)
+	var widgetData models.Widget
+	json.NewDecoder(resp.Body).Decode(&widgetData)
 
-	// Extract widget from response data
-	widgetData, ok := response.Data.(map[string]interface{})
-	if !ok {
-		t.Fatal("Widget data is not a map")
-	}
-
-	widgetID, ok := widgetData["id"].(string)
-	if !ok || widgetID == "" {
+	if widgetData.ID == "" {
 		t.Fatal("Widget ID is empty or not a string")
 	}
 
@@ -457,7 +443,7 @@ func TestE2E_PublicSubmission(t *testing.T) {
 		"Content-Type": "application/json",
 	}
 
-	resp, err = e2e.makeRequest("POST", "/widgets/"+widgetID+"/submit", submissionData, publicHeaders)
+	resp, err = e2e.makeRequest("POST", "/widgets/"+widgetData.ID+"/submit", submissionData, publicHeaders)
 	if err != nil {
 		t.Fatalf("Failed to submit data: %v", err)
 	}
@@ -469,7 +455,7 @@ func TestE2E_PublicSubmission(t *testing.T) {
 	}
 
 	// Step 3: Check stats
-	resp, err = e2e.makeRequest("GET", "/api/v1/widgets/"+widgetID+"/stats", nil, headers)
+	resp, err = e2e.makeRequest("GET", "/api/v1/widgets/"+widgetData.ID+"/stats", nil, headers)
 	if err != nil {
 		t.Fatalf("Failed to get stats: %v", err)
 	}
@@ -524,22 +510,15 @@ func TestE2E_Authorization(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	var response models.Response
-	json.NewDecoder(resp.Body).Decode(&response)
+	var widgetData models.Widget
+	json.NewDecoder(resp.Body).Decode(&widgetData)
 
-	// Extract widget from response data
-	widgetData, ok := response.Data.(map[string]interface{})
-	if !ok {
-		t.Fatal("Widget data is not a map")
-	}
-
-	widgetID, ok := widgetData["id"].(string)
-	if !ok || widgetID == "" {
+	if widgetData.ID == "" {
 		t.Fatal("Widget ID is empty or not a string")
 	}
 
 	// Step 2: User2 tries to access User1's widget (should fail)
-	resp, err = e2e.makeRequest("GET", "/api/v1/widgets/"+widgetID, nil, headers2)
+	resp, err = e2e.makeRequest("GET", "/api/v1/widgets/"+widgetData.ID, nil, headers2)
 	if err != nil {
 		t.Fatalf("Failed to get widget: %v", err)
 	}
@@ -552,7 +531,7 @@ func TestE2E_Authorization(t *testing.T) {
 	// Step 3: User2 tries to update User1's widget (should fail)
 	updateData := []byte(`{"name": "Hacked Widget"}`)
 
-	resp, err = e2e.makeRequest("POST", "/api/v1/widgets/"+widgetID, updateData, headers2)
+	resp, err = e2e.makeRequest("POST", "/api/v1/widgets/"+widgetData.ID, updateData, headers2)
 	if err != nil {
 		t.Fatalf("Failed to update widget: %v", err)
 	}
@@ -563,7 +542,7 @@ func TestE2E_Authorization(t *testing.T) {
 	}
 
 	// Step 4: User2 tries to delete User1's widget (should fail)
-	resp, err = e2e.makeRequest("DELETE", "/api/v1/widgets/"+widgetID, nil, headers2)
+	resp, err = e2e.makeRequest("DELETE", "/api/v1/widgets/"+widgetData.ID, nil, headers2)
 	if err != nil {
 		t.Fatalf("Failed to delete widget: %v", err)
 	}

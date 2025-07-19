@@ -44,29 +44,22 @@ func TestE2E_SimpleWidgetCreation(t *testing.T) {
 		return
 	}
 
-	var response models.Response
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+	var widgetData models.Widget
+	if err := json.NewDecoder(resp.Body).Decode(&widgetData); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	// Extract widget from response data
-	widgetData, ok := response.Data.(map[string]interface{})
-	if !ok {
-		t.Fatal("Widget data is not a map")
-	}
-
-	widgetID, ok := widgetData["id"].(string)
-	if !ok || widgetID == "" {
+	if widgetData.ID == "" {
 		t.Fatal("Widget ID is empty")
 	}
 
-	if name, ok := widgetData["name"].(string); !ok || name != "Simple Test Widget" {
-		t.Errorf("Expected widget name 'Simple Test Widget', got %v", name)
+	if widgetData.Name != "Simple Test Widget" {
+		t.Errorf("Expected widget name 'Simple Test Widget', got %v", widgetData.Name)
 	}
 
 	// Note: user_id may not be included in the response for security reasons
 
-	t.Logf("Successfully created widget with ID: %s", widgetID)
+	t.Logf("Successfully created widget with ID: %s", widgetData.ID)
 }
 
 func TestE2E_SimpleHealthCheck(t *testing.T) {
@@ -129,10 +122,9 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 	}
 	defer resp1.Body.Close()
 
-	var response1 models.Response
-	json.NewDecoder(resp1.Body).Decode(&response1)
-	widget1Data := response1.Data.(map[string]interface{})
-	widget1ID := widget1Data["id"].(string)
+	var widget1Data models.Widget
+	json.NewDecoder(resp1.Body).Decode(&widget1Data)
+	widget1ID := widget1Data.ID
 
 	// Create second widget
 	resp2, err := e2e.makeRequest("POST", "/api/v1/widgets", widgetData2, headers)
@@ -141,10 +133,9 @@ func TestE2E_ComprehensiveFlow(t *testing.T) {
 	}
 	defer resp2.Body.Close()
 
-	var response2 models.Response
-	json.NewDecoder(resp2.Body).Decode(&response2)
-	widget2Data := response2.Data.(map[string]interface{})
-	widget2ID := widget2Data["id"].(string)
+	var widget2Data models.Widget
+	json.NewDecoder(resp2.Body).Decode(&widget2Data)
+	widget2ID := widget2Data.ID
 
 	// Step 2: List widgets - should return 2 widgets
 	listResp, err := e2e.makeRequest("GET", "/api/v1/widgets", nil, headers)

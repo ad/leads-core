@@ -75,7 +75,7 @@ func (h *WidgetHandler) CreateWidget(w http.ResponseWriter, r *http.Request) {
 		"widget_id": widget.ID,
 		"type":      widget.Type,
 	})
-	writeJSONResponse(w, http.StatusCreated, models.Response{Data: widget})
+	writeJSONResponse(w, http.StatusCreated, widget)
 }
 
 // GetWidgets handles GET /widgets
@@ -379,7 +379,7 @@ func (h *WidgetHandler) GetWidgetStats(w http.ResponseWriter, r *http.Request) {
 		"user_id":   user.ID,
 		"widget_id": widgetID,
 	})
-	writeJSONResponse(w, http.StatusOK, models.Response{Data: stats})
+	writeJSONResponse(w, http.StatusOK, stats)
 }
 
 // GetWidgetSubmissions handles GET /widgets/{id}/submissions
