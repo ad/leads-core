@@ -52,8 +52,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Serve static file
-		h.serveStatic(w, r, path)
+		// Check if it's a static file request (CSS, JS, images, etc.)
+		if h.isStaticFile(path) {
+			h.serveStatic(w, r, path)
+			return
+		}
+
+		// For non-static files under /settings/, serve index.html (SPA routing)
+		h.serveIndex(w, r)
 		return
 	}
 
@@ -126,4 +132,34 @@ func (h *Handler) serveStatic(w http.ResponseWriter, r *http.Request, path strin
 
 	// Serve the file
 	http.ServeContent(w, r, info.Name(), info.ModTime(), file)
+}
+
+// isStaticFile checks if the given path is a static file (CSS, JS, images, etc.)
+func (h *Handler) isStaticFile(path string) bool {
+	// Try to open the file first
+	file, err := h.staticFS.Open(path)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+
+	// Get file info
+	info, err := file.Stat()
+	if err != nil {
+		return false
+	}
+
+	// Don't treat directories as static files
+	if info.IsDir() {
+		return false
+	}
+
+	// Check file extension
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".css", ".js", ".html", ".json", ".ico", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".woff", ".woff2", ".ttf", ".eot":
+		return true
+	default:
+		return false
+	}
 }
